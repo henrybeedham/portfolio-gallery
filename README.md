@@ -37,13 +37,13 @@ If `ADMIN_PASSWORD` isn't set, a password is generated on first start. It is pri
 
 Everything lives in the `./data` volume:
 
-| Path                                   | Contents                                   |
-| -------------------------------------- | ------------------------------------------ |
-| `gallery.db`                           | SQLite database (albums, photos, settings) |
-| `photos/originals/`                    | Original uploads, untouched                |
-| `photos/thumbs/`, `photos/medium/`     | Generated WebP derivatives                 |
-| `site/`                                | Hero image                                 |
-| `.session-secret`, `.admin-password`   | Generated secrets (if not set via env)     |
+| Path                                 | Contents                                   |
+| ------------------------------------ | ------------------------------------------ |
+| `gallery.db`                         | SQLite database (albums, photos, settings) |
+| `photos/originals/`                  | Original uploads, untouched                |
+| `photos/thumbs/`, `photos/medium/`   | Generated WebP derivatives                 |
+| `site/`                              | Hero image                                 |
+| `.session-secret`, `.admin-password` | Generated secrets (if not set via env)     |
 
 To back up, copy the `data` folder; stop the container first, or use `sqlite3 gallery.db .backup` for a live copy. Thumbnails can always be rebuilt from the originals with **Maintenance → Regenerate thumbnails**.
 
@@ -53,16 +53,16 @@ Put images in `./import`, or in `./import/<album-slug>` to target one album. The
 
 ### Configuration
 
-| Variable          | Default         | Description                                                                 |
-| ----------------- | --------------- | --------------------------------------------------------------------------- |
-| `ADMIN_USERNAME`  | `admin`         | Admin username                                                              |
-| `ADMIN_PASSWORD`  | generated       | Admin password                                                              |
-| `SESSION_SECRET`  | generated       | Secret used to sign cookies                                                 |
-| `ORIGIN`          | auto            | Public URL, e.g. `https://photos.example.com` (see below)                   |
-| `BODY_SIZE_LIMIT` | `512M`          | Maximum size of a single uploaded photo                                     |
-| `IMPORT_DIR`      | `/data/import`  | Server-side import folder                                                   |
-| `PUID` / `PGID`   | `1000`          | User and group the app runs as; the entrypoint fixes `/data` ownership      |
-| `PORT`            | `3000`          | Port inside the container (`GALLERY_PORT` sets the published port)          |
+| Variable          | Default        | Description                                                            |
+| ----------------- | -------------- | ---------------------------------------------------------------------- |
+| `ADMIN_USERNAME`  | `admin`        | Admin username                                                         |
+| `ADMIN_PASSWORD`  | generated      | Admin password                                                         |
+| `SESSION_SECRET`  | generated      | Secret used to sign cookies                                            |
+| `ORIGIN`          | auto           | Public URL, e.g. `https://photos.example.com` (see below)              |
+| `BODY_SIZE_LIMIT` | `512M`         | Maximum size of a single uploaded photo                                |
+| `IMPORT_DIR`      | `/data/import` | Server-side import folder                                              |
+| `PUID` / `PGID`   | `1000`         | User and group the app runs as; the entrypoint fixes `/data` ownership |
+| `PORT`            | `3000`         | Port inside the container (`GALLERY_PORT` sets the published port)     |
 
 ### Reverse proxy
 
@@ -78,6 +78,28 @@ proxy_set_header X-Forwarded-Host  $host;
 ```
 
 Caddy needs nothing extra: `photos.example.com { reverse_proxy localhost:3000 }`.
+
+## Migrating from the previous gallery
+
+`scripts/import-legacy.sh` copies everything from the previous version of this app
+([henrybeedham/client-gallery](https://github.com/henrybeedham/client-gallery)) when both run in Docker
+on the same machine:
+
+```sh
+scripts/import-legacy.sh --dry-run   # preview the plan; nothing is changed
+scripts/import-legacy.sh             # import (asks a few questions first)
+```
+
+It imports albums (including passwords, expiry dates, colours, layout and visibility), original photos
+with their EXIF details, tags, cover and background images, site settings, the hero image and the
+view/download counts. Old links (`/album/<slug>` and `/album/<slug>/photo/<id>`) redirect to the
+imported albums.
+
+The old gallery is never modified. The script runs a throwaway container from the new image with the
+old container's volumes mounted **read-only**, and it reads a snapshot copy of the old database.
+Running it again is safe: anything already imported is skipped, so you can rerun it to resume an
+interrupted import or to pick up photos added to the old gallery since. Start the new gallery at least
+once before importing so its database exists.
 
 ## Development
 

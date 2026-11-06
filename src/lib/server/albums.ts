@@ -80,6 +80,8 @@ function mapAlbum(row: AlbumRow): Album {
 
 export const RESERVED_SLUGS = new Set([
 	'admin',
+	// Used for redirects from the previous gallery's /album/<slug> links.
+	'album',
 	'api',
 	'galleries',
 	'media',
