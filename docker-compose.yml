@@ -1,0 +1,18 @@
+services:
+  gallery:
+    build: .
+    image: client-gallery:latest
+    container_name: client-gallery
+    restart: unless-stopped
+    ports:
+      - '${GALLERY_PORT:-3000}:3000'
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATA_DIR: /data
+    volumes:
+      # Database, original photos, generated thumbnails and the hero image.
+      - ./data:/data
+      # Drop images here (or in a sub-folder named after an album's slug) to import them.
+      - ./import:/data/import

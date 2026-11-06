@@ -1,0 +1,11 @@
+node_modules
+build
+.svelte-kit
+data
+import
+.git
+.env
+.env.*
+!.env.example
+.DS_Store
+.vscode
