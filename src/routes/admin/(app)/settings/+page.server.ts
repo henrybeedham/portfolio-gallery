@@ -11,9 +11,11 @@ import { getSettings, updateSettings } from '#lib/server/settings.js';
 import {
 	LAYOUTS,
 	SORT_ORDERS,
+	THEMES,
 	type Layout,
 	type SiteSettings,
-	type SortOrder
+	type SortOrder,
+	type Theme
 } from '#lib/types.js';
 import { isHexColor } from '#lib/utils.js';
 import type { Actions, PageServerLoad } from './$types';
@@ -72,7 +74,9 @@ export const actions: Actions = {
 			contactPhone: text(data, 'contactPhone', 60),
 			showContactOnHome: data.get('showContactOnHome') === 'on',
 			discordWebhook: webhook,
-			theme: data.get('theme') === 'dark' ? 'dark' : 'light',
+			theme: (THEMES as string[]).includes(text(data, 'theme'))
+				? (text(data, 'theme') as Theme)
+				: 'light',
 			defaultDescription: text(data, 'defaultDescription', 20000),
 			defaultAccentColor: isHexColor(accent) ? accent.toLowerCase() : current.defaultAccentColor,
 			defaultLayout: LAYOUTS.includes(layout) ? layout : current.defaultLayout,

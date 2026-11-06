@@ -4,6 +4,7 @@
 	import '@fontsource-variable/inter';
 	import '../app.css';
 	import { navigating } from '$app/state';
+	import { THEME_COLORS } from '#lib/types.js';
 	import type { LayoutProps } from './$types';
 
 	let { children, data }: LayoutProps = $props();
@@ -14,7 +15,7 @@
 </script>
 
 <svelte:head>
-	<meta name="theme-color" content={data.settings.theme === 'dark' ? '#141311' : '#f6f1e8'} />
+	<meta name="theme-color" content={THEME_COLORS[data.settings.theme] ?? THEME_COLORS.light} />
 </svelte:head>
 
 {#if navigating.to}
