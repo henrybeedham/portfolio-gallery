@@ -26,7 +26,8 @@ export const load: PageServerLoad = ({ cookies, locals }) => {
 			layout: album.layout,
 			accentColor: album.accentColor,
 			sortOrder: album.sortOrder,
-			total: ids.length,
+			// Don't reveal how many photos a locked album holds.
+			total: locked ? 0 : ids.length,
 			locked,
 			view,
 			photos: locked ? [] : photoItems(ids.slice(0, FEATURED_LIMIT)),

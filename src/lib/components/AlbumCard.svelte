@@ -45,7 +45,9 @@
 	</div>
 	<div class="info">
 		<h3>{album.title}</h3>
-		<p class="eyebrow">{plural(album.count, 'image')}</p>
+		<p class="eyebrow">
+			{album.count === null ? 'Password protected' : plural(album.count, 'image')}
+		</p>
 	</div>
 </a>
 

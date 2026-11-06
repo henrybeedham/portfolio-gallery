@@ -1,10 +1,18 @@
 import crypto from 'node:crypto';
+import { promisify } from 'node:util';
 import type { Cookies, RequestEvent } from '@sveltejs/kit';
 import { adminCredentials, sessionSecret } from './config.js';
 import type { Album } from './albums.js';
 
 const SESSION_COOKIE = 'gallery_session';
 const SESSION_DAYS = 30;
+
+const scrypt = promisify(crypto.scrypt) as (
+	password: crypto.BinaryLike,
+	salt: crypto.BinaryLike,
+	keylen: number,
+	options: crypto.ScryptOptions
+) => Promise<Buffer>;
 
 function hmac(value: string) {
 	return crypto.createHmac('sha256', sessionSecret()).update(value).digest('base64url');
@@ -47,10 +55,19 @@ export function checkAdminCredentials(username: string, password: string) {
 	return userOk && passOk;
 }
 
+/**
+ * Ties sessions to the current credentials: changing ADMIN_USERNAME or ADMIN_PASSWORD signs out
+ * every existing session.
+ */
+function credentialStamp() {
+	const { username, password } = adminCredentials();
+	return hmac(`admin-credentials:${username}:${password}`).slice(0, 22);
+}
+
 export function createAdminSession(event: Pick<RequestEvent, 'cookies' | 'url'>) {
 	const expires = Date.now() + SESSION_DAYS * 864e5;
 	const payload = Buffer.from(
-		JSON.stringify({ u: adminCredentials().username, e: expires })
+		JSON.stringify({ u: adminCredentials().username, c: credentialStamp(), e: expires })
 	).toString('base64url');
 	event.cookies.set(SESSION_COOKIE, sign(payload), {
 		...cookieOptions(event),
@@ -68,7 +85,11 @@ export function isAdminSession(cookies: Cookies): boolean {
 	try {
 		const data = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
 		return (
-			data.u === adminCredentials().username && typeof data.e === 'number' && data.e > Date.now()
+			data.u === adminCredentials().username &&
+			typeof data.c === 'string' &&
+			safeEqual(data.c, credentialStamp()) &&
+			typeof data.e === 'number' &&
+			data.e > Date.now()
 		);
 	} catch {
 		return false;
@@ -83,12 +104,13 @@ export function hashPassword(password: string): string {
 	return `scrypt$${salt.toString('base64url')}$${hash.toString('base64url')}`;
 }
 
-export function verifyPassword(password: string, stored: string | null): boolean {
+/** Runs off the main thread so a burst of unlock attempts can't stall the server. */
+export async function verifyPassword(password: string, stored: string | null): Promise<boolean> {
 	if (!stored) return false;
 	const [scheme, salt, hash] = stored.split('$');
 	if (scheme !== 'scrypt' || !salt || !hash) return false;
 	const expected = Buffer.from(hash, 'base64url');
-	const actual = crypto.scryptSync(password, Buffer.from(salt, 'base64url'), expected.length, {
+	const actual = await scrypt(password, Buffer.from(salt, 'base64url'), expected.length, {
 		N: 16384,
 		r: 8,
 		p: 1
