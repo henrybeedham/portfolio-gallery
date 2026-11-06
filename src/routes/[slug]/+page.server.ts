@@ -91,7 +91,11 @@ export const actions: Actions = {
 		const album = getAlbumBySlug(params.slug);
 		if (!album || !album.passwordHash) redirect(303, `/${params.slug}`);
 
-		if (!rateLimit(`unlock:${clientIp(event)}:${album.id}`, 10, 5 * 60 * 1000)) {
+		// Per visitor, plus a ceiling per album so guessing from many addresses stays slow.
+		if (
+			!rateLimit(`unlock:${clientIp(event)}:${album.id}`, 10, 5 * 60 * 1000) ||
+			!rateLimit(`unlock-album:${album.id}`, 200, 60 * 60 * 1000)
+		) {
 			return fail(429, { error: 'Too many attempts. Please wait a few minutes and try again.' });
 		}
 
@@ -99,7 +103,7 @@ export const actions: Actions = {
 		const password = String(data.get('password') ?? '');
 		// Re-read in case the album changed between render and submit.
 		const current = getAlbumById(album.id)!;
-		if (!password || !verifyPassword(password, current.passwordHash)) {
+		if (!password || !(await verifyPassword(password, current.passwordHash))) {
 			return fail(400, { error: 'That password is incorrect. Please try again.' });
 		}
 

@@ -31,7 +31,7 @@ docker compose up -d --build
 
 Open <http://localhost:3000> and sign in at `/admin/login`.
 
-If `ADMIN_PASSWORD` isn't set, a password is generated on first start. It is printed in `docker compose logs` and saved to `data/.admin-password`.
+If `ADMIN_PASSWORD` isn't set, a password is generated on first start and saved to `data/.admin-password` (it isn't printed to the logs). Placeholder passwords such as `change-me` are refused at startup.
 
 ### Data
 
@@ -53,20 +53,24 @@ Put images in `./import`, or in `./import/<album-slug>` to target one album. The
 
 ### Configuration
 
-| Variable          | Default        | Description                                                            |
-| ----------------- | -------------- | ---------------------------------------------------------------------- |
-| `ADMIN_USERNAME`  | `admin`        | Admin username                                                         |
-| `ADMIN_PASSWORD`  | generated      | Admin password                                                         |
-| `SESSION_SECRET`  | generated      | Secret used to sign cookies                                            |
-| `ORIGIN`          | auto           | Public URL, e.g. `https://photos.example.com` (see below)              |
-| `BODY_SIZE_LIMIT` | `512M`         | Maximum size of a single uploaded photo                                |
-| `IMPORT_DIR`      | `/data/import` | Server-side import folder                                              |
-| `PUID` / `PGID`   | `1000`         | User and group the app runs as; the entrypoint fixes `/data` ownership |
-| `PORT`            | `3000`         | Port inside the container (`GALLERY_PORT` sets the published port)     |
+| Variable          | Default        | Description                                                                   |
+| ----------------- | -------------- | ----------------------------------------------------------------------------- |
+| `ADMIN_USERNAME`  | `admin`        | Admin username                                                                |
+| `ADMIN_PASSWORD`  | generated      | Admin password                                                                |
+| `SESSION_SECRET`  | generated      | Secret used to sign cookies                                                   |
+| `ORIGIN`          | auto           | Public URL, e.g. `https://photos.example.com` (see below)                     |
+| `BODY_SIZE_LIMIT` | `512M`         | Maximum size of a single uploaded photo (other requests are capped at 1 MB)   |
+| `TRUST_PROXY`     | `auto`         | Whose `X-Forwarded-*` headers to trust: `auto`, `true` or `false` (see below) |
+| `XFF_DEPTH`       | `1`            | Number of proxies in front of the app, for reading `X-Forwarded-For`          |
+| `IMPORT_DIR`      | `/data/import` | Server-side import folder                                                     |
+| `PUID` / `PGID`   | `1000`         | User and group the app runs as; the entrypoint fixes `/data` ownership        |
+| `PORT`            | `3000`         | Port inside the container (`GALLERY_PORT` sets the published port)            |
 
 ### Reverse proxy
 
-The server works over plain `http://` on your LAN and behind a TLS reverse proxy. It reads `X-Forwarded-Proto` and `X-Forwarded-Host`, which Caddy, Traefik and most nginx setups send. If your proxy doesn't send them, set `ORIGIN`.
+The server works over plain `http://` on your LAN and behind a TLS reverse proxy. It reads `X-Forwarded-Proto`, `X-Forwarded-Host` and `X-Forwarded-For`, which Caddy, Traefik and most nginx setups send. If your proxy doesn't send them, set `ORIGIN`.
+
+Those headers are only trusted from connections on loopback or private networks (`TRUST_PROXY=auto`), so visitors reaching the app directly from the internet can't spoof the site address or their IP (which login and gallery rate limits rely on). Set `TRUST_PROXY=false` if there's no proxy at all. If the proxy runs on the same host, publish the port only on loopback with `GALLERY_BIND=127.0.0.1`. With more than one proxy in a chain (e.g. Cloudflare in front of nginx), set `XFF_DEPTH` to the number of proxies.
 
 Allow large request bodies for uploads. With nginx:
 
@@ -75,6 +79,7 @@ client_max_body_size 512m;
 proxy_request_buffering off;
 proxy_set_header X-Forwarded-Proto $scheme;
 proxy_set_header X-Forwarded-Host  $host;
+proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
 ```
 
 Caddy needs nothing extra: `photos.example.com { reverse_proxy localhost:3000 }`.

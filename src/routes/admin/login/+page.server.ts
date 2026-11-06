@@ -15,16 +15,18 @@ export const load: PageServerLoad = ({ locals, url }) => {
 export const actions: Actions = {
 	default: async (event) => {
 		const { request, cookies, url } = event;
-		const data = await request.formData();
-		const username = String(data.get('username') ?? '').trim();
-		const password = String(data.get('password') ?? '');
 
+		// Checked before the body is read, so rate-limited clients can't make the server parse it.
 		if (!rateLimit(`login:${clientIp(event)}`, 8, 15 * 60 * 1000)) {
 			return fail(429, {
-				username,
+				username: '',
 				error: 'Too many sign-in attempts. Please wait a few minutes and try again.'
 			});
 		}
+
+		const data = await request.formData();
+		const username = String(data.get('username') ?? '').trim();
+		const password = String(data.get('password') ?? '');
 
 		if (!username || !password || !checkAdminCredentials(username, password)) {
 			return fail(400, { username, error: 'The username or password is incorrect.' });

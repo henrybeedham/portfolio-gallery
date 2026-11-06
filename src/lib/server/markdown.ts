@@ -3,7 +3,8 @@ import { Marked } from 'marked';
 const escapeHtml = (value: string) =>
 	value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-const SAFE_URL = /^(https?:|mailto:|tel:|\/|#)/i;
+// Relative paths and fragments are allowed, but not protocol-relative URLs ("//example.com").
+const SAFE_URL = /^(https?:|mailto:|tel:|\/(?![/\\])|#)/i;
 
 const marked = new Marked({
 	gfm: true,
