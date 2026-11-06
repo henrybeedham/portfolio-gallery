@@ -4,6 +4,8 @@ import { getSettings } from './settings.js';
 import { LAYOUTS, SORT_ORDERS, type Layout, type SortOrder } from '#lib/types.js';
 import { isHexColor, slugify } from '#lib/utils.js';
 
+const MIN_PASSWORD_LENGTH = 6;
+
 export interface AlbumFormValues {
 	title: string;
 	slug: string;
@@ -87,8 +89,8 @@ export function parseAlbumForm(data: FormData, existing?: Album): AlbumFormResul
 	if (values.passwordEnabled) {
 		const password = String(data.get('password') ?? '');
 		if (password) {
-			if (password.length < 3)
-				return fail('Album passwords need at least 3 characters.', 'password');
+			if (password.length < MIN_PASSWORD_LENGTH)
+				return fail(`Album passwords need at least ${MIN_PASSWORD_LENGTH} characters.`, 'password');
 			passwordHash = hashPassword(password);
 		} else if (existing?.passwordHash) {
 			passwordHash = existing.passwordHash;

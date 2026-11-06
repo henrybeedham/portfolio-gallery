@@ -6,7 +6,8 @@ services:
     container_name: gallery
     restart: unless-stopped
     ports:
-      - '${GALLERY_PORT:-3000}:3000'
+      # Set GALLERY_BIND=127.0.0.1 when a reverse proxy on this host is the only way in.
+      - '${GALLERY_BIND:-0.0.0.0}:${GALLERY_PORT:-3000}:3000'
     env_file:
       - path: .env
         required: false

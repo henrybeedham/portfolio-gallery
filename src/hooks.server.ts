@@ -39,6 +39,10 @@ export const handle: Handle = async ({ event, resolve }) => {
 	});
 
 	response.headers.set('x-frame-options', 'SAMEORIGIN');
+	response.headers.set('x-content-type-options', 'nosniff');
 	response.headers.set('referrer-policy', 'strict-origin-when-cross-origin');
+	if (event.url.protocol === 'https:') {
+		response.headers.set('strict-transport-security', 'max-age=31536000');
+	}
 	return response;
 };
