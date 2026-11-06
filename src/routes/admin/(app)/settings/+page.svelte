@@ -4,6 +4,7 @@
 	import ImageIcon from '@lucide/svelte/icons/image';
 	import Sun from '@lucide/svelte/icons/sun';
 	import Moon from '@lucide/svelte/icons/moon';
+	import Leaf from '@lucide/svelte/icons/leaf';
 	import Toggle from '#lib/components/admin/Toggle.svelte';
 	import { feedback } from '#lib/components/admin/feedback.svelte.js';
 	import type { Layout, SortOrder, Theme } from '#lib/types.js';
@@ -242,6 +243,11 @@
 				<input type="radio" name="theme" value="dark" bind:group={theme} />
 				<span class="swatch"><span></span><span></span><span></span></span>
 				<span class="theme-label"><Moon size={14} /> Dark</span>
+			</label>
+			<label class="theme green" class:checked={theme === 'green'}>
+				<input type="radio" name="theme" value="green" bind:group={theme} />
+				<span class="swatch"><span></span><span></span><span></span></span>
+				<span class="theme-label"><Leaf size={14} /> Green</span>
 			</label>
 		</div>
 	</section>
@@ -522,6 +528,19 @@
 
 	.theme.dark .swatch span:first-child {
 		background: #ece5d9;
+		width: 60%;
+	}
+
+	.theme.green .swatch {
+		background: #14261c;
+	}
+
+	.theme.green .swatch span {
+		background: #2a4334;
+	}
+
+	.theme.green .swatch span:first-child {
+		background: #efe8d6;
 		width: 60%;
 	}
 

@@ -1,7 +1,15 @@
 export type Layout = 'grid' | 'masonry';
 export type SortOrder = 'oldest' | 'newest' | 'random';
 export type AdminSort = SortOrder | 'downloads' | 'name';
-export type Theme = 'light' | 'dark';
+export type Theme = 'light' | 'dark' | 'green';
+
+/** Theme → browser UI colour (the page background). */
+export const THEME_COLORS: Record<Theme, string> = {
+	light: '#f6f1e8',
+	dark: '#141311',
+	green: '#14261c'
+};
+export const THEMES = Object.keys(THEME_COLORS) as Theme[];
 
 export const LAYOUTS: Layout[] = ['grid', 'masonry'];
 export const SORT_ORDERS: SortOrder[] = ['oldest', 'newest', 'random'];

@@ -1,3 +1,4 @@
+import { THEMES } from '#lib/types.js';
 import type { Handle, ServerInit } from '@sveltejs/kit/hooks';
 import { isAdminSession } from '#lib/server/auth.js';
 import { adminCredentials } from '#lib/server/config.js';
@@ -31,7 +32,8 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 	event.locals.isAdmin = isAdminSession(event.cookies);
 
-	const theme = getSettings().theme === 'dark' ? 'dark' : 'light';
+	const stored = getSettings().theme;
+	const theme = THEMES.includes(stored) ? stored : 'light';
 	const response = await resolve(event, {
 		transformPageChunk: ({ html }) => html.replace('%gallery.theme%', theme)
 	});
