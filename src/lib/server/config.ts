@@ -54,11 +54,24 @@ export function sessionSecret(): Buffer {
 	return secret;
 }
 
+const WEAK_PASSWORDS = new Set(['change-me', 'changeme', 'password', 'admin']);
+
 let credentials: { username: string; password: string } | undefined;
 
 export function adminCredentials() {
 	if (!credentials) {
 		let password = ADMIN_PASSWORD;
+		if (password && WEAK_PASSWORDS.has(password.trim().toLowerCase())) {
+			throw new Error(
+				`[gallery] ADMIN_PASSWORD is set to the placeholder "${password}". Choose a real password, ` +
+					'or remove ADMIN_PASSWORD to have one generated.'
+			);
+		}
+		if (password && password.length < 12) {
+			console.warn(
+				'[gallery] ADMIN_PASSWORD is shorter than 12 characters. Consider a longer one.'
+			);
+		}
 		if (!password) {
 			let generated = false;
 			password = persistedSecret('.admin-password', () => {
@@ -66,9 +79,10 @@ export function adminCredentials() {
 				return crypto.randomBytes(12).toString('base64url');
 			});
 			if (generated) {
+				// The password itself isn't logged, so it doesn't end up in log files or log shippers.
 				console.log(
-					`\n[gallery] No ADMIN_PASSWORD set. Generated one for user "${ADMIN_USERNAME}": ${password}\n` +
-						`[gallery] It is stored in ${path.join(dataDir, '.admin-password')}\n`
+					`\n[gallery] No ADMIN_PASSWORD set. Generated one for user "${ADMIN_USERNAME}".\n` +
+						`[gallery] Read it from ${path.join(dataDir, '.admin-password')}\n`
 				);
 			}
 		}

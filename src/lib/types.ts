@@ -78,7 +78,8 @@ export interface AlbumCardData {
 	id: number;
 	slug: string;
 	title: string;
-	count: number;
+	/** Null on public listings of password-protected albums. */
+	count: number | null;
 	date: string | null;
 	locked: boolean;
 	cover: ImageRef | null;

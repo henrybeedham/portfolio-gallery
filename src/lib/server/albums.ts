@@ -260,11 +260,15 @@ function sortByDate(a: ListingRow, b: ListingRow) {
 export function listPublicAlbums(where: 'home' | 'galleries'): AlbumCardData[] {
 	const column = where === 'home' ? 'show_on_home' : 'show_on_galleries';
 	const rows = all<ListingRow>(`${LISTING_SQL} WHERE a.is_public = 1 AND a.${column} = 1`);
-	return rows
-		.filter((row) => !isExpired(row.expires_at))
-		.filter((row) => (where === 'home' ? !row.is_featured : true))
-		.sort(sortByDate)
-		.map(toCard);
+	return (
+		rows
+			.filter((row) => !isExpired(row.expires_at))
+			.filter((row) => (where === 'home' ? !row.is_featured : true))
+			.sort(sortByDate)
+			.map(toCard)
+			// Don't reveal how many photos a password-protected album holds.
+			.map((card) => (card.locked ? { ...card, count: null } : card))
+	);
 }
 
 export function getFeaturedAlbum(): Album | undefined {
@@ -274,6 +278,7 @@ export function getFeaturedAlbum(): Album | undefined {
 }
 
 export interface AdminAlbumRow extends AlbumCardData {
+	count: number;
 	isPublic: boolean;
 	showOnHome: boolean;
 	showOnGalleries: boolean;
@@ -290,6 +295,7 @@ export function listAdminAlbums(): AdminAlbumRow[] {
 	const rows = all<ListingRow>(`${LISTING_SQL} ORDER BY a.created_at DESC`);
 	return rows.map((row) => ({
 		...toCard(row),
+		count: row.count,
 		isPublic: !!row.is_public,
 		showOnHome: !!row.show_on_home,
 		showOnGalleries: !!row.show_on_galleries,

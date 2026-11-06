@@ -17,7 +17,8 @@ function lookup<T>(sql: string, param: string | number): T | undefined {
  * /album/<slug> → /<slug> and /album/<slug>/photo/<id> → /<slug>/photo/<new id>.
  */
 export const GET: RequestHandler = ({ params }) => {
-	const [oldSlug, kind, oldId] = params.path.split('/').map((part) => decodeURIComponent(part));
+	// SvelteKit has already decoded the path.
+	const [oldSlug, kind, oldId] = params.path.split('/');
 	if (!oldSlug) redirect(301, '/galleries');
 
 	if (kind === 'photo' && /^\d+$/.test(oldId ?? '')) {

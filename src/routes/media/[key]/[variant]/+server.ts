@@ -47,7 +47,9 @@ export const GET: RequestHandler = async ({ params, request, url, cookies, local
 		}
 		const response = await serveFile(request, originalPath(photo.key, photo.ext), {
 			type: photo.mime,
-			cacheControl: download ? 'private, no-store' : cacheControl,
+			// Originals are never cached by shared caches, so they stop being served as soon as
+			// the album is hidden or locked.
+			cacheControl: download ? 'private, no-store' : 'private, max-age=31536000, immutable',
 			disposition: contentDisposition(photo.original_name, download ? 'attachment' : 'inline')
 		});
 		if (!response) error(404, 'Original file is missing');
