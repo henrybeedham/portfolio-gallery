@@ -33,6 +33,21 @@
 	let loadError = $state<string | null>(null);
 	const hasMore = $derived(photos.length < total);
 
+	// Infinite scroll: load the next page when a sentinel below the grid nears the viewport.
+	// The observer is recreated after each load so a still-visible sentinel triggers again.
+	let sentinel = $state<HTMLElement>();
+	$effect(() => {
+		if (!sentinel || !hasMore || loadingMore || loadError) return;
+		const observer = new IntersectionObserver(
+			(entries) => {
+				if (entries.some((entry) => entry.isIntersecting)) loadMore();
+			},
+			{ rootMargin: '0px 0px 1200px 0px' }
+		);
+		observer.observe(sentinel);
+		return () => observer.disconnect();
+	});
+
 	let selecting = $state(false);
 	const selected = new SvelteSet<number>();
 	let selectingAll = $state(false);
@@ -331,13 +346,17 @@
 		{/if}
 
 		{#if photos.length}
-			<div class="load-more">
+			<div class="load-more" bind:this={sentinel}>
 				{#if hasMore}
-					<button class="btn" onclick={loadMore} disabled={loadingMore}>
-						{#if loadingMore}<span class="spinner"></span> Loading{:else}Load More{/if}
-					</button>
+					{#if loadError}
+						<p class="error-text">{loadError}</p>
+						<button class="btn" onclick={loadMore} disabled={loadingMore}>Try again</button>
+					{:else}
+						<p class="subtle loading" aria-live="polite">
+							<span class="spinner"></span> Loading more photos…
+						</p>
+					{/if}
 					<p class="subtle">Showing {photos.length.toLocaleString()} of {total.toLocaleString()}</p>
-					{#if loadError}<p class="error-text">{loadError}</p>{/if}
 				{:else}
 					<p class="done eyebrow">
 						{total === 1
@@ -617,6 +636,12 @@
 		gap: 0.85rem;
 		padding-top: clamp(2.5rem, 6vw, 4rem);
 		font-size: 0.85rem;
+	}
+
+	.loading {
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
 	}
 
 	.done {

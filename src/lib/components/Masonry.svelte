@@ -24,7 +24,7 @@
 			[1180, 4]
 		],
 		initialColumns = 3,
-		gap = 'clamp(0.5rem, 1.2vw, 1rem)',
+		gap = 'clamp(0.25rem, 0.5vw, 0.4rem)',
 		children
 	}: Props = $props();
 

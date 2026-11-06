@@ -90,7 +90,7 @@
 	.grid {
 		display: grid;
 		grid-template-columns: repeat(2, minmax(0, 1fr));
-		gap: clamp(0.4rem, 1vw, 0.85rem);
+		gap: clamp(0.25rem, 0.5vw, 0.4rem);
 	}
 
 	@media (min-width: 720px) {
