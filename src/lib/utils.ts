@@ -1,0 +1,142 @@
+import type { ImageRef, SortOrder, ViewQuery } from './types.js';
+
+export function slugify(input: string): string {
+	return input
+		.normalize('NFKD')
+		.replace(/[̀-ͯ]/g, '')
+		.toLowerCase()
+		.replace(/&/g, ' and ')
+		.replace(/[^a-z0-9]+/g, '-')
+		.replace(/^-+|-+$/g, '')
+		.slice(0, 80);
+}
+
+export function mediaUrl(image: ImageRef, variant: 'thumb' | 'medium' | 'original') {
+	return `/media/${image.key}/${variant}?v=${image.v}`;
+}
+
+export function downloadUrl(image: ImageRef) {
+	return `/media/${image.key}/original?download=1`;
+}
+
+export function formatBytes(bytes: number): string {
+	if (!bytes) return '0 B';
+	const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+	const exponent = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+	const value = bytes / 1024 ** exponent;
+	return `${value >= 100 || exponent === 0 ? Math.round(value) : value.toFixed(1)} ${units[exponent]}`;
+}
+
+/** Formats a plain YYYY-MM-DD date without timezone shifting. */
+export function formatDay(day: string | null | undefined): string {
+	if (!day) return '';
+	const [y, m, d] = day.slice(0, 10).split('-').map(Number);
+	if (!y || !m || !d) return day;
+	return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString('en-GB', {
+		day: 'numeric',
+		month: 'long',
+		year: 'numeric',
+		timeZone: 'UTC'
+	});
+}
+
+export function formatDateTime(iso: string | null | undefined): string {
+	if (!iso) return '';
+	const date = new Date(iso);
+	if (isNaN(date.getTime())) return iso;
+	return date.toLocaleString('en-GB', {
+		day: 'numeric',
+		month: 'short',
+		year: 'numeric',
+		hour: '2-digit',
+		minute: '2-digit'
+	});
+}
+
+/** EXIF capture times are stored as naive local wall-clock strings (YYYY-MM-DDTHH:mm:ss). */
+export function formatCaptureTime(value: string | null | undefined): string {
+	if (!value) return '';
+	const match = /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?/.exec(value);
+	if (!match) return value;
+	const [, y, m, d, hh, mm] = match;
+	const date = formatDay(`${y}-${m}-${d}`);
+	return hh ? `${date} at ${hh}:${mm}` : date;
+}
+
+export function formatShutter(seconds: number | null | undefined): string {
+	if (!seconds) return '';
+	if (seconds >= 1) return `${Number(seconds.toFixed(1))}s`;
+	return `1/${Math.round(1 / seconds)}s`;
+}
+
+export function formatAperture(value: number | null | undefined) {
+	return value ? `ƒ/${Number(value.toFixed(1))}` : '';
+}
+
+export function formatFocal(value: number | null | undefined) {
+	return value ? `${Math.round(value)}mm` : '';
+}
+
+export function isExpired(expiresAt: string | null | undefined, now = Date.now()) {
+	return !!expiresAt && new Date(expiresAt).getTime() <= now;
+}
+
+/** A short countdown label when an expiry date is within the next 30 days. */
+export function expiryLabel(expiresAt: string | null | undefined, now = Date.now()): string | null {
+	if (!expiresAt) return null;
+	const remaining = new Date(expiresAt).getTime() - now;
+	if (remaining <= 0) return 'Expired';
+	const hours = remaining / 36e5;
+	if (hours > 24 * 30) return null;
+	if (hours < 1) return 'Expires in less than an hour';
+	if (hours < 48)
+		return `Expires in ${Math.round(hours)} hour${Math.round(hours) === 1 ? '' : 's'}`;
+	const days = Math.round(hours / 24);
+	return `Expires in ${days} days`;
+}
+
+/** Picks a legible text colour for a given background colour. */
+export function contrastText(hex: string): string {
+	const value = hex.replace('#', '');
+	const full = value.length === 3 ? value.replace(/(.)/g, '$1$1') : value;
+	const r = parseInt(full.slice(0, 2), 16) / 255;
+	const g = parseInt(full.slice(2, 4), 16) / 255;
+	const b = parseInt(full.slice(4, 6), 16) / 255;
+	const lin = (c: number) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+	const luminance = 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+	return luminance > 0.45 ? '#1f1d1a' : '#ffffff';
+}
+
+export function isHexColor(value: string) {
+	return /^#[0-9a-f]{6}$/i.test(value);
+}
+
+export function plural(count: number, singular: string, pluralForm = singular + 's') {
+	return `${count.toLocaleString('en-GB')} ${count === 1 ? singular : pluralForm}`;
+}
+
+/** Serialises the active tag/sort selection so it survives navigating between photos. */
+export function viewQuery(
+	view: ViewQuery,
+	defaults: { sort: SortOrder },
+	extra?: Record<string, string>
+) {
+	const params = new URLSearchParams();
+	if (view.tag) params.set('tag', String(view.tag));
+	if (view.sort !== defaults.sort) params.set('sort', view.sort);
+	if (view.sort === 'random' && view.seed) params.set('seed', String(view.seed));
+	for (const [key, value] of Object.entries(extra ?? {})) params.set(key, value);
+	const query = params.toString();
+	return query ? `?${query}` : '';
+}
+
+export function paragraphs(text: string): string[] {
+	return text
+		.split(/\n\s*\n/)
+		.map((p) => p.trim())
+		.filter(Boolean);
+}
+
+export function copyrightText(template: string) {
+	return template.replace(/\{year\}/g, String(new Date().getFullYear()));
+}
