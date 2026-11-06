@@ -544,6 +544,11 @@
 		width: 60%;
 	}
 
+	.theme.green .swatch span:last-child {
+		background: #e2c068;
+		width: 35%;
+	}
+
 	.theme-label {
 		display: flex;
 		align-items: center;
