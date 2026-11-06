@@ -2,7 +2,8 @@ services:
   gallery:
     build: .
     image: client-gallery:latest
-    container_name: client-gallery
+    # Not "client-gallery": that name is used by the previous version of the app.
+    container_name: gallery
     restart: unless-stopped
     ports:
       - '${GALLERY_PORT:-3000}:3000'
