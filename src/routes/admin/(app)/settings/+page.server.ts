@@ -108,7 +108,8 @@ export const actions: Actions = {
 			defaultLayout: LAYOUTS.includes(layout) ? layout : current.defaultLayout,
 			defaultSort: SORT_ORDERS.includes(sort) ? sort : current.defaultSort,
 			defaultPublic: data.get('defaultPublic') === 'on',
-			defaultShowOnHome: data.get('defaultShowOnHome') === 'on'
+			defaultShowOnHome: data.get('defaultShowOnHome') === 'on',
+			defaultShowOnGalleries: data.get('defaultShowOnGalleries') === 'on'
 		};
 
 		const hero = data.get('heroImage');

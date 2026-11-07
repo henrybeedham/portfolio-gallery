@@ -139,9 +139,11 @@ export interface PhotoMetadata {
 	aperture: number | null;
 	exposureTime: number | null;
 	iso: number | null;
+	/** Keywords from Lightroom and similar tools, which become album tags. */
+	keywords: string[];
 }
 
-const EMPTY_METADATA: PhotoMetadata = {
+const EMPTY_METADATA: Omit<PhotoMetadata, 'keywords'> = {
 	takenAt: null,
 	camera: null,
 	lens: null,
@@ -174,6 +176,66 @@ function text(value: unknown): string | null {
 	return trimmed || null;
 }
 
+/** The longest tag name, matching what the admin UI allows. */
+const MAX_KEYWORD_LENGTH = 60;
+
+function decodeXml(value: string) {
+	return value.replace(
+		/&(?:#(\d+)|#x([\da-f]+)|(amp|lt|gt|quot|apos));/gi,
+		(entity, dec, hex, name) => {
+			if (dec || hex) {
+				const code = parseInt(dec ?? hex, dec ? 10 : 16);
+				return code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : entity;
+			}
+			return { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" }[name.toLowerCase() as 'amp'];
+		}
+	);
+}
+
+/**
+ * The `dc:subject` keywords in an XMP packet. Lightroom writes these according to each keyword's
+ * export settings (parent keywords included only when it is set to export them). They're read from
+ * the raw XML because exifr turns a lone keyword into a string, numeric ones into numbers and
+ * leaves entities like `&amp;` encoded.
+ */
+function xmpKeywords(xmp: unknown): string[] {
+	if (typeof xmp !== 'string') return [];
+	const subject = /<dc:subject(?:\s[^>]*)?>([\s\S]*?)<\/dc:subject>/.exec(xmp);
+	if (!subject) return [];
+	return [...subject[1].matchAll(/<rdf:li(?:\s[^>]*)?>([^<]*)<\/rdf:li>/g)].map((match) =>
+		decodeXml(match[1])
+	);
+}
+
+/**
+ * IPTC keywords, for files whose XMP has none. exifr decodes them as Latin-1, but Lightroom and most
+ * current tools write UTF-8, so they're re-read as UTF-8 when the bytes allow it.
+ */
+function iptcKeywords(value: unknown): string[] {
+	const list = Array.isArray(value) ? value : [value];
+	return list
+		.filter((item) => typeof item === 'string' || typeof item === 'number')
+		.map((item) => {
+			const latin1 = String(item);
+			const utf8 = Buffer.from(latin1, 'latin1').toString('utf8');
+			return utf8.includes('\uFFFD') ? latin1 : utf8;
+		});
+}
+
+/** Trims, drops empty and over-long keywords, and removes case-insensitive duplicates. */
+function cleanKeywords(keywords: string[]): string[] {
+	const seen = new Set<string>();
+	const result: string[] = [];
+	for (const keyword of keywords) {
+		const name = keyword.replace(/[\0\s]+/g, ' ').trim();
+		const folded = name.toLowerCase();
+		if (!name || name.length > MAX_KEYWORD_LENGTH || seen.has(folded)) continue;
+		seen.add(folded);
+		result.push(name);
+	}
+	return result;
+}
+
 /**
  * Reads the bytes exifr needs. JPEG EXIF lives in the first 64 KB; other formats may store it
  * near the end, so they're read whole. (Passing a path to exifr leaks a file handle, which
@@ -202,8 +264,9 @@ export async function extractMetadata(source: string): Promise<PhotoMetadata> {
 			tiff: true,
 			exif: true,
 			gps: false,
-			iptc: false,
-			xmp: false,
+			iptc: true,
+			// The raw packet, parsed by xmpKeywords. Parsed XMP would also be merged over the EXIF values.
+			xmp: { parse: false },
 			icc: false,
 			jfif: false,
 			ihdr: false,
@@ -213,7 +276,8 @@ export async function extractMetadata(source: string): Promise<PhotoMetadata> {
 	} catch {
 		exif = undefined;
 	}
-	if (!exif) return { ...EMPTY_METADATA };
+	if (!exif) return { ...EMPTY_METADATA, keywords: [] };
+	const xmp = xmpKeywords(exif.xmp);
 
 	const make = text(exif.Make);
 	const model = text(exif.Model);
@@ -232,7 +296,8 @@ export async function extractMetadata(source: string): Promise<PhotoMetadata> {
 		focalLength: num(exif.FocalLength),
 		aperture: num(exif.FNumber) ?? num(exif.ApertureValue),
 		exposureTime: num(exif.ExposureTime),
-		iso: num(exif.ISO) ?? num(exif.ISOSpeedRatings) ?? num(exif.PhotographicSensitivity)
+		iso: num(exif.ISO) ?? num(exif.ISOSpeedRatings) ?? num(exif.PhotographicSensitivity),
+		keywords: cleanKeywords(xmp.length ? xmp : iptcKeywords(exif.Keywords))
 	};
 }
 

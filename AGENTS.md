@@ -145,6 +145,8 @@ Prettier-formatted, so `bun run lint` reports it; leave it alone unless asked.
   - Each photo has a random `key`. Its `version` changes when the thumbnails are regenerated and
     is used for cache-busting (`?v=`).
   - `sharp` work goes through the `processing` limiter in `images.ts`.
+  - Embedded keywords (XMP `dc:subject`, falling back to IPTC) become album tags on upload, folder
+    import and “Re-extract metadata”. This only ever adds tags, so hand-applied ones survive.
 - **Maintenance tasks** (regenerating thumbnails, refreshing metadata, importing from a folder) run
   in memory through `jobs.ts`. The UI polls them at `/admin/api/jobs/[id]`.
 

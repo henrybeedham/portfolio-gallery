@@ -50,6 +50,7 @@ export interface SiteSettings {
 	defaultSort: SortOrder;
 	defaultPublic: boolean;
 	defaultShowOnHome: boolean;
+	defaultShowOnGalleries: boolean;
 }
 
 export type PublicSettings = Omit<SiteSettings, 'discordWebhook'>;

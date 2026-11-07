@@ -18,7 +18,7 @@ A self-hosted photography portfolio and client-delivery platform. It combines a 
 **Admin** (`/admin`)
 
 - Dashboard with totals (albums, photos, page views, photo and album downloads) and an album table.
-- Album editor with batched multi-file uploads and progress, shift-click range selection, bulk delete and tagging, cover and background images, analytics, and sharing links.
+- Album editor with batched multi-file uploads and progress, shift-click range selection, bulk delete and tagging (keywords from Lightroom and similar tools become tags automatically), cover and background images, analytics, and sharing links.
 - Maintenance jobs: regenerate thumbnails, re-extract metadata, and import from a server folder.
 - Settings for branding, the hero image, homepage copy, contact details, Discord notifications, the theme, and defaults for new albums.
 

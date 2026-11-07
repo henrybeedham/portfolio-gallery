@@ -62,10 +62,10 @@ export function parseAlbumForm(data: FormData, existing?: Album): AlbumFormResul
 		albumDate,
 		isPublic: checkbox(data, 'is_public'),
 		showOnHome: checkbox(data, 'show_on_home'),
-		// Fields not present on the "new album" form keep sensible defaults.
+		// Unchecked checkboxes aren't submitted, so the marker fields tell "off" apart from "absent".
 		showOnGalleries: has('show_on_galleries_present')
 			? checkbox(data, 'show_on_galleries')
-			: (existing?.showOnGalleries ?? true),
+			: (existing?.showOnGalleries ?? settings.defaultShowOnGalleries),
 		isFeatured: has('is_featured_present')
 			? checkbox(data, 'is_featured')
 			: (existing?.isFeatured ?? false),

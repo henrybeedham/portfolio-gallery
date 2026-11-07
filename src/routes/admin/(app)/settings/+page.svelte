@@ -19,6 +19,7 @@
 	let showContactOnHome = $state(initial.showContactOnHome);
 	let defaultPublic = $state(initial.defaultPublic);
 	let defaultShowOnHome = $state(initial.defaultShowOnHome);
+	let defaultShowOnGalleries = $state(initial.defaultShowOnGalleries);
 	let preview = $state<string | null>(null);
 	let fileInput = $state<HTMLInputElement>();
 	let saving = $state(false);
@@ -292,6 +293,11 @@
 				name="defaultShowOnHome"
 				label="Show on homepage by default"
 				bind:checked={defaultShowOnHome}
+			/>
+			<Toggle
+				name="defaultShowOnGalleries"
+				label="Show on galleries page by default"
+				bind:checked={defaultShowOnGalleries}
 			/>
 		</div>
 	</section>

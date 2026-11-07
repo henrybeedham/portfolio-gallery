@@ -182,15 +182,15 @@
 				description="List this album in the homepage “Explore More” section."
 				bind:checked={showOnHome}
 			/>
+			<input type="hidden" name="show_on_galleries_present" value="1" />
+			<Toggle
+				name="show_on_galleries"
+				label="Show on galleries page"
+				description="Include this album on the public /galleries listing."
+				bind:checked={showOnGalleries}
+			/>
 			{#if mode === 'edit'}
-				<input type="hidden" name="show_on_galleries_present" value="1" />
 				<input type="hidden" name="is_featured_present" value="1" />
-				<Toggle
-					name="show_on_galleries"
-					label="Show on galleries page"
-					description="Include this album on the public /galleries listing."
-					bind:checked={showOnGalleries}
-				/>
 				<Toggle
 					name="is_featured"
 					label="Featured on homepage"

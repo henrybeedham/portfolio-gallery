@@ -23,7 +23,8 @@ export const defaultSettings: SiteSettings = {
 	defaultLayout: 'grid',
 	defaultSort: 'oldest',
 	defaultPublic: true,
-	defaultShowOnHome: false
+	defaultShowOnHome: false,
+	defaultShowOnGalleries: false
 };
 
 let cache: SiteSettings | undefined;
