@@ -1,10 +1,12 @@
 /** Numbers for the analytics page: income, clients and gallery activity over a period. */
 import { all, get } from './db.js';
 import { listBookings } from './bookings.js';
-import { addDays, todayIso } from '#lib/utils.js';
+import { addDays, formatShortDay, isIsoDay, todayIso } from '#lib/utils.js';
 
-export const PERIODS = ['academic', '12m', 'year', 'all'] as const;
-export type Period = (typeof PERIODS)[number];
+/** Preset periods. “academic” is the current academic year, “academic-prev” the one before. */
+export const PRESETS = ['academic', 'academic-prev', '12m', 'year', 'all'] as const;
+export type Preset = (typeof PRESETS)[number];
+export type Period = Preset | 'custom';
 
 export interface Range {
 	period: Period;
@@ -91,13 +93,14 @@ function entries(): Entry[] {
 	return out;
 }
 
-export function rangeFor(period: Period, today = todayIso()): Range {
+export function rangeFor(period: Preset, today = todayIso()): Range {
 	const [y, m] = today.split('-').map(Number);
+	const academicStart = m >= 9 ? y : y - 1;
 	switch (period) {
-		case 'academic': {
-			const start = m >= 9 ? y : y - 1;
-			const current = academicYear(start);
-			return { period, ...current, previous: academicYear(start - 1) };
+		case 'academic':
+		case 'academic-prev': {
+			const start = period === 'academic' ? academicStart : academicStart - 1;
+			return { period, ...academicYear(start), previous: academicYear(start - 1) };
 		}
 		case '12m': {
 			const fromDate = new Date(Date.UTC(y, m - 12, 1));
@@ -133,6 +136,27 @@ export function rangeFor(period: Period, today = todayIso()): Range {
 			};
 		}
 	}
+}
+
+const DAY_MS = 864e5;
+
+/** A range between two dates (in either order), compared with the same number of days before it. */
+export function customRange(from: string, to: string): Range | null {
+	if (!isIsoDay(from) || !isIsoDay(to)) return null;
+	if (from > to) [from, to] = [to, from];
+	const days = Math.round((Date.parse(to) - Date.parse(from)) / DAY_MS) + 1;
+	if (days > 366 * 20) return null;
+	return {
+		period: 'custom',
+		from,
+		to,
+		label: `${formatShortDay(from)} – ${formatShortDay(to)}`,
+		previous: {
+			from: addDays(from, -days),
+			to: addDays(from, -1),
+			label: days === 1 ? 'the day before' : `the ${days} days before`
+		}
+	};
 }
 
 /** YYYY-MM keys from the range's first month to its last. */
@@ -255,8 +279,7 @@ function galleryActivity(range: Range) {
 	};
 }
 
-export function insights(period: Period) {
-	const range = rangeFor(period);
+export function insights(range: Range) {
 	const everything = entries();
 	const inRange = (r: Pick<Range, 'from' | 'to'>) =>
 		everything.filter((entry) => entry.day >= r.from && entry.day <= r.to);

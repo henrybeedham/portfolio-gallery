@@ -1,5 +1,5 @@
 <script lang="ts">
-	import ArrowLeft from '@lucide/svelte/icons/arrow-left';
+	import BackLink from '#lib/components/admin/BackLink.svelte';
 	import BookingForm from '#lib/components/admin/BookingForm.svelte';
 	import type { PageProps } from './$types';
 
@@ -11,7 +11,7 @@
 </svelte:head>
 
 <div class="page">
-	<a class="link" href="/admin/jobs"><ArrowLeft size={14} /> Jobs</a>
+	<BackLink list="jobs" label="Jobs" />
 	<header>
 		<p class="eyebrow">Jobs</p>
 		<h1>New job</h1>

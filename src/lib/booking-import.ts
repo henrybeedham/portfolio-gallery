@@ -25,6 +25,7 @@ export interface ImportRow {
 
 const COLUMNS: Record<keyof Omit<ImportRow, 'line' | 'billingAddressId'>, string[]> = {
 	title: ['job description', 'description', 'job', 'title', 'event', 'name'],
+	// “Society” is accepted too, for older spreadsheets.
 	client: ['client', 'society', 'customer'],
 	location: ['location', 'venue', 'where'],
 	startsAt: ['date and time', 'date & time', 'datetime', 'date', 'when', 'start'],
@@ -164,7 +165,7 @@ const EVENT_WORDS = new Set([
 	'event'
 ]);
 
-/** A best guess at the society from the job's title: “Boxing Christmas Dinner” → “Boxing”. */
+/** A best guess at the client from the job's title: “Boxing Christmas Dinner” → “Boxing”. */
 export function guessClient(title: string): string {
 	const words = title.trim().split(/\s+/);
 	while (words.length > 1 && EVENT_WORDS.has(words[words.length - 1].toLowerCase())) words.pop();

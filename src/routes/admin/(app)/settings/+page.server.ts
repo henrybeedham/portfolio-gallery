@@ -8,7 +8,8 @@ import { sendDiscord } from '#lib/server/discord.js';
 import { requireAdmin } from '#lib/server/guard.js';
 import { detectType, removeHeroImage, saveHeroImage, tempFile } from '#lib/server/images.js';
 import { getSettings, updateSettings } from '#lib/server/settings.js';
-import { customThemesDir, getTheme, hasTheme, themeSummaries } from '#lib/server/themes.js';
+import { getInvoiceSettings } from '#lib/server/billing.js';
+import { getTheme, hasTheme, themeSummaries } from '#lib/server/themes.js';
 import {
 	LAYOUTS,
 	SORT_ORDERS,
@@ -19,13 +20,22 @@ import {
 import { isHexColor } from '#lib/utils.js';
 import type { Actions, PageServerLoad } from './$types';
 
+/** Which themes the site and the invoice default use, for the theme list. */
+function themesInUse(siteTheme: string) {
+	const uses: Record<string, string[]> = {};
+	const add = (id: string, use: string) => (uses[id] ??= []).push(use);
+	add(getTheme(siteTheme).id, 'the site');
+	add(getTheme(getInvoiceSettings().style).id, 'new invoices');
+	return Object.fromEntries(Object.entries(uses).map(([id, list]) => [id, list.join(' and ')]));
+}
+
 export const load: PageServerLoad = ({ locals }) => {
 	requireAdmin(locals);
 	const current = getSettings();
 	return {
 		current: { ...current, theme: getTheme(current.theme).id },
 		themes: themeSummaries(),
-		customThemesDir
+		themesInUse: themesInUse(current.theme)
 	};
 };
 

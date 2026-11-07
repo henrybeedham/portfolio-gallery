@@ -182,7 +182,7 @@
 			<p class="hint">Used to fill in “Bill to” on this job’s invoices.</p>
 		</div>
 		<div class="field">
-			<label for="client">Society or client</label>
+			<label for="client">Client</label>
 			<input
 				id="client"
 				class="input"

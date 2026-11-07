@@ -12,6 +12,7 @@
 	let { data }: PageProps = $props();
 
 	const info = $derived(data.insights);
+	let customOpen = $state(false);
 	const stats = $derived(info.stats);
 
 	/** Whole pounds for axes and big figures; pence only matter on invoices. */
@@ -68,22 +69,47 @@
 	</div>
 </header>
 
-<nav class="ui-chips filters" aria-label="Period">
-	{#each data.periods as period (period.id)}
-		<a
+<div class="filters">
+	<nav class="ui-chips" aria-label="Period">
+		{#each data.presets as preset (preset.id)}
+			<a
+				class="ui-chip"
+				class:active={info.range.period === preset.id}
+				href="?period={preset.id}"
+				data-sveltekit-noscroll
+				data-sveltekit-replacestate
+				onclick={() => (customOpen = false)}
+			>
+				{preset.id.startsWith('academic') ? `Academic year ${preset.label}` : preset.label}
+			</a>
+		{/each}
+		<button
+			type="button"
 			class="ui-chip"
-			class:active={info.range.period === period.id}
-			href="?period={period.id}"
-			data-sveltekit-noscroll
-			data-sveltekit-replacestate
+			class:active={info.range.period === 'custom' || customOpen}
+			aria-expanded={customOpen}
+			onclick={() => (customOpen = !customOpen)}>Custom</button
 		>
-			{period.id === 'academic' ? `Academic year ${period.label}` : period.label}
-		</a>
-	{/each}
-	<span class="range subtle">
-		{formatShortDay(info.range.from)} – {formatShortDay(info.range.to)}
-	</span>
-</nav>
+	</nav>
+
+	{#if customOpen}
+		<form class="custom" method="GET" data-sveltekit-noscroll data-sveltekit-replacestate>
+			<label class="field">
+				<span class="label">From</span>
+				<input class="input" type="date" name="from" value={info.range.from} required />
+			</label>
+			<label class="field">
+				<span class="label">To</span>
+				<input class="input" type="date" name="to" value={info.range.to} required />
+			</label>
+			<button class="btn btn-sm btn-solid">Show</button>
+		</form>
+	{:else}
+		<span class="range subtle">
+			{formatShortDay(info.range.from)} – {formatShortDay(info.range.to)}
+		</span>
+	{/if}
+</div>
 
 <div class="body" class:loading={!!navigating.to}>
 	<section class="ui-stats">
@@ -111,8 +137,9 @@
 			<span class="eyebrow">Booked</span>
 			<strong>{pounds(stats.booked)}</strong>
 			<span class="ui-note">
-				{plural(stats.jobs, 'job')}{#if stats.tentative}
-					· {pounds(stats.tentative)} tentative{/if}
+				{[plural(stats.jobs, 'job'), stats.tentative && `${pounds(stats.tentative)} tentative`]
+					.filter(Boolean)
+					.join(' · ')}
 			</span>
 		</div>
 		<div class="ui-stat">
@@ -242,13 +269,29 @@
 
 <style>
 	.filters {
+		display: flex;
+		flex-wrap: wrap;
 		align-items: center;
+		gap: 0.75rem 1rem;
 		margin-bottom: 1.75rem;
 	}
 
 	.range {
-		margin-left: 0.5rem;
 		font-size: 0.8rem;
+	}
+
+	.custom {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: flex-end;
+		gap: 0.75rem;
+	}
+
+	.custom .input {
+		min-height: 36px;
+		padding-block: 0.35rem;
+		font-size: 0.88rem;
+		width: auto;
 	}
 
 	.body {
