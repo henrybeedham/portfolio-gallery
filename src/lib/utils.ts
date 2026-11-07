@@ -137,6 +137,25 @@ export function addDays(day: string, days: number): string {
 	return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
 }
 
+/**
+ * When an invoice issued on `issueDate` is due: the shoot date if it's still ahead and you've asked
+ * for that, otherwise after your payment terms.
+ */
+export function invoiceDueDate(
+	issueDate: string,
+	shootDay: string | null | undefined,
+	terms: { dueOnShootDate: boolean; paymentTermsDays: number }
+): string {
+	return terms.dueOnShootDate && shootDay && shootDay >= issueDate
+		? shootDay
+		: addDays(issueDate, terms.paymentTermsDays);
+}
+
+/** Records imported from a job's “paid” tick can have no number. */
+export function invoiceLabel(number: string): string {
+	return number || 'No number';
+}
+
 export function isIsoDay(value: string): boolean {
 	return /^\d{4}-\d{2}-\d{2}$/.test(value) && !isNaN(Date.parse(value));
 }

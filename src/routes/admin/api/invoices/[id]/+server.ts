@@ -3,6 +3,7 @@ import { requireAdmin } from '#lib/server/guard.js';
 import {
 	deleteInvoice,
 	getInvoice,
+	issueInvoice,
 	parseInvoice,
 	setInvoicePaid,
 	updateInvoice
@@ -29,7 +30,12 @@ export const POST: RequestHandler = async ({ request, params, locals }) => {
 			updateInvoice(invoice.id, { ...result.input, number: invoice.number });
 			return Response.json({ ok: true });
 		}
+		case 'issue': {
+			if (!invoice.draft) error(400, 'This invoice has already been issued.');
+			return Response.json({ ok: true, ...issueInvoice(invoice) });
+		}
 		case 'set-paid': {
+			if (invoice.draft) error(400, 'Issue the invoice before marking it paid.');
 			const paidAt =
 				body.paid === false
 					? null

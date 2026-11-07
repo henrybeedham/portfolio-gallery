@@ -7,14 +7,16 @@
 		client: string;
 		billingAddressId: number | null;
 		startsAt: string | null;
-		hours: number;
-		rate: number;
 		status: BookingStatus;
 	}
 
 	export interface EditorInvoice extends InvoiceDocument {
 		bookingId: number | null;
 		billingAddressId: number | null;
+		/** Not sent yet; the page issues it. */
+		draft: boolean;
+		/** A record converted from a job's old fields: no PDF, so no preview, details or style. */
+		imported: boolean;
 	}
 </script>
 
@@ -48,6 +50,8 @@
 		$props();
 
 	const start = untrack(() => initial);
+	const imported = start.imported;
+	const draft = start.draft;
 	let key = 0;
 
 	let bookingId = $state(start.bookingId ? String(start.bookingId) : '');
@@ -71,7 +75,7 @@
 			rate: moneyInput(item.rate)
 		}))
 	);
-	let saving = $state(false);
+	let saving = $state<'draft' | 'invoice' | null>(null);
 
 	const payload = $derived({
 		number: start.number,
@@ -121,10 +125,6 @@
 		if (!job || mode === 'edit') return;
 		billToName = job.client || job.title;
 		if (job.billingAddressId) applyAddress(job.billingAddressId);
-		if (items.length === 1) {
-			items[0].quantity = String(job.hours || 1);
-			items[0].rate = moneyInput(job.rate || settings.hourlyRate);
-		}
 		const shootDay = job.startsAt?.slice(0, 10);
 		if (settings.dueOnShootDate && shootDay && shootDay >= issueDate) dueDate = shootDay;
 	}
@@ -197,6 +197,7 @@
 	let timer: ReturnType<typeof setTimeout> | undefined;
 	$effect(() => {
 		const body = json;
+		if (imported) return;
 		const first = untrack(() => !frames[0] && !frames[1]);
 		clearTimeout(timer);
 		timer = setTimeout(() => refresh(body), first ? 0 : 450);
@@ -205,13 +206,19 @@
 
 	// ---- saving --------------------------------------------------------------
 
-	export async function save(): Promise<boolean> {
-		saving = true;
+	/** In create mode, `asDraft` saves it without sending; the invoice's page issues it later. */
+	export async function save(asDraft = false): Promise<boolean> {
+		saving = asDraft ? 'draft' : 'invoice';
 		try {
 			if (mode === 'create') {
-				const result = await api<{ id: number; number: string }>('/admin/api/invoices', payload);
+				const result = await api<{ id: number; number: string }>('/admin/api/invoices', {
+					...payload,
+					draft: asDraft
+				});
 				savedJson = json;
-				feedback.toast(`Invoice ${result.number} created`);
+				feedback.toast(
+					asDraft ? `Draft ${result.number} saved` : `Invoice ${result.number} created`
+				);
 				await goto(`/admin/invoices/${result.id}`);
 			} else {
 				await api(`/admin/api/invoices/${invoiceId}`, { action: 'save', invoice: payload });
@@ -224,7 +231,7 @@
 			feedback.toast((error as Error).message, 'error');
 			return false;
 		} finally {
-			saving = false;
+			saving = null;
 		}
 	}
 
@@ -233,7 +240,7 @@
 	}
 </script>
 
-<div class="editor">
+<div class="editor" class:single={imported}>
 	<div class="form">
 		<section class="ui-card">
 			<div class="ui-card-head">
@@ -249,7 +256,7 @@
 					{/each}
 				</select>
 				{#if mode === 'create'}<p class="hint">
-						Choosing a job fills in the client, hours and rate.
+						Choosing a job fills in the client, address and due date.
 					</p>{/if}
 			</div>
 			<div class="field">
@@ -320,6 +327,11 @@
 					<input id="due" class="input" type="date" bind:value={dueDate} />
 				</div>
 			</div>
+			{#if draft}
+				<p class="hint dates-hint">
+					When you issue this draft, it’s dated that day and these dates are worked out again.
+				</p>
+			{/if}
 
 			<div class="field">
 				<span class="label">Items</span>
@@ -384,100 +396,124 @@
 			</div>
 		</section>
 
-		<section class="ui-card">
-			<div class="ui-card-head head-row">
-				<div>
-					<h2>Your details</h2>
-					<p class="hint">Saved on this invoice, so changing your defaults later won’t alter it.</p>
+		{#if !imported}
+			<section class="ui-card">
+				<div class="ui-card-head head-row">
+					<div>
+						<h2>Your details</h2>
+						<p class="hint">
+							Saved on this invoice, so changing your defaults later won’t alter it.
+						</p>
+					</div>
+					<button type="button" class="link" onclick={resetSender}>
+						<RotateCcw size={13} /> Use defaults
+					</button>
 				</div>
-				<button type="button" class="link" onclick={resetSender}>
-					<RotateCcw size={13} /> Use defaults
-				</button>
-			</div>
-			<div class="ui-grid-2">
-				<div class="field">
-					<label for="s-name">Name</label>
-					<input id="s-name" class="input" bind:value={sender.name} />
+				<div class="ui-grid-2">
+					<div class="field">
+						<label for="s-name">Name</label>
+						<input id="s-name" class="input" bind:value={sender.name} />
+					</div>
+					<div class="field">
+						<label for="s-email">Email</label>
+						<input id="s-email" class="input" type="email" bind:value={sender.email} />
+					</div>
+				</div>
+				<div class="ui-grid-2">
+					<div class="field">
+						<label for="s-address">Address</label>
+						<textarea
+							id="s-address"
+							class="textarea ui-textarea-short"
+							rows="3"
+							bind:value={sender.address}></textarea>
+					</div>
+					<div class="field">
+						<label for="s-phone">Phone</label>
+						<input id="s-phone" class="input" type="tel" bind:value={sender.phone} />
+					</div>
 				</div>
 				<div class="field">
-					<label for="s-email">Email</label>
-					<input id="s-email" class="input" type="email" bind:value={sender.email} />
-				</div>
-			</div>
-			<div class="ui-grid-2">
-				<div class="field">
-					<label for="s-address">Address</label>
+					<label for="payment">Payment information</label>
 					<textarea
-						id="s-address"
+						id="payment"
 						class="textarea ui-textarea-short"
 						rows="3"
-						bind:value={sender.address}></textarea>
+						bind:value={paymentDetails}
+						placeholder="Name: …&#10;Account number: …&#10;Sort code: …"></textarea>
 				</div>
-				<div class="field">
-					<label for="s-phone">Phone</label>
-					<input id="s-phone" class="input" type="tel" bind:value={sender.phone} />
-				</div>
-			</div>
-			<div class="field">
-				<label for="payment">Payment information</label>
-				<textarea
-					id="payment"
-					class="textarea ui-textarea-short"
-					rows="3"
-					bind:value={paymentDetails}
-					placeholder="Name: …&#10;Account number: …&#10;Sort code: …"></textarea>
-			</div>
-		</section>
+			</section>
+		{/if}
 
 		<section class="ui-card">
 			<div class="ui-card-head">
-				<h2>Style &amp; payment</h2>
+				<h2>{imported ? 'Payment' : 'Style & payment'}</h2>
 			</div>
-			<div class="field">
-				<span class="label">Style</span>
-				<ThemePicker {themes} name="invoice-style" bind:value={style} compact />
-			</div>
-			<div class="paid">
-				<Toggle
-					label="Paid"
-					description="Shows a paid stamp and a balance of £0.00."
-					bind:checked={paid}
-				/>
-				{#if paid}
-					<input class="input paid-date" type="date" bind:value={paidAt} aria-label="Date paid" />
-				{/if}
-			</div>
+			{#if !imported}
+				<div class="field">
+					<span class="label">Style</span>
+					<ThemePicker {themes} name="invoice-style" bind:value={style} compact />
+				</div>
+			{/if}
+			{#if draft}
+				<p class="hint">Issue the invoice before marking it paid.</p>
+			{:else}
+				<div class="paid">
+					<Toggle
+						label="Paid"
+						description={imported
+							? 'When it was paid, if you know.'
+							: 'Shows a paid stamp and a balance of £0.00.'}
+						bind:checked={paid}
+					/>
+					{#if paid}
+						<input class="input paid-date" type="date" bind:value={paidAt} aria-label="Date paid" />
+					{/if}
+				</div>
+			{/if}
 		</section>
 
 		<div class="submit">
 			{#if dirty && mode === 'edit'}<span class="unsaved">Unsaved changes</span>{/if}
-			<button class="btn btn-solid" disabled={saving || (mode === 'edit' && !dirty)} onclick={save}>
-				{#if saving}<span class="spinner"></span>{/if}
+			{#if mode === 'create'}
+				<button class="btn btn-quiet" disabled={!!saving} onclick={() => save(true)}>
+					{#if saving === 'draft'}<span class="spinner"></span>{/if}
+					Save Draft
+				</button>
+			{/if}
+			<button
+				class="btn btn-solid"
+				disabled={!!saving || (mode === 'edit' && !dirty)}
+				onclick={() => save()}
+			>
+				{#if saving === 'invoice'}<span class="spinner"></span>{/if}
 				{mode === 'create' ? 'Create Invoice' : 'Save Changes'}
 			</button>
 		</div>
 	</div>
 
-	<aside class="preview" aria-label="Preview">
-		<div class="preview-head">
-			<span class="eyebrow">Preview</span>
-			{#if previewing}<span class="spinner subtle"></span>{/if}
-		</div>
-		<div class="sheet">
-			{#each frames as src, index (index)}
-				{#if src}
-					<iframe
-						title="Invoice preview"
-						{src}
-						class:shown={index === active}
-						onload={() => onframeload(index)}
-						inert={index !== active}
-					></iframe>
-				{/if}
-			{/each}
-			{#if previewError}<p class="preview-error">{previewError}</p>{/if}
-		</div>
-	</aside>
+	{#if !imported}
+		<aside class="preview" aria-label="Preview">
+			<div class="preview-head">
+				<span class="eyebrow">Preview</span>
+				{#if previewing}<span class="spinner subtle"></span>{/if}
+			</div>
+			<div class="sheet">
+				{#each frames as src, index (index)}
+					{#if src}
+						<iframe
+							title="Invoice preview"
+							{src}
+							class:shown={index === active}
+							onload={() => onframeload(index)}
+							inert={index !== active}
+						></iframe>
+					{/if}
+				{/each}
+				{#if previewError}<p class="preview-error">{previewError}</p>{/if}
+			</div>
+		</aside>
+	{/if}
 </div>
 
 <style>
@@ -490,6 +526,10 @@
 	@media (min-width: 1240px) {
 		.editor {
 			grid-template-columns: minmax(0, 640px) minmax(380px, 1fr);
+		}
+
+		.editor.single {
+			grid-template-columns: minmax(0, 640px);
 		}
 
 		.preview {
@@ -578,6 +618,10 @@
 
 	.paid-date {
 		width: auto;
+	}
+
+	.dates-hint {
+		margin-top: -0.5rem;
 	}
 
 	.submit {

@@ -12,7 +12,7 @@
 	import StateBadge from '#lib/components/admin/StateBadge.svelte';
 	import { api, feedback } from '#lib/components/admin/feedback.svelte.js';
 	import { formatMoney } from '#lib/money.js';
-	import { formatJobDate, formatShortDay } from '#lib/utils.js';
+	import { formatJobDate, formatShortDay, invoiceLabel } from '#lib/utils.js';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
@@ -77,7 +77,9 @@
 				<StateBadge state={booking.payment} />
 				{#if booking.shot}<span class="ui-badge ok">Shot</span>{/if}
 				{#if booking.delivered}<span class="ui-badge ok">Delivered</span>{/if}
-				<span class="subtle">{formatMoney(booking.fee)}</span>
+				{#if booking.invoices.length}
+					<span class="subtle">{formatMoney(booking.total)}</span>
+				{/if}
 			</div>
 		</div>
 		<div class="ui-actions">
@@ -95,7 +97,6 @@
 				initial={data.initial}
 				addresses={data.addresses}
 				clients={data.clients}
-				hasInvoices={booking.invoices.length > 0}
 				error={form?.error ?? null}
 				errorField={form?.field ?? null}
 			/>
@@ -109,46 +110,48 @@
 						<Plus size={13} /> New
 					</a>
 				</div>
-				{#if booking.invoices.length || booking.legacyInvoices}
+				{#if booking.invoices.length}
 					<ul class="list">
 						{#each booking.invoices as invoice (invoice.id)}
 							<li>
 								<div>
-									<a class="ui-title" href="/admin/invoices/{invoice.id}">{invoice.number}</a>
+									<a class="ui-title" href="/admin/invoices/{invoice.id}"
+										>{invoiceLabel(invoice.number)}</a
+									>
 									<span class="ui-sub">
 										{formatMoney(invoice.total)}
-										{#if invoice.paidAt}
+										{#if invoice.state === 'draft'}
+											· not sent yet
+										{:else if invoice.paidAt}
 											· paid {formatShortDay(invoice.paidAt)}
 										{:else if invoice.dueDate}
 											· due {formatShortDay(invoice.dueDate)}
 										{/if}
+										{#if invoice.imported}· imported{/if}
 									</span>
 								</div>
 								<div class="ui-row-actions">
 									<StateBadge state={invoice.state} />
-									<a
-										class="ui-icon-btn"
-										href="/admin/api/invoices/{invoice.id}/pdf"
-										download
-										title="Download PDF"
-										aria-label="Download invoice {invoice.number}"
-									>
-										<Download size={15} strokeWidth={1.5} />
-									</a>
-								</div>
-							</li>
-						{/each}
-						{#each booking.legacyInvoices.split(/,\s*/).filter(Boolean) as number (number)}
-							<li>
-								<div>
-									<span class="ui-title">{number}</span>
-									<span class="ui-sub">Sent before this system</span>
+									{#if invoice.state !== 'draft' && !invoice.imported}
+										<a
+											class="ui-icon-btn"
+											href="/admin/api/invoices/{invoice.id}/pdf"
+											download
+											title="Download PDF"
+											aria-label="Download invoice {invoice.number}"
+										>
+											<Download size={15} strokeWidth={1.5} />
+										</a>
+									{/if}
 								</div>
 							</li>
 						{/each}
 					</ul>
 				{:else}
-					<p class="empty muted">No invoices yet.</p>
+					<p class="empty muted">
+						No invoices yet. The fee lives on an invoice: start one and save it as a draft until you
+						send it.
+					</p>
 				{/if}
 			</section>
 

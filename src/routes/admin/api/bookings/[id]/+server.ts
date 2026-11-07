@@ -17,7 +17,7 @@ function requireBooking(id: string) {
 	return booking;
 }
 
-const FLAGS: BookingFlag[] = ['shot', 'delivered', 'paid'];
+const FLAGS: BookingFlag[] = ['shot', 'delivered'];
 
 export const POST: RequestHandler = async ({ request, params, locals }) => {
 	requireAdmin(locals);
