@@ -1,6 +1,7 @@
 <script lang="ts">
+	import { listUrl } from '#lib/components/admin/list-memory.js';
+	import BackLink from '#lib/components/admin/BackLink.svelte';
 	import { goto, invalidate } from '$app/navigation';
-	import ArrowLeft from '@lucide/svelte/icons/arrow-left';
 	import Download from '@lucide/svelte/icons/download';
 	import ExternalLink from '@lucide/svelte/icons/external-link';
 	import Copy from '@lucide/svelte/icons/copy';
@@ -35,7 +36,7 @@
 		try {
 			await api(`/admin/api/invoices/${invoice.id}`, undefined, 'DELETE');
 			feedback.toast(`Deleted invoice ${invoice.number}`);
-			await goto('/admin/invoices');
+			await goto(listUrl('invoices'));
 		} catch (error) {
 			feedback.toast((error as Error).message, 'error');
 		}
@@ -51,7 +52,7 @@
 	<title>Invoice {invoice.number} — Admin</title>
 </svelte:head>
 
-<a class="link" href="/admin/invoices"><ArrowLeft size={14} /> Invoices</a>
+<BackLink list="invoices" label="Invoices" />
 
 <header class="ui-head head">
 	<div>

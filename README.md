@@ -24,11 +24,11 @@ A self-hosted photography portfolio and client-delivery platform. It combines a 
 
 **Jobs, invoices and analytics**
 
-- **Jobs** (`/admin/jobs`): each shoot with its date, client (society), hours, rate and location, plus
+- **Jobs** (`/admin/jobs`): each shoot with its date, client, hours, rate and location, plus
   whether it's confirmed, tentative or cancelled. Tick off shot, delivered and paid straight from the
   list, and link one or more albums. Albums never need a job or an invoice.
-- **Saved addresses**: type a society's name and pick AU, Guild or any other saved address. Societies
-  you've billed before pick their address automatically.
+- **Saved addresses**: type a client's name and pick AU, Guild or any other saved address (or
+  type one in for one-off clients). Clients you've billed before pick their address automatically.
 - **Invoices** (`/admin/invoices`): PDF invoices with a live preview, a unique random 8-digit number,
   line items, a due date (by default the shoot date, or your payment terms), and a paid stamp once
   paid. Your details, bank details and notes are copied onto each invoice, so changing your defaults
@@ -39,13 +39,13 @@ A self-hosted photography portfolio and client-delivery platform. It combines a 
   and cancelled jobs are left out by default, and re-importing skips jobs that are already there.
 - **Analytics** (`/admin/analytics`): earnings, money awaiting payment, booked work, average job and
   time to get paid, income by month (paid → invoiced → booked → tentative), top clients, AU vs Guild,
-  and weekly gallery views and downloads. Filter by academic year, the last 12 months, calendar year
-  or all time.
+  and weekly gallery views and downloads. Filter by this or last academic year, the last 12 months, the calendar year, all time, or
+  any custom dates.
 
 **Themes**
 
 Themes are JSON files: the built-in light, dark and green themes are in `src/lib/themes/`, and you
-can drop your own into `data/themes/` without rebuilding. See [`src/lib/themes/README.md`](src/lib/themes/README.md)
+can upload your own under **Settings → Appearance** (they're saved in `data/themes/`) without rebuilding. See [`src/lib/themes/README.md`](src/lib/themes/README.md)
 for the format.
 
 ## Quick start (Docker)

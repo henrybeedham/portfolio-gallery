@@ -1,5 +1,5 @@
 <script lang="ts">
-	import ArrowLeft from '@lucide/svelte/icons/arrow-left';
+	import BackLink from '#lib/components/admin/BackLink.svelte';
 	import InvoiceEditor from '#lib/components/admin/InvoiceEditor.svelte';
 	import type { PageProps } from './$types';
 
@@ -11,7 +11,7 @@
 	<title>New invoice — {data.settings.siteTitle}</title>
 </svelte:head>
 
-<a class="link" href="/admin/invoices"><ArrowLeft size={14} /> Invoices</a>
+<BackLink list="invoices" label="Invoices" />
 
 <header class="ui-head head">
 	<div>

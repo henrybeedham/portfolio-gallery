@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { rememberList } from '#lib/components/admin/list-memory.js';
 	import { invalidate } from '$app/navigation';
 	import { page } from '$app/state';
 	import Plus from '@lucide/svelte/icons/plus';
@@ -16,6 +17,9 @@
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
+
+	// So the back links on a invoice's page return to this filter.
+	$effect(() => rememberList('invoices', page.url.search));
 	let pending = $state<number | null>(null);
 
 	type Filter = 'all' | 'unpaid' | 'overdue' | 'paid';
