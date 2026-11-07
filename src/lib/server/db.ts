@@ -1,7 +1,11 @@
 import { DatabaseSync, type StatementSync, type SQLInputValue } from 'node:sqlite';
 import { ensureDirs, paths } from './config.js';
+import { moveJobMoneyToInvoices } from './legacy-money.js';
 
-const MIGRATIONS: string[] = [
+/** SQL, or a function for migrations that convert data. Each runs inside its own transaction. */
+type Migration = string | ((db: DatabaseSync) => void);
+
+const MIGRATIONS: Migration[] = [
 	`
 	CREATE TABLE settings (
 		key TEXT PRIMARY KEY,
@@ -149,7 +153,10 @@ const MIGRATIONS: string[] = [
 	`
 	ALTER TABLE albums ADD COLUMN theme TEXT;
 	ALTER TABLE albums DROP COLUMN accent_color;
-	`
+	`,
+	// Money lives on invoices only. Jobs lose hours, rate, paid and earlier invoice numbers, which
+	// become imported records or drafts; invoices gain draft and imported flags.
+	moveJobMoneyToInvoices
 ];
 
 let db: DatabaseSync | undefined;
@@ -160,7 +167,9 @@ function migrate(instance: DatabaseSync) {
 	for (let version = row.user_version; version < MIGRATIONS.length; version++) {
 		instance.exec('BEGIN');
 		try {
-			instance.exec(MIGRATIONS[version]);
+			const migration = MIGRATIONS[version];
+			if (typeof migration === 'string') instance.exec(migration);
+			else migration(instance);
 			instance.exec(`PRAGMA user_version = ${version + 1}`);
 			instance.exec('COMMIT');
 		} catch (error) {

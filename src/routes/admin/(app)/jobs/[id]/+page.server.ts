@@ -8,7 +8,6 @@ import {
 	updateBooking
 } from '#lib/server/bookings.js';
 import { requireAdmin } from '#lib/server/guard.js';
-import { moneyInput } from '#lib/money.js';
 import type { Actions, PageServerLoad } from './$types';
 
 function requireBooking(id: string) {
@@ -33,13 +32,9 @@ export const load: PageServerLoad = ({ params, locals, depends }) => {
 			location: booking.location,
 			date: booking.startsAt?.slice(0, 10) ?? '',
 			time: booking.startsAt?.slice(11, 16) ?? '',
-			hours: booking.hours ? String(booking.hours) : '',
-			rate: moneyInput(booking.rate),
 			status: booking.status,
 			shot: booking.shot,
 			delivered: booking.delivered,
-			paid: booking.paid,
-			legacyInvoices: booking.legacyInvoices,
 			notes: booking.notes
 		}
 	};

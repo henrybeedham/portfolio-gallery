@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import { all, get, run } from './db.js';
 import { billingAddressText, getBillingAddress, getInvoiceSettings } from './billing.js';
-import { getBooking, invoiceState, legacyInvoiceNumbers } from './bookings.js';
+import { getBooking, invoiceState } from './bookings.js';
 import { getTheme, hasTheme } from './themes.js';
 import { itemsTotal } from '#lib/money.js';
 import type {
@@ -11,12 +11,16 @@ import type {
 	InvoiceSender,
 	InvoiceSummary
 } from '#lib/types.js';
-import { addDays, isIsoDay, todayIso } from '#lib/utils.js';
+import { invoiceDueDate, isIsoDay, todayIso } from '#lib/utils.js';
 
 export interface Invoice extends InvoiceDocument {
 	id: number;
 	bookingId: number | null;
 	billingAddressId: number | null;
+	/** Not sent yet: it holds the expected fee and is dated when it's issued. */
+	draft: boolean;
+	/** Converted from a job's old fee, paid tick or earlier invoice numbers; there's no PDF. */
+	imported: boolean;
 	total: number;
 	createdAt: string;
 	updatedAt: string;
@@ -40,6 +44,8 @@ interface InvoiceRow {
 	total: number;
 	style: string;
 	paid_at: string | null;
+	draft: number;
+	imported: number;
 	created_at: string;
 	updated_at: string;
 }
@@ -69,15 +75,19 @@ function mapInvoice(row: InvoiceRow): Invoice {
 		total: row.total,
 		style: row.style,
 		paidAt: row.paid_at,
+		draft: !!row.draft,
+		imported: !!row.imported,
 		createdAt: row.created_at,
 		updatedAt: row.updated_at
 	};
 }
 
-export function isInvoiceNumberTaken(number: string, exceptId?: number): boolean {
-	const row = get<{ id: number }>('SELECT id FROM invoices WHERE number = ?', number);
-	if (row && row.id !== exceptId) return true;
-	return legacyInvoiceNumbers().has(number);
+/** Checks invoices made here and the numbers on imported records (which can list several). */
+export function isInvoiceNumberTaken(number: string): boolean {
+	if (get('SELECT 1 FROM invoices WHERE number = ?', number)) return true;
+	return all<{ number: string }>(
+		"SELECT number FROM invoices WHERE imported = 1 AND number LIKE '%,%'"
+	).some((row) => row.number.split(/,\s*/).includes(number));
 }
 
 /** A random 8-digit number (never starting with 0) that no invoice, old or new, has used. */
@@ -101,12 +111,14 @@ export function listInvoices(): InvoiceSummary[] {
 		due_date: string | null;
 		total: number;
 		paid_at: string | null;
+		draft: number;
+		imported: number;
 		style: string;
 	}>(
 		`SELECT i.id, i.number, i.booking_id, b.title AS booking_title, i.bill_to_name, i.issue_date,
-			i.due_date, i.total, i.paid_at, i.style
+			i.due_date, i.total, i.paid_at, i.draft, i.imported, i.style
 		 FROM invoices i LEFT JOIN bookings b ON b.id = i.booking_id
-		 ORDER BY i.issue_date DESC, i.id DESC`
+		 ORDER BY i.draft DESC, i.issue_date DESC, i.id DESC`
 	).map((row) => ({
 		id: row.id,
 		number: row.number,
@@ -117,7 +129,8 @@ export function listInvoices(): InvoiceSummary[] {
 		dueDate: row.due_date,
 		total: row.total,
 		paidAt: row.paid_at,
-		state: invoiceState({ paidAt: row.paid_at, dueDate: row.due_date }, today),
+		state: invoiceState({ draft: !!row.draft, paidAt: row.paid_at, dueDate: row.due_date }, today),
+		imported: !!row.imported,
 		style: row.style
 	}));
 }
@@ -130,8 +143,8 @@ export function getInvoice(id: number): Invoice | undefined {
 export function createInvoice(input: InvoiceInput): number {
 	return run(
 		`INSERT INTO invoices (number, booking_id, billing_address_id, issue_date, due_date, bill_to_name,
-			bill_to_address, sender, payment_details, notes, items, total, style, paid_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			bill_to_address, sender, payment_details, notes, items, total, style, paid_at, draft, imported)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		input.number,
 		input.bookingId,
 		input.billingAddressId,
@@ -145,16 +158,22 @@ export function createInvoice(input: InvoiceInput): number {
 		JSON.stringify(input.items),
 		itemsTotal(input.items),
 		input.style,
-		input.paidAt
+		input.draft ? null : input.paidAt,
+		input.draft,
+		input.imported
 	).lastInsertRowid;
 }
 
-/** The number never changes once an invoice exists. */
+/**
+ * The number, draft and imported flags never change here; issuing a draft is `issueInvoice`.
+ * A draft can't be paid until it's issued.
+ */
 export function updateInvoice(id: number, input: InvoiceInput) {
 	run(
 		`UPDATE invoices SET booking_id = ?, billing_address_id = ?, issue_date = ?, due_date = ?, bill_to_name = ?,
 			bill_to_address = ?, sender = ?, payment_details = ?, notes = ?, items = ?, total = ?, style = ?,
-			paid_at = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+			paid_at = CASE WHEN draft = 1 THEN NULL ELSE ? END,
+			updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
 		 WHERE id = ?`,
 		input.bookingId,
 		input.billingAddressId,
@@ -173,6 +192,27 @@ export function updateInvoice(id: number, input: InvoiceInput) {
 	);
 }
 
+/**
+ * Sends a draft: it's dated today and due by your usual rule (the shoot date if it's still ahead,
+ * otherwise after your payment terms), as a new invoice would be.
+ */
+export function issueInvoice(invoice: Invoice): { issueDate: string; dueDate: string } {
+	const issueDate = todayIso();
+	const shootDay = invoice.bookingId
+		? getBooking(invoice.bookingId)?.startsAt?.slice(0, 10)
+		: undefined;
+	const dueDate = invoiceDueDate(issueDate, shootDay, getInvoiceSettings());
+	run(
+		`UPDATE invoices SET draft = 0, issue_date = ?, due_date = ?,
+			updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+		 WHERE id = ?`,
+		issueDate,
+		dueDate,
+		invoice.id
+	);
+	return { issueDate, dueDate };
+}
+
 export function setInvoicePaid(id: number, paidAt: string | null) {
 	run(
 		`UPDATE invoices SET paid_at = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?`,
@@ -186,12 +226,10 @@ export function deleteInvoice(id: number) {
 }
 
 /** A new invoice filled in from your invoice settings and, optionally, a job. */
-export function draftInvoice(booking?: Booking): InvoiceInput {
+export function newInvoice(booking?: Booking): InvoiceInput {
 	const settings = getInvoiceSettings();
 	const issueDate = todayIso();
-	let dueDate = addDays(issueDate, settings.paymentTermsDays);
-	const shootDay = booking?.startsAt?.slice(0, 10);
-	if (settings.dueOnShootDate && shootDay && shootDay >= issueDate) dueDate = shootDay;
+	const dueDate = invoiceDueDate(issueDate, booking?.startsAt?.slice(0, 10), settings);
 	const address = getBillingAddress(booking?.billingAddressId);
 
 	return {
@@ -205,15 +243,11 @@ export function draftInvoice(booking?: Booking): InvoiceInput {
 		sender: { ...settings.sender },
 		paymentDetails: settings.paymentDetails,
 		notes: settings.notes,
-		items: [
-			{
-				description: settings.itemDescription,
-				quantity: booking?.hours || 1,
-				rate: booking?.rate || settings.hourlyRate
-			}
-		],
+		items: [{ description: settings.itemDescription, quantity: 1, rate: settings.hourlyRate }],
 		style: getTheme(settings.style).id,
-		paidAt: null
+		paidAt: null,
+		draft: false,
+		imported: false
 	};
 }
 
@@ -235,7 +269,7 @@ function id(value: unknown): number | null {
 
 export type InvoiceParseResult = { ok: true; input: InvoiceInput } | { ok: false; error: string };
 
-/** Validates an invoice sent by the editor (as JSON). */
+/** Validates an invoice sent by the editor (as JSON). `draft` only matters when creating one. */
 export function parseInvoice(raw: unknown): InvoiceParseResult {
 	if (!raw || typeof raw !== 'object') return { ok: false, error: 'Missing invoice details.' };
 	const body = raw as Record<string, unknown>;
@@ -292,7 +326,9 @@ export function parseInvoice(raw: unknown): InvoiceParseResult {
 			notes: text(body.notes, 4000),
 			items,
 			style: hasTheme(style) ? style : getTheme(getInvoiceSettings().style).id,
-			paidAt: day(body.paidAt)
+			paidAt: day(body.paidAt),
+			draft: body.draft === true,
+			imported: false
 		}
 	};
 }

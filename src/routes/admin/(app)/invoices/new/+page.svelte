@@ -15,7 +15,7 @@
 
 <header class="ui-head head">
 	<div>
-		<p class="eyebrow">No. {data.draft.number}</p>
+		<p class="eyebrow">No. {data.initial.number}</p>
 		<h1>New invoice</h1>
 	</div>
 </header>
@@ -27,10 +27,10 @@
 	</p>
 {/if}
 
-{#key data.draft.number}
+{#key data.initial.number}
 	<InvoiceEditor
 		mode="create"
-		initial={data.draft}
+		initial={data.initial}
 		addresses={data.addresses}
 		jobs={data.jobs}
 		clients={data.clients}

@@ -1,34 +1,14 @@
 /** Saved billing addresses and the defaults used for new invoices. */
 import { all, get, run } from './db.js';
+import { mergeInvoiceSettings } from './invoice-defaults.js';
 import type { BillingAddress, InvoiceSettings } from '#lib/types.js';
-
-export const defaultInvoiceSettings: InvoiceSettings = {
-	sender: { name: '', address: '', phone: '', email: '' },
-	paymentDetails: '',
-	notes: 'Thanks very much :)',
-	itemDescription: 'Photography Services (Hourly)',
-	hourlyRate: 6000,
-	style: 'light',
-	paymentTermsDays: 30,
-	dueOnShootDate: true
-};
 
 let cache: InvoiceSettings | undefined;
 
 export function getInvoiceSettings(): InvoiceSettings {
 	if (!cache) {
 		const row = get<{ value: string }>(`SELECT value FROM settings WHERE key = 'invoicing'`);
-		let stored: Partial<InvoiceSettings> = {};
-		try {
-			stored = row ? JSON.parse(row.value) : {};
-		} catch {
-			stored = {};
-		}
-		cache = {
-			...defaultInvoiceSettings,
-			...stored,
-			sender: { ...defaultInvoiceSettings.sender, ...stored.sender }
-		};
+		cache = mergeInvoiceSettings(row?.value);
 	}
 	return cache;
 }
