@@ -1,0 +1,133 @@
+{
+	"$schema": "http://json-schema.org/draft-07/schema#",
+	"title": "Gallery theme",
+	"description": "A colour theme for the public site, the admin and PDF invoices. The file name (without .json) is the theme's id.",
+	"type": "object",
+	"additionalProperties": false,
+	"properties": {
+		"$schema": { "type": "string" },
+		"name": { "type": "string", "description": "Shown in the theme pickers." },
+		"description": { "type": "string" },
+		"icon": {
+			"type": "string",
+			"description": "Icon shown next to the name.",
+			"enum": [
+				"sun",
+				"moon",
+				"leaf",
+				"palette",
+				"flower",
+				"waves",
+				"snowflake",
+				"flame",
+				"coffee",
+				"mountain",
+				"sparkles",
+				"droplet",
+				"cherry",
+				"sunset"
+			]
+		},
+		"scheme": {
+			"type": "string",
+			"enum": ["light", "dark"],
+			"description": "Tells the browser whether to draw light or dark scrollbars and form controls."
+		},
+		"order": { "type": "number", "description": "Position in the pickers (lowest first)." },
+		"extends": {
+			"type": "string",
+			"description": "Id of another theme to start from. Only the colours you list are changed."
+		},
+		"colors": { "$ref": "#/definitions/colors" },
+		"invoice": {
+			"$ref": "#/definitions/colors",
+			"description": "Overrides used only on PDF invoices, e.g. a white page for printing. Invoices use bg, text, text-muted, text-subtle, border, border-strong, surface and highlight."
+		}
+	},
+	"definitions": {
+		"color": {
+			"type": "string",
+			"pattern": "^[#a-zA-Z0-9(),.%\\s/-]+$",
+			"description": "Any CSS colour: #rrggbb, rgba(…), hsl(…). Invoices understand hex and rgb()/rgba() only."
+		},
+		"colors": {
+			"type": "object",
+			"description": "Each key becomes a CSS custom property (\"bg\" → --bg).",
+			"properties": {
+				"bg": { "$ref": "#/definitions/color", "description": "Page background." },
+				"bg-elevated": {
+					"$ref": "#/definitions/color",
+					"description": "Cards, panels, inputs and the admin sidebar."
+				},
+				"surface": {
+					"$ref": "#/definitions/color",
+					"description": "Hover fills, active navigation, code backgrounds."
+				},
+				"surface-strong": { "$ref": "#/definitions/color", "description": "Stronger fills." },
+				"text": {
+					"$ref": "#/definitions/color",
+					"description": "Primary text and the default ink."
+				},
+				"text-muted": { "$ref": "#/definitions/color", "description": "Body copy and labels." },
+				"text-subtle": {
+					"$ref": "#/definitions/color",
+					"description": "Hints, metadata, table headers."
+				},
+				"border": { "$ref": "#/definitions/color", "description": "Default hairlines." },
+				"border-strong": {
+					"$ref": "#/definitions/color",
+					"description": "Hovered inputs, quiet buttons, badges."
+				},
+				"overlay": { "$ref": "#/definitions/color", "description": "Scrims over content." },
+				"header-bg": {
+					"$ref": "#/definitions/color",
+					"description": "Translucent sticky header (blurred)."
+				},
+				"lightbox-bg": {
+					"$ref": "#/definitions/color",
+					"description": "Full-screen photo viewer."
+				},
+				"danger": { "$ref": "#/definitions/color" },
+				"danger-soft": { "$ref": "#/definitions/color" },
+				"success": { "$ref": "#/definitions/color" },
+				"success-soft": { "$ref": "#/definitions/color" },
+				"warning": { "$ref": "#/definitions/color" },
+				"warning-soft": { "$ref": "#/definitions/color" },
+				"accent": {
+					"$ref": "#/definitions/color",
+					"description": "Selected states, chips and accent buttons."
+				},
+				"accent-text": {
+					"$ref": "#/definitions/color",
+					"description": "Text on the accent colour."
+				},
+				"placeholder": {
+					"$ref": "#/definitions/color",
+					"description": "Background behind images while they load."
+				},
+				"highlight": {
+					"$ref": "#/definitions/color",
+					"description": "Optional. Replaces the ink colour for solid buttons, eyebrows, focus rings and selection."
+				},
+				"chart-1": {
+					"$ref": "#/definitions/color",
+					"description": "Optional. Main analytics chart colour (default: highlight, or text)."
+				},
+				"chart-2": {
+					"$ref": "#/definitions/color",
+					"description": "Optional. Second step of the chart ramp."
+				},
+				"chart-3": {
+					"$ref": "#/definitions/color",
+					"description": "Optional. Third step of the chart ramp."
+				},
+				"chart-4": {
+					"$ref": "#/definitions/color",
+					"description": "Optional. Lightest step of the chart ramp."
+				}
+			},
+			"propertyNames": { "pattern": "^[a-z][a-z0-9-]*$" },
+			"additionalProperties": { "$ref": "#/definitions/color" }
+		}
+	}
+}

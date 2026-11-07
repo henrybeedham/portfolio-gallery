@@ -1,0 +1,31 @@
+{
+	"$schema": "./theme.schema.json",
+	"name": "Dark",
+	"description": "Warm charcoal with cream type.",
+	"icon": "moon",
+	"scheme": "dark",
+	"order": 2,
+	"colors": {
+		"bg": "#141311",
+		"bg-elevated": "#1b1a17",
+		"surface": "#22201c",
+		"surface-strong": "#2b2924",
+		"text": "#ece5d9",
+		"text-muted": "#a99f90",
+		"text-subtle": "#7a7266",
+		"border": "#33302a",
+		"border-strong": "#4a453c",
+		"overlay": "rgba(20, 19, 17, 0.84)",
+		"header-bg": "rgba(20, 19, 17, 0.76)",
+		"lightbox-bg": "rgba(18, 17, 15, 0.94)",
+		"danger": "#e08470",
+		"danger-soft": "rgba(224, 132, 112, 0.1)",
+		"success": "#8cc29b",
+		"success-soft": "rgba(140, 194, 155, 0.1)",
+		"warning": "#e0b860",
+		"warning-soft": "rgba(224, 184, 96, 0.1)",
+		"accent": "#ece5d9",
+		"accent-text": "#141311",
+		"placeholder": "#26241f"
+	}
+}
