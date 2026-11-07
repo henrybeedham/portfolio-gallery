@@ -253,7 +253,7 @@
 					</p>{/if}
 			</div>
 			<div class="field">
-				<label for="bill-name">Society or client</label>
+				<label for="bill-name">Client</label>
 				<input
 					id="bill-name"
 					class="input"

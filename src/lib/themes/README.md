@@ -5,14 +5,17 @@ Each theme is one JSON file. The file name (without `.json`) is the theme's id. 
 - the public site and the admin (Settings → Appearance), and
 - PDF invoices (each invoice has its own style; the default is under Invoices → Settings).
 
-## Where theme files go
+## Adding a theme
 
-| Folder                                            | When to use it                                                                |
-| ------------------------------------------------- | ----------------------------------------------------------------------------- |
-| `src/lib/themes/`                                 | Built-in themes, bundled with the app. Rebuild/redeploy after adding one.     |
-| `DATA_DIR/themes/` (`./data/themes/` with Docker) | Your own themes. No rebuild: they appear in the pickers within a few seconds. |
+The easiest way: **Settings → Appearance → Upload Theme**, and choose one or more `.json` files.
+The file name becomes the theme's id (`Plum.json` → `plum`). Uploading a file with an existing
+theme's name updates it, and one named after a built-in theme (`light.json`, `dark.json`,
+`green.json`) replaces that theme until you delete it. The same list lets you download any theme
+(handy as a starting point) and delete uploaded ones.
 
-A file in `DATA_DIR/themes/` with the same name as a built-in theme replaces it.
+Uploaded themes are saved in `DATA_DIR/themes/` (`./data/themes/` with Docker Compose), so you can
+also copy files there directly; they appear within a few seconds. Built-in themes live in
+`src/lib/themes/` and need a rebuild after changes.
 
 ## Format
 

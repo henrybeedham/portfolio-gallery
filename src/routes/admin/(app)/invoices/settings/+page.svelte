@@ -1,7 +1,7 @@
 <script lang="ts">
+	import BackLink from '#lib/components/admin/BackLink.svelte';
 	import { untrack } from 'svelte';
 	import { enhance, type SubmitFunction } from '$app/forms';
-	import ArrowLeft from '@lucide/svelte/icons/arrow-left';
 	import Plus from '@lucide/svelte/icons/plus';
 	import ThemePicker from '#lib/components/admin/ThemePicker.svelte';
 	import Toggle from '#lib/components/admin/Toggle.svelte';
@@ -67,7 +67,7 @@
 	<title>Invoice settings — {data.settings.siteTitle}</title>
 </svelte:head>
 
-<a class="link" href="/admin/invoices"><ArrowLeft size={14} /> Invoices</a>
+<BackLink list="invoices" label="Invoices" />
 
 <header class="head">
 	<p class="eyebrow">Invoices</p>
@@ -213,8 +213,8 @@
 		<div class="ui-card-head">
 			<h2>Saved addresses</h2>
 			<p class="hint">
-				Pick one when you bill a society, e.g. AU or Guild. The short name is what you click; the
-				organisation and address are printed under the society’s name.
+				Pick one when you bill a client, e.g. AU or Guild. The short name is what you click; the
+				organisation and address are printed under the client’s name.
 			</p>
 		</div>
 

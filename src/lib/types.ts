@@ -13,6 +13,8 @@ export interface ThemeSummary {
 	icon: string;
 	scheme: 'light' | 'dark';
 	swatch: { bg: string; surface: string; text: string; border: string; accent: string };
+	/** Bundled with the app, uploaded, or uploaded with the same name as a bundled theme. */
+	source: 'built-in' | 'custom' | 'replaced';
 }
 
 export const LAYOUTS: Layout[] = ['grid', 'masonry'];
@@ -237,7 +239,7 @@ export interface AlbumRef {
 export interface Booking {
 	id: number;
 	title: string;
-	/** Society or client name, printed in bold on invoices. */
+	/** Client name (a society, business or person), printed in bold on invoices. */
 	client: string;
 	billingAddressId: number | null;
 	billingLabel: string | null;

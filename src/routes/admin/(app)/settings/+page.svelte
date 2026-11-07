@@ -3,6 +3,7 @@
 	import { enhance } from '$app/forms';
 	import ImageIcon from '@lucide/svelte/icons/image';
 	import ThemePicker from '#lib/components/admin/ThemePicker.svelte';
+	import ThemeManager from '#lib/components/admin/ThemeManager.svelte';
 	import Toggle from '#lib/components/admin/Toggle.svelte';
 	import { feedback } from '#lib/components/admin/feedback.svelte.js';
 	import type { Layout, SortOrder } from '#lib/types.js';
@@ -233,12 +234,10 @@
 		</div>
 		<ThemePicker themes={data.themes} name="theme" bind:value={theme} />
 		<p class="hint">
-			Themes are JSON files. To add one, drop a <code>.json</code> file into
-			<code>{data.customThemesDir}</code> on the server (with Docker Compose, the
-			<code>data/themes</code> folder next to <code>docker-compose.yml</code>); it appears here
-			within a few seconds. Invoices have their own style setting under
+			Invoices have their own style setting under
 			<a href="/admin/invoices/settings">Invoices → Settings</a>.
 		</p>
+		<ThemeManager themes={data.themes} inUse={data.themesInUse} />
 	</section>
 
 	<section class="card" id="defaults">
