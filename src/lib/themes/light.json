@@ -1,0 +1,31 @@
+{
+	"$schema": "./theme.schema.json",
+	"name": "Light",
+	"description": "Warm paper and ink.",
+	"icon": "sun",
+	"scheme": "light",
+	"order": 1,
+	"colors": {
+		"bg": "#f6f1e8",
+		"bg-elevated": "#fbf8f2",
+		"surface": "#efe8dc",
+		"surface-strong": "#e6ddce",
+		"text": "#26231f",
+		"text-muted": "#6d655a",
+		"text-subtle": "#9b9284",
+		"border": "#ddd4c5",
+		"border-strong": "#c3b8a6",
+		"overlay": "rgba(246, 241, 232, 0.82)",
+		"header-bg": "rgba(246, 241, 232, 0.78)",
+		"lightbox-bg": "rgba(18, 17, 15, 0.94)",
+		"danger": "#9d3b2b",
+		"danger-soft": "rgba(157, 59, 43, 0.08)",
+		"success": "#3e6a4a",
+		"success-soft": "rgba(62, 106, 74, 0.1)",
+		"warning": "#8f6a1d",
+		"warning-soft": "rgba(143, 106, 29, 0.1)",
+		"accent": "#26231f",
+		"accent-text": "#ffffff",
+		"placeholder": "#e8e0d3"
+	}
+}

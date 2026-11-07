@@ -6,6 +6,7 @@
 	import Eye from '@lucide/svelte/icons/eye';
 	import Lock from '@lucide/svelte/icons/lock';
 	import Trash2 from '@lucide/svelte/icons/trash-2';
+	import Briefcase from '@lucide/svelte/icons/briefcase';
 	import AlbumForm from '#lib/components/admin/AlbumForm.svelte';
 	import PhotoManager from '#lib/components/admin/PhotoManager.svelte';
 	import Maintenance from '#lib/components/admin/Maintenance.svelte';
@@ -88,6 +89,12 @@
 				{#if album.hasPassword}<span class="badge"><Lock size={11} /> Password</span>{/if}
 				{#if album.expired}<span class="badge warn">Expired</span>{/if}
 				<span class="subtle">{data.stats.count} photos · {formatBytes(data.stats.bytes)}</span>
+				{#each data.bookings as booking (booking.id)}
+					<a class="badge job" href="/admin/jobs/{booking.id}" title="Linked job">
+						<Briefcase size={11} />
+						{booking.title}
+					</a>
+				{/each}
 			</div>
 		</div>
 		<div class="head-actions">
@@ -247,6 +254,15 @@
 	.badge.warn {
 		color: var(--warning);
 		border-color: color-mix(in srgb, var(--warning) 50%, transparent);
+	}
+
+	.badge.job {
+		text-decoration: none;
+	}
+
+	.badge.job:hover {
+		border-color: var(--text);
+		color: var(--text);
 	}
 
 	.head-actions {

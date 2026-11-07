@@ -2,18 +2,16 @@
 	import { untrack } from 'svelte';
 	import { enhance } from '$app/forms';
 	import ImageIcon from '@lucide/svelte/icons/image';
-	import Sun from '@lucide/svelte/icons/sun';
-	import Moon from '@lucide/svelte/icons/moon';
-	import Leaf from '@lucide/svelte/icons/leaf';
+	import ThemePicker from '#lib/components/admin/ThemePicker.svelte';
 	import Toggle from '#lib/components/admin/Toggle.svelte';
 	import { feedback } from '#lib/components/admin/feedback.svelte.js';
-	import type { Layout, SortOrder, Theme } from '#lib/types.js';
+	import type { Layout, SortOrder } from '#lib/types.js';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
 
 	const initial = untrack(() => data.current);
-	let theme = $state<Theme>(initial.theme);
+	let theme = $state(initial.theme);
 	let accent = $state(initial.defaultAccentColor);
 	let layout = $state<Layout>(initial.defaultLayout);
 	let sort = $state<SortOrder>(initial.defaultSort);
@@ -233,23 +231,14 @@
 			<h2>Appearance</h2>
 			<p class="hint">Applies to the public site and this dashboard.</p>
 		</div>
-		<div class="themes">
-			<label class="theme light" class:checked={theme === 'light'}>
-				<input type="radio" name="theme" value="light" bind:group={theme} />
-				<span class="swatch"><span></span><span></span><span></span></span>
-				<span class="theme-label"><Sun size={14} /> Light</span>
-			</label>
-			<label class="theme dark" class:checked={theme === 'dark'}>
-				<input type="radio" name="theme" value="dark" bind:group={theme} />
-				<span class="swatch"><span></span><span></span><span></span></span>
-				<span class="theme-label"><Moon size={14} /> Dark</span>
-			</label>
-			<label class="theme green" class:checked={theme === 'green'}>
-				<input type="radio" name="theme" value="green" bind:group={theme} />
-				<span class="swatch"><span></span><span></span><span></span></span>
-				<span class="theme-label"><Leaf size={14} /> Green</span>
-			</label>
-		</div>
+		<ThemePicker themes={data.themes} name="theme" bind:value={theme} />
+		<p class="hint">
+			Themes are JSON files. To add one, drop a <code>.json</code> file into
+			<code>{data.customThemesDir}</code> on the server (with Docker Compose, the
+			<code>data/themes</code> folder next to <code>docker-compose.yml</code>); it appears here
+			within a few seconds. Invoices have their own style setting under
+			<a href="/admin/invoices/settings">Invoices → Settings</a>.
+		</p>
 	</section>
 
 	<section class="card" id="defaults">
@@ -471,89 +460,6 @@
 
 	.link.danger {
 		color: var(--danger);
-	}
-
-	.themes {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(180px, 220px));
-		gap: 1rem;
-	}
-
-	.theme {
-		display: grid;
-		gap: 0.75rem;
-		padding: 0.75rem;
-		border: 1px solid var(--border);
-		cursor: pointer;
-	}
-
-	.theme.checked {
-		border-color: var(--text);
-		outline: 1px solid var(--text);
-	}
-
-	.theme input {
-		position: absolute;
-		opacity: 0;
-	}
-
-	.swatch {
-		display: grid;
-		grid-template-rows: 14px 1fr 10px;
-		gap: 6px;
-		height: 90px;
-		padding: 10px;
-	}
-
-	.theme.light .swatch {
-		background: #f6f1e8;
-	}
-
-	.theme.light .swatch span {
-		background: #ddd4c5;
-	}
-
-	.theme.light .swatch span:first-child {
-		background: #26231f;
-		width: 60%;
-	}
-
-	.theme.dark .swatch {
-		background: #141311;
-	}
-
-	.theme.dark .swatch span {
-		background: #33302a;
-	}
-
-	.theme.dark .swatch span:first-child {
-		background: #ece5d9;
-		width: 60%;
-	}
-
-	.theme.green .swatch {
-		background: #14261c;
-	}
-
-	.theme.green .swatch span {
-		background: #2a4334;
-	}
-
-	.theme.green .swatch span:first-child {
-		background: #efe8d6;
-		width: 60%;
-	}
-
-	.theme.green .swatch span:last-child {
-		background: #e2c068;
-		width: 35%;
-	}
-
-	.theme-label {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		font-size: 0.86rem;
 	}
 
 	.swatch-input {

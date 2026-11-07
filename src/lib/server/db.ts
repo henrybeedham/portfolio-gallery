@@ -68,6 +68,82 @@ const MIGRATIONS: string[] = [
 		PRIMARY KEY (photo_id, tag_id)
 	);
 	CREATE INDEX photo_tags_tag ON photo_tags(tag_id);
+	`,
+	// Photography jobs ("bookings" in code; "jobs" is already used for background maintenance tasks),
+	// invoices and the saved addresses invoices are billed to.
+	`
+	CREATE TABLE billing_addresses (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		label TEXT NOT NULL,
+		organisation TEXT NOT NULL,
+		address TEXT NOT NULL DEFAULT '',
+		position INTEGER NOT NULL DEFAULT 0,
+		created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+	);
+
+	INSERT INTO billing_addresses (label, organisation, address, position) VALUES
+		('Guild', 'University of Exeter Students’ Guild', 'Devonshire House\nStocker Road\nExeter\nEX4 4PZ', 1),
+		('AU', 'University of Exeter Athletic Union', 'Sports Park\nStocker Road\nExeter\nEX4 4QN', 2);
+
+	CREATE TABLE bookings (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		title TEXT NOT NULL,
+		client TEXT NOT NULL DEFAULT '',
+		billing_address_id INTEGER REFERENCES billing_addresses(id) ON DELETE SET NULL,
+		location TEXT NOT NULL DEFAULT '',
+		starts_at TEXT,
+		hours REAL NOT NULL DEFAULT 0,
+		rate INTEGER NOT NULL DEFAULT 0,
+		status TEXT NOT NULL DEFAULT 'confirmed',
+		shot INTEGER NOT NULL DEFAULT 0,
+		delivered INTEGER NOT NULL DEFAULT 0,
+		paid INTEGER NOT NULL DEFAULT 0,
+		legacy_invoices TEXT NOT NULL DEFAULT '',
+		notes TEXT NOT NULL DEFAULT '',
+		created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+		updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+	);
+	CREATE INDEX bookings_starts ON bookings(starts_at);
+
+	CREATE TABLE booking_albums (
+		booking_id INTEGER NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+		album_id INTEGER NOT NULL REFERENCES albums(id) ON DELETE CASCADE,
+		PRIMARY KEY (booking_id, album_id)
+	);
+	CREATE INDEX booking_albums_album ON booking_albums(album_id);
+
+	CREATE TABLE invoices (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		number TEXT NOT NULL UNIQUE,
+		booking_id INTEGER REFERENCES bookings(id) ON DELETE SET NULL,
+		billing_address_id INTEGER REFERENCES billing_addresses(id) ON DELETE SET NULL,
+		issue_date TEXT NOT NULL,
+		due_date TEXT,
+		bill_to_name TEXT NOT NULL DEFAULT '',
+		bill_to_address TEXT NOT NULL DEFAULT '',
+		sender TEXT NOT NULL DEFAULT '{}',
+		payment_details TEXT NOT NULL DEFAULT '',
+		notes TEXT NOT NULL DEFAULT '',
+		items TEXT NOT NULL DEFAULT '[]',
+		total INTEGER NOT NULL DEFAULT 0,
+		style TEXT NOT NULL DEFAULT 'light',
+		paid_at TEXT,
+		created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+		updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+	);
+	CREATE INDEX invoices_booking ON invoices(booking_id);
+	`,
+	// Per-day gallery activity for the analytics charts (the albums table only keeps running totals).
+	`
+	CREATE TABLE album_daily_stats (
+		album_id INTEGER NOT NULL REFERENCES albums(id) ON DELETE CASCADE,
+		day TEXT NOT NULL,
+		views INTEGER NOT NULL DEFAULT 0,
+		photo_downloads INTEGER NOT NULL DEFAULT 0,
+		album_downloads INTEGER NOT NULL DEFAULT 0,
+		PRIMARY KEY (album_id, day)
+	);
+	CREATE INDEX album_daily_stats_day ON album_daily_stats(day);
 	`
 ];
 

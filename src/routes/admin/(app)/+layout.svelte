@@ -5,10 +5,14 @@
 	import LayoutDashboard from '@lucide/svelte/icons/layout-dashboard';
 	import Plus from '@lucide/svelte/icons/plus';
 	import Settings from '@lucide/svelte/icons/settings';
+	import Briefcase from '@lucide/svelte/icons/briefcase';
+	import Receipt from '@lucide/svelte/icons/receipt';
+	import ChartColumn from '@lucide/svelte/icons/chart-column';
 	import LogOut from '@lucide/svelte/icons/log-out';
 	import Menu from '@lucide/svelte/icons/menu';
 	import X from '@lucide/svelte/icons/x';
 	import FeedbackHost from '#lib/components/admin/FeedbackHost.svelte';
+	import '#lib/components/admin/admin-ui.css';
 	import type { LayoutProps } from './$types';
 
 	let { children, data }: LayoutProps = $props();
@@ -17,6 +21,9 @@
 	const links = [
 		{ href: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
 		{ href: '/admin/albums/new', label: 'New Album', icon: Plus, exact: true },
+		{ href: '/admin/jobs', label: 'Jobs', icon: Briefcase, exact: false },
+		{ href: '/admin/invoices', label: 'Invoices', icon: Receipt, exact: false },
+		{ href: '/admin/analytics', label: 'Analytics', icon: ChartColumn, exact: false },
 		{ href: '/admin/settings', label: 'Settings', icon: Settings, exact: false }
 	];
 
