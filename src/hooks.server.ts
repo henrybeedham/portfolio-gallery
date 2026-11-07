@@ -3,7 +3,7 @@ import { isAdminSession } from '#lib/server/auth.js';
 import { adminCredentials } from '#lib/server/config.js';
 import { getDb } from '#lib/server/db.js';
 import { getSettings } from '#lib/server/settings.js';
-import { getTheme, themeCss } from '#lib/server/themes.js';
+import { getTheme, themeCss, themeVersion } from '#lib/server/themes.js';
 
 export const init: ServerInit = () => {
 	getDb();
@@ -35,7 +35,10 @@ export const handle: Handle = async ({ event, resolve }) => {
 	const theme = getTheme(getSettings().theme).id;
 	const response = await resolve(event, {
 		transformPageChunk: ({ html }) =>
-			html.replace('%gallery.theme%', theme).replace('%gallery.themes%', themeCss)
+			html
+				.replace('%gallery.theme%', theme)
+				.replace('%gallery.themesVersion%', themeVersion)
+				.replace('%gallery.themes%', themeCss)
 	});
 
 	response.headers.set('x-frame-options', 'SAMEORIGIN');

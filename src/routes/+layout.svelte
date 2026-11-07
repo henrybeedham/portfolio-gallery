@@ -11,6 +11,20 @@
 	$effect(() => {
 		document.documentElement.dataset.theme = data.theme.id;
 	});
+
+	// Themes uploaded or deleted since this page loaded: swap in the new CSS without a reload.
+	$effect(() => {
+		const version = data.theme.version;
+		const style = document.getElementById('themes');
+		if (!style || style.dataset.version === version) return;
+		fetch(`/site/themes.css?v=${version}`)
+			.then((response) => (response.ok ? response.text() : Promise.reject()))
+			.then((css) => {
+				style.textContent = css;
+				style.dataset.version = version;
+			})
+			.catch(() => {});
+	});
 </script>
 
 <svelte:head>

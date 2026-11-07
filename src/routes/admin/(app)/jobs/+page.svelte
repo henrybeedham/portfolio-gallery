@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { rememberList } from '#lib/components/admin/list-memory.js';
 	import { invalidate } from '$app/navigation';
 	import { page } from '$app/state';
 	import Plus from '@lucide/svelte/icons/plus';
@@ -16,6 +17,9 @@
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
+
+	// So the back links on a job's page return to this filter.
+	$effect(() => rememberList('jobs', page.url.search));
 	let pending = $state<string | null>(null);
 
 	type Filter = 'active' | 'upcoming' | 'deliver' | 'invoice' | 'unpaid' | 'all';

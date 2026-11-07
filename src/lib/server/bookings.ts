@@ -269,7 +269,7 @@ export function bookingOptions() {
 }
 
 /**
- * Clients you've billed before, with the address used most recently, so typing a society name
+ * Clients you've billed before, with the address used most recently, so typing a client's name
  * can fill in AU or Guild automatically.
  */
 export function clientSuggestions(): { client: string; billingAddressId: number | null }[] {

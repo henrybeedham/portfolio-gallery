@@ -7,6 +7,7 @@
  *
  * See src/lib/themes/README.md for the format.
  */
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { dataDir } from './config.js';
@@ -44,18 +45,21 @@ const builtInFiles = import.meta.glob<ThemeFile>('../themes/*.json', {
 	eager: true,
 	import: 'default'
 });
+const builtInIds = new Set(Object.keys(builtInFiles).map((file) => path.basename(file, '.json')));
 
 function str(value: unknown, max = 200) {
 	return typeof value === 'string' ? value.trim().slice(0, max) : '';
 }
 
-function colorMap(value: unknown, source: string): Record<string, string> {
+/** Reads a colour map, skipping anything unsafe. Skipped keys are logged, or collected in `problems`. */
+function colorMap(value: unknown, source: string, problems?: string[]): Record<string, string> {
 	const out: Record<string, string> = {};
-	if (!value || typeof value !== 'object') return out;
+	if (!value || typeof value !== 'object' || Array.isArray(value)) return out;
 	for (const [key, raw] of Object.entries(value as Record<string, unknown>)) {
 		const color = typeof raw === 'string' ? raw.trim() : '';
 		if (!KEY.test(key) || !VALUE.test(color) || color.includes('/*')) {
-			console.warn(`[gallery] Theme ${source}: ignoring colour "${key}"`);
+			if (problems) problems.push(`${source}: “${key}” was skipped (not a valid colour).`);
+			else console.warn(`[gallery] Theme ${source}: ignoring colour "${key}"`);
 			continue;
 		}
 		out[key] = color;
@@ -142,6 +146,7 @@ function build(): Theme[] {
 			scheme,
 			order: typeof file.order === 'number' ? file.order : 100,
 			builtIn,
+			source: builtIn ? 'built-in' : builtInIds.has(id) ? 'replaced' : 'custom',
 			colors,
 			invoice: { ...colors, ...overrides },
 			swatch: {
@@ -173,7 +178,7 @@ function buildCss(themes: Theme[]): string {
 	return rules.join('\n');
 }
 
-let cache: { stamp: string; themes: Theme[]; css: string } | undefined;
+let cache: { stamp: string; themes: Theme[]; css: string; version: string } | undefined;
 let checkedAt = 0;
 
 function current() {
@@ -183,7 +188,9 @@ function current() {
 		const stamp = customStamp();
 		if (!cache || cache.stamp !== stamp) {
 			const themes = build();
-			cache = { stamp, themes, css: buildCss(themes) };
+			const css = buildCss(themes);
+			const version = crypto.createHash('sha1').update(css).digest('hex').slice(0, 10);
+			cache = { stamp, themes, css, version };
 		}
 	}
 	return cache;
@@ -194,13 +201,14 @@ export function listThemes(): Theme[] {
 }
 
 export function themeSummaries(): ThemeSummary[] {
-	return listThemes().map(({ id, name, description, icon, scheme, swatch }) => ({
+	return listThemes().map(({ id, name, description, icon, scheme, swatch, source }) => ({
 		id,
 		name,
 		description,
 		icon,
 		scheme,
-		swatch
+		swatch,
+		source
 	}));
 }
 
@@ -220,4 +228,107 @@ export function hasTheme(id: string): boolean {
 /** CSS custom properties for every theme, switched by `data-theme` on <html>. */
 export function themeCss(): string {
 	return current().css;
+}
+
+/** Changes whenever the theme CSS does, so open pages know to fetch the new CSS. */
+export function themeVersion(): string {
+	return current().version;
+}
+
+/** A theme's file as JSON, for downloading (uploaded themes exactly as saved). */
+export function themeFileJson(id: string): string | null {
+	const custom = readCustomTheme(id);
+	if (custom !== null) return custom;
+	const entry = Object.entries(builtInFiles).find(([file]) => path.basename(file, '.json') === id);
+	return entry ? JSON.stringify(entry[1], null, '\t') + '\n' : null;
+}
+
+/* ------------------------------------------------------------ uploads */
+
+/** Picks up added or removed theme files straight away instead of within a few seconds. */
+export function refreshThemes() {
+	cache = undefined;
+}
+
+/** A theme id from an uploaded file's name: “My Theme.json” → “my-theme”. */
+export function themeIdFromFilename(filename: string): string {
+	return filename
+		.replace(/\.json$/i, '')
+		.normalize('NFKD')
+		.replace(/[\u0300-\u036f]/g, '')
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, '-')
+		.replace(/^-+|-+$/g, '')
+		.slice(0, 40);
+}
+
+export type ThemeCheck =
+	{ ok: true; theme: ThemeFile; warnings: string[] } | { ok: false; error: string };
+
+/** Checks an uploaded theme file before it's saved. */
+export function checkThemeFile(text: string, id: string): ThemeCheck {
+	if (!ID.test(id)) {
+		return { ok: false, error: 'Name the file with letters, numbers and hyphens, e.g. plum.json.' };
+	}
+	let parsed: unknown;
+	try {
+		parsed = JSON.parse(text);
+	} catch (error) {
+		return { ok: false, error: `That isn’t valid JSON: ${(error as Error).message}` };
+	}
+	if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+		return {
+			ok: false,
+			error: 'A theme file should be a JSON object, like the examples in the docs.'
+		};
+	}
+	const theme = parsed as ThemeFile;
+	const warnings: string[] = [];
+	const colors = colorMap(theme.colors, 'colors', warnings);
+	colorMap(theme.invoice, 'invoice', warnings);
+	const parent = str(theme.extends);
+	if (parent && !hasTheme(parent))
+		warnings.push(`“extends” names a theme that doesn’t exist: ${parent}.`);
+	if (parent === id) return { ok: false, error: 'A theme can’t extend itself.' };
+	if (!Object.keys(colors).length && !parent) {
+		return {
+			ok: false,
+			error: 'The file has no colours. Add a “colors” object, or “extends” another theme.'
+		};
+	}
+	if (theme.scheme !== undefined && theme.scheme !== 'light' && theme.scheme !== 'dark') {
+		warnings.push('“scheme” should be "light" or "dark"; using light.');
+	}
+	return { ok: true, theme, warnings };
+}
+
+export function saveCustomTheme(id: string, theme: ThemeFile) {
+	fs.mkdirSync(customThemesDir, { recursive: true });
+	fs.writeFileSync(
+		path.join(customThemesDir, `${id}.json`),
+		JSON.stringify(theme, null, '\t') + '\n'
+	);
+	refreshThemes();
+}
+
+/** Removes an uploaded theme. A built-in theme it replaced comes back. */
+export function deleteCustomTheme(id: string): boolean {
+	if (!ID.test(id)) return false;
+	try {
+		fs.unlinkSync(path.join(customThemesDir, `${id}.json`));
+	} catch {
+		return false;
+	}
+	refreshThemes();
+	return true;
+}
+
+/** The uploaded file's contents, for downloading it again. */
+export function readCustomTheme(id: string): string | null {
+	if (!ID.test(id)) return null;
+	try {
+		return fs.readFileSync(path.join(customThemesDir, `${id}.json`), 'utf8');
+	} catch {
+		return null;
+	}
 }

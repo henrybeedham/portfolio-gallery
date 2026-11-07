@@ -1,6 +1,6 @@
 <script lang="ts">
+	import BackLink from '#lib/components/admin/BackLink.svelte';
 	import { goto } from '$app/navigation';
-	import ArrowLeft from '@lucide/svelte/icons/arrow-left';
 	import ClipboardPaste from '@lucide/svelte/icons/clipboard-paste';
 	import StateBadge from '#lib/components/admin/StateBadge.svelte';
 	import { api, feedback } from '#lib/components/admin/feedback.svelte.js';
@@ -69,7 +69,7 @@
 	<title>Import jobs — {data.settings.siteTitle}</title>
 </svelte:head>
 
-<a class="link" href="/admin/jobs"><ArrowLeft size={14} /> Jobs</a>
+<BackLink list="jobs" label="Jobs" />
 
 <header class="head">
 	<p class="eyebrow">Jobs</p>
@@ -107,7 +107,7 @@
 			<div>
 				<h2>{rows.length} jobs found</h2>
 				<p class="hint">
-					Delivered and cancelled jobs are left unticked. Check each society and choose AU or Guild,
+					Delivered and cancelled jobs are left unticked. Check each client and choose AU, Guild or Other,
 					so invoices fill themselves in.
 				</p>
 			</div>
@@ -123,7 +123,7 @@
 						<th class="ui-shrink"><span class="visually-hidden">Import</span></th>
 						<th>Job</th>
 						<th>Date</th>
-						<th>Society</th>
+						<th>Client</th>
 						<th>Billing</th>
 						<th class="ui-num">Fee</th>
 						<th>Status</th>
@@ -157,7 +157,7 @@
 									class="input compact"
 									bind:value={row.client}
 									list="import-clients"
-									aria-label="Society for {row.title}"
+									aria-label="Client for {row.title}"
 								/>
 							</td>
 							<td>
