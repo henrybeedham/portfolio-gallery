@@ -24,7 +24,6 @@ export const load: PageServerLoad = ({ cookies, locals }) => {
 			title: album.title,
 			descriptionHtml: renderMarkdown(album.description),
 			layout: album.layout,
-			accentColor: album.accentColor,
 			sortOrder: album.sortOrder,
 			// Don't reveal how many photos a locked album holds.
 			total: locked ? 0 : ids.length,

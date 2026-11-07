@@ -17,6 +17,15 @@ export interface ThemeSummary {
 	source: 'built-in' | 'custom' | 'replaced';
 }
 
+/** The theme a page is shown in. */
+export interface PageTheme {
+	id: string;
+	/** For `<meta name="theme-color">`. */
+	color: string;
+	/** Changes whenever the theme CSS does. */
+	version: string;
+}
+
 export const LAYOUTS: Layout[] = ['grid', 'masonry'];
 export const SORT_ORDERS: SortOrder[] = ['oldest', 'newest', 'random'];
 
@@ -35,7 +44,8 @@ export interface SiteSettings {
 	discordWebhook: string;
 	theme: Theme;
 	defaultDescription: string;
-	defaultAccentColor: string;
+	/** Theme for new albums, or '' to follow the site's theme. */
+	defaultAlbumTheme: Theme;
 	defaultLayout: Layout;
 	defaultSort: SortOrder;
 	defaultPublic: boolean;
@@ -114,7 +124,6 @@ export interface PublicAlbum {
 	title: string;
 	albumDate: string | null;
 	expiresAt: string | null;
-	accentColor: string;
 	layout: Layout;
 	sortOrder: SortOrder;
 	hasPassword: boolean;
@@ -148,7 +157,8 @@ export interface AlbumFormInitial {
 	isFeatured: boolean;
 	passwordEnabled: boolean;
 	expiresAt: string;
-	accentColor: string;
+	/** Theme id, or '' to follow the site's theme. */
+	theme: Theme;
 	layout: Layout;
 	sortOrder: SortOrder;
 }

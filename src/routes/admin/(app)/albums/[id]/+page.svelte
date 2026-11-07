@@ -138,6 +138,8 @@
 			mode="edit"
 			action="?/save"
 			initial={data.form}
+			themes={data.themes}
+			siteTheme={data.siteTheme}
 			origin={data.origin}
 			hasPassword={album.hasPassword}
 			error={form?.error ?? null}

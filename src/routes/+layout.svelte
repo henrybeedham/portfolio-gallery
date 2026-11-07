@@ -3,13 +3,16 @@
 	import '@fontsource-variable/playfair-display/wght-italic.css';
 	import '@fontsource-variable/inter';
 	import '../app.css';
-	import { navigating } from '$app/state';
+	import { navigating, page } from '$app/state';
 	import type { LayoutProps } from './$types';
 
 	let { children, data }: LayoutProps = $props();
 
+	// The site theme, or an album's own theme on its pages.
+	const theme = $derived(page.data.theme ?? data.theme);
+
 	$effect(() => {
-		document.documentElement.dataset.theme = data.theme.id;
+		document.documentElement.dataset.theme = theme.id;
 	});
 
 	// Themes uploaded or deleted since this page loaded: swap in the new CSS without a reload.
@@ -28,7 +31,7 @@
 </script>
 
 <svelte:head>
-	<meta name="theme-color" content={data.theme.color} />
+	<meta name="theme-color" content={theme.color} />
 </svelte:head>
 
 {#if navigating.to}

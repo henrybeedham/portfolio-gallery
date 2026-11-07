@@ -11,7 +11,8 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { dataDir } from './config.js';
-import type { ThemeSummary } from '#lib/types.js';
+import { getSettings } from './settings.js';
+import type { PageTheme, ThemeSummary } from '#lib/types.js';
 
 interface ThemeFile {
 	name?: unknown;
@@ -225,7 +226,24 @@ export function hasTheme(id: string): boolean {
 	return listThemes().some((theme) => theme.id === id);
 }
 
-/** CSS custom properties for every theme, switched by `data-theme` on <html>. */
+/** What a page needs to show a theme: the `data-theme` id, the browser UI colour and the CSS version. */
+export function pageTheme(id: string | null | undefined): PageTheme {
+	const theme = getTheme(id);
+	return { id: theme.id, color: theme.swatch.bg, version: themeVersion() };
+}
+
+/**
+ * Shows an album page in the album's own theme, or the site's when it has none (or its theme was
+ * deleted). Return the result as the page's `theme` data: it replaces the root layout's site theme
+ * in `page.data`, and `locals.theme` sets `<html data-theme>` when the page is rendered on the server.
+ */
+export function albumPageTheme(locals: App.Locals, album: { theme: string | null }): PageTheme {
+	const theme = pageTheme(album.theme && hasTheme(album.theme) ? album.theme : getSettings().theme);
+	locals.theme = theme.id;
+	return theme;
+}
+
+/** CSS custom properties for every theme, switched by `data-theme` (on <html>, or any element). */
 export function themeCss(): string {
 	return current().css;
 }

@@ -32,11 +32,11 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 	event.locals.isAdmin = isAdminSession(event.cookies);
 
-	const theme = getTheme(getSettings().theme).id;
 	const response = await resolve(event, {
+		// Runs after the page's load functions, so an album page's theme (see albumPageTheme) is set.
 		transformPageChunk: ({ html }) =>
 			html
-				.replace('%gallery.theme%', theme)
+				.replace('%gallery.theme%', () => event.locals.theme ?? getTheme(getSettings().theme).id)
 				.replace('%gallery.themesVersion%', themeVersion)
 				.replace('%gallery.themes%', themeCss)
 	});

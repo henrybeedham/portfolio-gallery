@@ -6,6 +6,8 @@ import { runningJob } from '#lib/server/jobs.js';
 import { adminPhotos, albumTags } from '#lib/server/photos.js';
 import { importDir } from '#lib/server/config.js';
 import { bookingsForAlbum } from '#lib/server/bookings.js';
+import { getSettings } from '#lib/server/settings.js';
+import { getTheme, hasTheme, themeSummaries } from '#lib/server/themes.js';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = ({ params, locals, url, depends }) => {
@@ -29,8 +31,7 @@ export const load: PageServerLoad = ({ params, locals, url, depends }) => {
 			views: album.views,
 			photoDownloads: album.photoDownloads,
 			albumDownloads: album.albumDownloads,
-			createdAt: album.createdAt,
-			accentColor: album.accentColor
+			createdAt: album.createdAt
 		},
 		form: {
 			title: album.title,
@@ -43,10 +44,13 @@ export const load: PageServerLoad = ({ params, locals, url, depends }) => {
 			isFeatured: album.isFeatured,
 			passwordEnabled: !!album.passwordHash,
 			expiresAt: album.expiresAt ?? '',
-			accentColor: album.accentColor,
+			// A deleted theme shows as following the site, which is what the album falls back to.
+			theme: album.theme && hasTheme(album.theme) ? album.theme : '',
 			layout: album.layout,
 			sortOrder: album.sortOrder
 		},
+		themes: themeSummaries(),
+		siteTheme: getTheme(getSettings().theme).id,
 		photos: adminPhotos(album.id),
 		tags: albumTags(album.id),
 		stats,

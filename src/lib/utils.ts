@@ -95,22 +95,6 @@ export function expiryLabel(expiresAt: string | null | undefined, now = Date.now
 	return `Expires in ${days} days`;
 }
 
-/** Picks a legible text colour for a given background colour. */
-export function contrastText(hex: string): string {
-	const value = hex.replace('#', '');
-	const full = value.length === 3 ? value.replace(/(.)/g, '$1$1') : value;
-	const r = parseInt(full.slice(0, 2), 16) / 255;
-	const g = parseInt(full.slice(2, 4), 16) / 255;
-	const b = parseInt(full.slice(4, 6), 16) / 255;
-	const lin = (c: number) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
-	const luminance = 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
-	return luminance > 0.45 ? '#1f1d1a' : '#ffffff';
-}
-
-export function isHexColor(value: string) {
-	return /^#[0-9a-f]{6}$/i.test(value);
-}
-
 export function plural(count: number, singular: string, pluralForm = singular + 's') {
 	return `${count.toLocaleString('en-GB')} ${count === 1 ? singular : pluralForm}`;
 }

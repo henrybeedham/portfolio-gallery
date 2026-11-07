@@ -2,6 +2,7 @@ import { error, redirect } from '@sveltejs/kit';
 import { getAlbumBySlug } from '#lib/server/albums.js';
 import { albumAccess } from '#lib/server/access.js';
 import { albumTags, getPhoto, orderedPhotoIds, photoDetail } from '#lib/server/photos.js';
+import { albumPageTheme } from '#lib/server/themes.js';
 import { parseView } from '#lib/server/view.js';
 import type { PageServerLoad } from './$types';
 
@@ -27,11 +28,11 @@ export const load: PageServerLoad = ({ params, url, cookies, locals }) => {
 	}
 
 	return {
+		theme: albumPageTheme(locals, album),
 		album: {
 			id: album.id,
 			slug: album.slug,
 			title: album.title,
-			accentColor: album.accentColor,
 			sortOrder: album.sortOrder,
 			hasPassword: !!album.passwordHash,
 			isPublic: album.isPublic

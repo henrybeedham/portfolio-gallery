@@ -25,6 +25,8 @@
 	<AlbumForm
 		mode="create"
 		initial={data.defaults}
+		themes={data.themes}
+		siteTheme={data.siteTheme}
 		origin={data.origin}
 		error={form?.error ?? null}
 		errorField={form?.field ?? null}

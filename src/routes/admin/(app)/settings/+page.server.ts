@@ -9,6 +9,7 @@ import { requireAdmin } from '#lib/server/guard.js';
 import { detectType, removeHeroImage, saveHeroImage, tempFile } from '#lib/server/images.js';
 import { getSettings, updateSettings } from '#lib/server/settings.js';
 import { getInvoiceSettings } from '#lib/server/billing.js';
+import { albumThemeCounts } from '#lib/server/albums.js';
 import { getTheme, hasTheme, themeSummaries } from '#lib/server/themes.js';
 import {
 	LAYOUTS,
@@ -17,25 +18,38 @@ import {
 	type SiteSettings,
 	type SortOrder
 } from '#lib/types.js';
-import { isHexColor } from '#lib/utils.js';
+import { plural } from '#lib/utils.js';
 import type { Actions, PageServerLoad } from './$types';
 
-/** Which themes the site and the invoice default use, for the theme list. */
-function themesInUse(siteTheme: string) {
+/** What uses each theme (the site, new invoices, albums), for the theme list. */
+function themesInUse(settings: SiteSettings) {
 	const uses: Record<string, string[]> = {};
 	const add = (id: string, use: string) => (uses[id] ??= []).push(use);
-	add(getTheme(siteTheme).id, 'the site');
+	add(getTheme(settings.theme).id, 'the site');
 	add(getTheme(getInvoiceSettings().style).id, 'new invoices');
-	return Object.fromEntries(Object.entries(uses).map(([id, list]) => [id, list.join(' and ')]));
+	if (hasTheme(settings.defaultAlbumTheme)) add(settings.defaultAlbumTheme, 'new albums');
+	for (const [id, count] of albumThemeCounts()) {
+		if (hasTheme(id)) add(id, plural(count, 'album'));
+	}
+	return Object.fromEntries(
+		Object.entries(uses).map(([id, list]) => [
+			id,
+			list.length > 1 ? `${list.slice(0, -1).join(', ')} and ${list.at(-1)}` : list[0]
+		])
+	);
 }
 
 export const load: PageServerLoad = ({ locals }) => {
 	requireAdmin(locals);
 	const current = getSettings();
 	return {
-		current: { ...current, theme: getTheme(current.theme).id },
+		current: {
+			...current,
+			theme: getTheme(current.theme).id,
+			defaultAlbumTheme: hasTheme(current.defaultAlbumTheme) ? current.defaultAlbumTheme : ''
+		},
 		themes: themeSummaries(),
-		themesInUse: themesInUse(current.theme)
+		themesInUse: themesInUse(current)
 	};
 };
 
@@ -74,7 +88,7 @@ export const actions: Actions = {
 
 		const layout = text(data, 'defaultLayout') as Layout;
 		const sort = text(data, 'defaultSort') as SortOrder;
-		const accent = text(data, 'defaultAccentColor');
+		const albumTheme = text(data, 'defaultAlbumTheme');
 
 		const patch: Partial<SiteSettings> = {
 			siteTitle: text(data, 'siteTitle', 120) || current.siteTitle,
@@ -90,7 +104,7 @@ export const actions: Actions = {
 			discordWebhook: webhook,
 			theme: hasTheme(text(data, 'theme')) ? text(data, 'theme') : current.theme,
 			defaultDescription: text(data, 'defaultDescription', 20000),
-			defaultAccentColor: isHexColor(accent) ? accent.toLowerCase() : current.defaultAccentColor,
+			defaultAlbumTheme: hasTheme(albumTheme) ? albumTheme : '',
 			defaultLayout: LAYOUTS.includes(layout) ? layout : current.defaultLayout,
 			defaultSort: SORT_ORDERS.includes(sort) ? sort : current.defaultSort,
 			defaultPublic: data.get('defaultPublic') === 'on',

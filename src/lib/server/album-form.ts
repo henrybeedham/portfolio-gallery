@@ -1,8 +1,9 @@
 import { validateSlug, type Album, type AlbumInput } from './albums.js';
 import { hashPassword } from './auth.js';
 import { getSettings } from './settings.js';
+import { hasTheme } from './themes.js';
 import { LAYOUTS, SORT_ORDERS, type Layout, type SortOrder } from '#lib/types.js';
-import { isHexColor, slugify } from '#lib/utils.js';
+import { slugify } from '#lib/utils.js';
 
 const MIN_PASSWORD_LENGTH = 6;
 
@@ -17,7 +18,8 @@ export interface AlbumFormValues {
 	isFeatured: boolean;
 	passwordEnabled: boolean;
 	expiresAt: string;
-	accentColor: string;
+	/** Theme id, or '' to use the site's theme. */
+	theme: string;
 	layout: Layout;
 	sortOrder: SortOrder;
 }
@@ -45,7 +47,7 @@ export function parseAlbumForm(data: FormData, existing?: Album): AlbumFormResul
 	const sortOrder = (SORT_ORDERS as string[]).includes(str('sort_order'))
 		? (str('sort_order') as SortOrder)
 		: settings.defaultSort;
-	const accent = str('accent_color');
+	const theme = str('theme');
 	const albumDate = /^\d{4}-\d{2}-\d{2}$/.test(str('album_date')) ? str('album_date') : '';
 	let expiresAt = '';
 	if (str('expires_at')) {
@@ -69,7 +71,7 @@ export function parseAlbumForm(data: FormData, existing?: Album): AlbumFormResul
 			: (existing?.isFeatured ?? false),
 		passwordEnabled: checkbox(data, 'password_enabled'),
 		expiresAt,
-		accentColor: isHexColor(accent) ? accent.toLowerCase() : settings.defaultAccentColor,
+		theme: theme && hasTheme(theme) ? theme : '',
 		layout,
 		sortOrder
 	};
@@ -112,7 +114,7 @@ export function parseAlbumForm(data: FormData, existing?: Album): AlbumFormResul
 			isFeatured: values.isFeatured,
 			passwordHash,
 			expiresAt: values.expiresAt || null,
-			accentColor: values.accentColor,
+			theme: values.theme || null,
 			layout: values.layout,
 			sortOrder: values.sortOrder
 		}

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Link from '@lucide/svelte/icons/link-2';
 	import ThemeIcon from './ThemeIcon.svelte';
 	import type { ThemeSummary } from '#lib/types.js';
 
@@ -8,36 +9,45 @@
 		value?: string;
 		/** Smaller cards, for pickers inside dense forms. */
 		compact?: boolean;
+		/**
+		 * Adds a first choice with the value '' that follows another theme (like the site's), drawn in
+		 * that theme's colours.
+		 */
+		inherit?: { label: string; theme: ThemeSummary | undefined };
 		onchange?: (value: string) => void;
 	}
 
-	let { themes, name, value = $bindable(''), compact = false, onchange }: Props = $props();
+	let { themes, name, value = $bindable(''), compact = false, inherit, onchange }: Props = $props();
 </script>
 
+{#snippet card(id: string, theme: ThemeSummary | undefined, title: string)}
+	<label class="theme" class:checked={value === id} title={theme?.description}>
+		<input type="radio" {name} value={id} bind:group={value} onchange={() => onchange?.(id)} />
+		<span
+			class="swatch"
+			style:--s-bg={theme?.swatch.bg}
+			style:--s-surface={theme?.swatch.surface}
+			style:--s-text={theme?.swatch.text}
+			style:--s-border={theme?.swatch.border}
+			style:--s-accent={theme?.swatch.accent}
+		>
+			<span class="s-title"></span>
+			<span class="s-panel"></span>
+			<span class="s-bar"></span>
+		</span>
+		<span class="theme-label">
+			{#if id}<ThemeIcon name={theme?.icon ?? ''} />{:else}<Link size={14} strokeWidth={1.5} />{/if}
+			{title}
+		</span>
+	</label>
+{/snippet}
+
 <div class="themes" class:compact role="radiogroup">
+	{#if inherit}
+		{@render card('', inherit.theme, inherit.label)}
+	{/if}
 	{#each themes as theme (theme.id)}
-		<label class="theme" class:checked={value === theme.id} title={theme.description}>
-			<input
-				type="radio"
-				{name}
-				value={theme.id}
-				bind:group={value}
-				onchange={() => onchange?.(theme.id)}
-			/>
-			<span
-				class="swatch"
-				style:--s-bg={theme.swatch.bg}
-				style:--s-surface={theme.swatch.surface}
-				style:--s-text={theme.swatch.text}
-				style:--s-border={theme.swatch.border}
-				style:--s-accent={theme.swatch.accent}
-			>
-				<span class="s-title"></span>
-				<span class="s-panel"></span>
-				<span class="s-bar"></span>
-			</span>
-			<span class="theme-label"><ThemeIcon name={theme.icon} /> {theme.name}</span>
-		</label>
+		{@render card(theme.id, theme, theme.name)}
 	{/each}
 </div>
 
@@ -89,6 +99,11 @@
 	}
 
 	.swatch {
+		--s-bg: var(--bg);
+		--s-surface: var(--bg-elevated);
+		--s-text: var(--text);
+		--s-border: var(--border);
+		--s-accent: var(--text);
 		display: grid;
 		grid-template-rows: 12px 1fr 8px;
 		gap: 6px;
