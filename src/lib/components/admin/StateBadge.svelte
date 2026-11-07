@@ -10,6 +10,7 @@
 		'part-paid': 'Part paid',
 		unpaid: 'Unpaid',
 		overdue: 'Overdue',
+		draft: 'Draft',
 		'not-invoiced': 'Not invoiced',
 		confirmed: 'Confirmed',
 		tentative: 'Tentative',

@@ -6,13 +6,9 @@
 		location: string;
 		date: string;
 		time: string;
-		hours: string;
-		rate: string;
 		status: import('#lib/types.js').BookingStatus;
 		shot: boolean;
 		delivered: boolean;
-		paid: boolean;
-		legacyInvoices: string;
 		notes: string;
 	}
 </script>
@@ -22,16 +18,12 @@
 	import { enhance } from '$app/forms';
 	import Toggle from './Toggle.svelte';
 	import { feedback } from './feedback.svelte.js';
-	import { parseHours } from '#lib/booking-import.js';
-	import { formatMoney, parseMoney } from '#lib/money.js';
 	import type { BillingAddress, BookingStatus } from '#lib/types.js';
 
 	interface Props {
 		initial: BookingFormValues;
 		addresses: BillingAddress[];
 		clients: { client: string; billingAddressId: number | null }[];
-		/** The job has invoices here, so “paid” comes from them. */
-		hasInvoices?: boolean;
 		action?: string;
 		submitLabel?: string;
 		error?: string | null;
@@ -42,7 +34,6 @@
 		initial,
 		addresses,
 		clients,
-		hasInvoices = false,
 		action = '',
 		submitLabel = 'Save Job',
 		error = null,
@@ -57,19 +48,10 @@
 	let location = $state(start.location);
 	let date = $state(start.date);
 	let time = $state(start.time);
-	let hours = $state(start.hours);
-	let rate = $state(start.rate);
 	let status = $state<BookingStatus>(start.status);
 	let shot = $state(start.shot);
 	let delivered = $state(start.delivered);
-	let paid = $state(start.paid);
 	let saving = $state(false);
-
-	const fee = $derived.by(() => {
-		const h = parseHours(hours);
-		const r = parseMoney(rate);
-		return h !== null && r !== null ? Math.round(h * r) : null;
-	});
 
 	const selectedAddress = $derived(addresses.find((a) => a.id === billingAddressId));
 
@@ -131,37 +113,6 @@
 			<div class="field">
 				<label for="time">Start time <span class="ui-optional">optional</span></label>
 				<input id="time" class="input" type="time" name="time" bind:value={time} />
-			</div>
-		</div>
-		<div class="ui-grid-3">
-			<div class="field">
-				<label for="hours">Hours</label>
-				<input
-					id="hours"
-					class="input"
-					name="hours"
-					bind:value={hours}
-					inputmode="decimal"
-					placeholder="2.5"
-					aria-invalid={errorField === 'hours'}
-				/>
-			</div>
-			<div class="field">
-				<label for="rate">Rate per hour</label>
-				<div class="ui-money-input">
-					<input
-						id="rate"
-						class="input"
-						name="rate"
-						bind:value={rate}
-						inputmode="decimal"
-						aria-invalid={errorField === 'rate'}
-					/>
-				</div>
-			</div>
-			<div class="field">
-				<span class="label">Fee</span>
-				<p class="fee">{fee === null ? '—' : formatMoney(fee)}</p>
 			</div>
 		</div>
 		<div class="field">
@@ -275,29 +226,6 @@
 				description="Link the album below once it’s saved."
 				bind:checked={delivered}
 			/>
-			{#if hasInvoices}
-				<input type="hidden" name="paid" value={paid ? 'on' : ''} />
-			{:else}
-				<Toggle
-					name="paid"
-					label="Paid"
-					description="For jobs paid without an invoice here. Once a job has invoices, they decide this."
-					bind:checked={paid}
-				/>
-			{/if}
-		</div>
-		<div class="field">
-			<label for="legacy">Earlier invoice numbers <span class="ui-optional">optional</span></label>
-			<input
-				id="legacy"
-				class="input"
-				name="legacy_invoices"
-				value={start.legacyInvoices}
-				placeholder="64017714"
-			/>
-			<p class="hint">
-				Invoices sent before this system. New invoice numbers will never repeat them.
-			</p>
 		</div>
 		<div class="field">
 			<label for="notes">Notes <span class="ui-optional">optional</span></label>
@@ -319,15 +247,6 @@
 	.form {
 		display: grid;
 		gap: 1.5rem;
-	}
-
-	.fee {
-		min-height: 44px;
-		display: flex;
-		align-items: center;
-		font-family: var(--font-serif);
-		font-size: 1.4rem;
-		font-variant-numeric: lining-nums;
 	}
 
 	.address a {

@@ -132,7 +132,9 @@ Prettier-formatted, so `bun run lint` reports it; leave it alone unless asked.
   Booleans are stored as 0/1, `undefined` becomes `NULL`, and columns are snake_case, mapped to
   camelCase types in each module.
 - **Migrations.** These are the `MIGRATIONS` array in `db.ts`, applied in order and tracked by
-  `PRAGMA user_version`. Add a new string at the end; never edit or reorder existing ones.
+  `PRAGMA user_version`, each in its own transaction. Add a new entry at the end; never edit or
+  reorder existing ones. An entry is SQL, or a function given the raw `DatabaseSync` for data
+  conversions (it can't use the `db.ts` helpers, which open the database themselves).
 - **Site settings.**
   - They're stored as one JSON row (`settings.key = 'site'`) and cached in `settings.ts`.
   - Unknown keys are dropped when read, so a new setting needs adding to both `defaultSettings`
@@ -159,14 +161,21 @@ background maintenance tasks (`jobs.ts`, `/admin/api/jobs`). The page route is s
   - Money is always stored as integer pence (`money.ts`: `formatMoney`, `parseMoney`).
   - A job's `starts_at` is a naive local `YYYY-MM-DDTHH:mm`, or just a date.
   - Days are `YYYY-MM-DD` strings; use `todayIso` and `addDays` from `utils.ts`.
-- **Job payment state** comes from the job's invoices if it has any. Otherwise it comes from its
-  own `paid` flag and `legacy_invoices` (see `invoiceState` in `bookings.ts`). Status is
-  `confirmed | tentative | cancelled`.
+- **Jobs hold no money.** A job's fee, payment state and analytics all come from its invoices
+  (`paymentState` and `invoiceState` in `bookings.ts`). Don't add money fields to `bookings`. Status
+  is `confirmed | tentative | cancelled`.
+- **Invoice states.**
+  - A **draft** (`draft = 1`) hasn't been sent. It holds the expected fee, counts as booked (or
+    tentative, for a tentative job) in analytics, can't be marked paid, and isn't outstanding.
+    Issuing it (`issueInvoice`) dates it today and recomputes the due date with `invoiceDueDate`.
+  - An **imported** record (`imported = 1`) was converted from the money jobs used to hold
+    (`legacy-money.ts`). It has no PDF, its number may be empty or list several earlier numbers, and
+    it's left out of “time to get paid”. The spreadsheet import makes the same conversion.
 - **Invoices are snapshots.**
   - The sender, bill-to, payment details, line items (JSON) and style are copied onto the invoice
     row, so changing defaults never alters an issued invoice.
-  - Numbers are random 8-digit values, unique against both invoices and legacy numbers
-    (`generateInvoiceNumber`).
+  - Numbers are random 8-digit values, unique against invoices and the numbers on imported records
+    (`generateInvoiceNumber`). Only non-imported numbers are unique in the database.
   - Invoices exist only as PDF downloads; there are deliberately no public invoice URLs.
   - Invoices and jobs are both optional for albums: an album can be delivered with neither.
 - **PDF rendering** uses PDFKit in `invoice-pdf.ts`.

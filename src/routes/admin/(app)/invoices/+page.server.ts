@@ -9,7 +9,10 @@ export const load: PageServerLoad = ({ locals, depends }) => {
 	const invoices = listInvoices();
 	const year = todayIso().slice(0, 4);
 	const sum = (list: typeof invoices) => list.reduce((total, invoice) => total + invoice.total, 0);
-	const unpaid = invoices.filter((invoice) => invoice.state !== 'paid');
+	const unpaid = invoices.filter(
+		(invoice) => invoice.state === 'unpaid' || invoice.state === 'overdue'
+	);
+	const drafts = invoices.filter((invoice) => invoice.state === 'draft');
 	const overdue = invoices.filter((invoice) => invoice.state === 'overdue');
 	const paidThisYear = invoices.filter((invoice) => invoice.paidAt?.startsWith(year));
 	return {
@@ -21,6 +24,8 @@ export const load: PageServerLoad = ({ locals, depends }) => {
 			overdueCount: overdue.length,
 			paidThisYear: sum(paidThisYear),
 			paidThisYearCount: paidThisYear.length,
+			drafted: sum(drafts),
+			draftCount: drafts.length,
 			year
 		}
 	};

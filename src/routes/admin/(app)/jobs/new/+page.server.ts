@@ -1,9 +1,8 @@
 import { fail, redirect } from '@sveltejs/kit';
-import { getInvoiceSettings, listBillingAddresses } from '#lib/server/billing.js';
+import { listBillingAddresses } from '#lib/server/billing.js';
 import { parseBookingForm } from '#lib/server/booking-form.js';
 import { clientSuggestions, createBooking } from '#lib/server/bookings.js';
 import { requireAdmin } from '#lib/server/guard.js';
-import { moneyInput } from '#lib/money.js';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = ({ locals }) => {
@@ -18,13 +17,9 @@ export const load: PageServerLoad = ({ locals }) => {
 			location: '',
 			date: '',
 			time: '',
-			hours: '',
-			rate: moneyInput(getInvoiceSettings().hourlyRate),
 			status: 'confirmed' as const,
 			shot: false,
 			delivered: false,
-			paid: false,
-			legacyInvoices: '',
 			notes: ''
 		}
 	};
