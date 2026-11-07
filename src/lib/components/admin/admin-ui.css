@@ -1,0 +1,718 @@
+/*
+ * Shared building blocks for admin pages (jobs, invoices). They mirror the dashboard and settings
+ * styles; the `ui-` prefix keeps them from clashing with page-scoped classes.
+ */
+
+.ui-head {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	justify-content: space-between;
+	gap: 1rem;
+	margin-bottom: 2.25rem;
+}
+
+.ui-head h1 {
+	font-size: clamp(2.2rem, 4vw, 3rem);
+	margin-top: 0.5rem;
+}
+
+.ui-head .ui-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+}
+
+.ui-back {
+	margin-bottom: 1.5rem;
+}
+
+/* ---------------------------------------------------------------- stats */
+
+.ui-stats {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+	gap: 1px;
+	background: var(--border);
+	border: 1px solid var(--border);
+	margin-bottom: 2rem;
+}
+
+.ui-stat {
+	display: grid;
+	align-content: start;
+	gap: 0.6rem;
+	padding: 1.3rem 1.5rem;
+	background: var(--bg-elevated);
+	text-decoration: none;
+}
+
+a.ui-stat:hover {
+	background: var(--surface);
+}
+
+.ui-stat strong {
+	font-family: var(--font-serif);
+	font-size: 2rem;
+	font-weight: 400;
+	line-height: 1;
+	/* Proportional figures for standalone numbers; lining so money doesn't use old-style digits. */
+	font-variant-numeric: lining-nums proportional-nums;
+}
+
+.ui-stat .ui-note {
+	font-size: 0.78rem;
+	color: var(--text-subtle);
+}
+
+/* ---------------------------------------------------------------- panels */
+
+.ui-panel {
+	border: 1px solid var(--border);
+	background: var(--bg-elevated);
+}
+
+.ui-panel + .ui-panel {
+	margin-top: 1.5rem;
+}
+
+.ui-panel-head {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.75rem 1rem;
+	padding: 1.1rem 1.5rem;
+	border-bottom: 1px solid var(--border);
+}
+
+.ui-panel-head h2 {
+	font-size: 1.5rem;
+}
+
+.ui-panel-body {
+	display: grid;
+	gap: 1.25rem;
+	padding: 1.25rem 1.5rem 1.5rem;
+}
+
+/* A form section, as on the settings page. */
+.ui-card {
+	display: grid;
+	gap: 1.4rem;
+	padding: clamp(1.25rem, 3vw, 2rem);
+	border: 1px solid var(--border);
+	background: var(--bg-elevated);
+	scroll-margin-top: 1.5rem;
+}
+
+.ui-card-head {
+	display: grid;
+	gap: 0.35rem;
+	padding-bottom: 1rem;
+	border-bottom: 1px solid var(--border);
+}
+
+.ui-card-head h2 {
+	font-size: 1.5rem;
+}
+
+.ui-grid-2,
+.ui-grid-3 {
+	display: grid;
+	gap: 1.25rem;
+}
+
+@media (min-width: 720px) {
+	.ui-grid-2 {
+		grid-template-columns: 1fr 1fr;
+	}
+
+	.ui-grid-3 {
+		grid-template-columns: repeat(3, 1fr);
+	}
+}
+
+.ui-optional {
+	text-transform: none;
+	letter-spacing: 0;
+	color: var(--text-subtle);
+	margin-left: 0.3rem;
+}
+
+.ui-textarea-short {
+	min-height: 84px !important;
+}
+
+/* ---------------------------------------------------------------- filters */
+
+.ui-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.4rem;
+}
+
+.ui-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+	min-height: 32px;
+	padding: 0.35rem 0.8rem;
+	border: 1px solid var(--border-strong);
+	background: none;
+	color: var(--text-muted);
+	font-size: 0.66rem;
+	font-weight: 500;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	text-decoration: none;
+	cursor: pointer;
+	transition:
+		border-color 0.15s var(--ease),
+		color 0.15s var(--ease),
+		background-color 0.15s var(--ease);
+}
+
+.ui-chip:hover {
+	border-color: var(--text);
+	color: var(--text);
+}
+
+.ui-chip.active {
+	background: var(--accent);
+	border-color: var(--accent);
+	color: var(--accent-text);
+}
+
+.ui-chip:has(input:focus-visible) {
+	outline: 1px solid var(--highlight, var(--text));
+	outline-offset: 3px;
+}
+
+.ui-chip .ui-count {
+	opacity: 0.7;
+	font-variant-numeric: tabular-nums;
+}
+
+/* ---------------------------------------------------------------- tables */
+
+.ui-table-wrap {
+	overflow-x: auto;
+}
+
+.ui-table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 0.88rem;
+}
+
+.ui-table th {
+	text-align: left;
+	font-size: 0.64rem;
+	font-weight: 500;
+	letter-spacing: 0.16em;
+	text-transform: uppercase;
+	color: var(--text-subtle);
+	padding: 0.85rem 1rem;
+	border-bottom: 1px solid var(--border);
+	white-space: nowrap;
+}
+
+.ui-table td {
+	padding: 0.85rem 1rem;
+	border-bottom: 1px solid var(--border);
+	vertical-align: middle;
+}
+
+.ui-table tbody tr:last-child td {
+	border-bottom: 0;
+}
+
+.ui-table tbody tr {
+	transition: background-color 0.15s;
+}
+
+.ui-table tbody tr:hover {
+	background: color-mix(in srgb, var(--surface) 55%, transparent);
+}
+
+.ui-table .ui-num {
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+
+.ui-table .ui-center {
+	text-align: center;
+}
+
+.ui-table .ui-shrink {
+	width: 1%;
+	white-space: nowrap;
+}
+
+.ui-title {
+	display: block;
+	font-family: var(--font-serif);
+	font-size: 1.08rem;
+	line-height: 1.3;
+	text-decoration: none;
+}
+
+a.ui-title:hover {
+	text-decoration: underline;
+	text-underline-offset: 3px;
+}
+
+.ui-sub {
+	display: block;
+	font-size: 0.78rem;
+	color: var(--text-subtle);
+	line-height: 1.5;
+}
+
+.ui-faded {
+	opacity: 0.55;
+}
+
+/* ---------------------------------------------------------------- badges */
+
+.ui-badges {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.35rem;
+}
+
+.ui-badge {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.3rem;
+	padding: 0.18rem 0.5rem;
+	border: 1px solid var(--border-strong);
+	font-size: 0.68rem;
+	letter-spacing: 0.04em;
+	color: var(--text-muted);
+	white-space: nowrap;
+	text-decoration: none;
+	line-height: 1.5;
+}
+
+a.ui-badge:hover {
+	border-color: var(--text);
+	color: var(--text);
+}
+
+.ui-badge.ok {
+	color: var(--success);
+	border-color: color-mix(in srgb, var(--success) 50%, transparent);
+}
+
+.ui-badge.warn {
+	color: var(--warning);
+	border-color: color-mix(in srgb, var(--warning) 50%, transparent);
+}
+
+.ui-badge.danger {
+	color: var(--danger);
+	border-color: color-mix(in srgb, var(--danger) 50%, transparent);
+}
+
+.ui-badge.solid {
+	background: var(--accent);
+	border-color: var(--accent);
+	color: var(--accent-text);
+}
+
+/* ---------------------------------------------------------------- buttons */
+
+.ui-icon-btn {
+	display: inline-grid;
+	place-items: center;
+	width: 34px;
+	height: 34px;
+	border: 1px solid transparent;
+	background: none;
+	color: var(--text-muted);
+	cursor: pointer;
+	text-decoration: none;
+	transition:
+		border-color 0.15s,
+		color 0.15s;
+}
+
+.ui-icon-btn:hover:not(:disabled) {
+	border-color: var(--border-strong);
+	color: var(--text);
+}
+
+.ui-icon-btn.danger:hover:not(:disabled) {
+	border-color: var(--danger);
+	color: var(--danger);
+}
+
+.ui-icon-btn:disabled {
+	opacity: 0.4;
+	cursor: not-allowed;
+}
+
+.ui-row-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 0.25rem;
+}
+
+/* A square check used for the shot / delivered / paid columns. */
+.ui-check {
+	display: inline-grid;
+	place-items: center;
+	width: 26px;
+	height: 26px;
+	padding: 0;
+	border: 1px solid var(--border-strong);
+	background: none;
+	color: var(--bg);
+	cursor: pointer;
+	transition:
+		background-color 0.15s var(--ease),
+		border-color 0.15s var(--ease);
+}
+
+.ui-check:hover:not(:disabled) {
+	border-color: var(--text);
+}
+
+.ui-check.on {
+	background: var(--highlight, var(--text));
+	border-color: var(--highlight, var(--text));
+}
+
+.ui-check:disabled {
+	cursor: default;
+	opacity: 0.5;
+}
+
+/* ---------------------------------------------------------------- empty */
+
+.ui-empty {
+	display: grid;
+	justify-items: center;
+	gap: 0.85rem;
+	padding: 4rem 1rem;
+	text-align: center;
+	color: var(--text-muted);
+}
+
+.ui-empty h3 {
+	font-size: 1.6rem;
+	color: var(--text);
+}
+
+.ui-empty .btn {
+	margin-top: 0.75rem;
+}
+
+.ui-inline {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.ui-money-input {
+	position: relative;
+}
+
+.ui-money-input::before {
+	content: '£';
+	position: absolute;
+	left: 0.85rem;
+	top: 50%;
+	transform: translateY(-50%);
+	color: var(--text-subtle);
+	font-size: 0.95rem;
+	pointer-events: none;
+}
+
+.ui-money-input .input {
+	padding-left: 1.7rem;
+}
+
+/* ---------------------------------------------------------------- charts */
+
+/*
+ * Chart colours come from the active theme. A theme can set chart-1…chart-4 itself; otherwise
+ * chart-1 is its highlight (or ink) and the rest are steps of it towards the panel colour — an
+ * ordinal ramp (paid → invoiced → booked → tentative) validated for contrast in every built-in theme.
+ */
+.viz {
+	--viz-surface: var(--bg-elevated);
+	--viz-1: var(--chart-1, var(--highlight, var(--text)));
+	--viz-2: var(--chart-2, color-mix(in srgb, var(--viz-1) 72%, var(--viz-surface)));
+	--viz-3: var(--chart-3, color-mix(in srgb, var(--viz-1) 52%, var(--viz-surface)));
+	--viz-4: var(--chart-4, color-mix(in srgb, var(--viz-1) 36%, var(--viz-surface)));
+	--viz-grid: color-mix(in srgb, var(--border) 70%, var(--viz-surface));
+	--viz-axis: var(--border-strong);
+	margin: 0;
+	min-width: 0;
+}
+
+.viz .legend {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.4rem 1.1rem;
+	margin-bottom: 0.9rem;
+	font-size: 0.78rem;
+	color: var(--text-muted);
+}
+
+.viz .key {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.45rem;
+}
+
+.viz .swatch {
+	width: 10px;
+	height: 10px;
+	border-radius: 2px;
+}
+
+.viz .plot {
+	position: relative;
+	width: 100%;
+	outline-offset: 4px;
+}
+
+.viz svg {
+	display: block;
+	overflow: visible;
+}
+
+.viz .grid {
+	stroke: var(--viz-grid);
+	stroke-width: 1;
+	shape-rendering: crispEdges;
+}
+
+.viz .baseline {
+	stroke: var(--viz-axis);
+	stroke-width: 1;
+	shape-rendering: crispEdges;
+}
+
+.viz text {
+	font-family: var(--font-sans);
+	font-size: 11px;
+	fill: var(--text-subtle);
+	font-variant-numeric: tabular-nums;
+}
+
+.viz text.x {
+	fill: var(--text-muted);
+}
+
+.viz text.x.muted,
+.viz text.sub {
+	fill: var(--text-subtle);
+}
+
+.viz text.peak,
+.viz text.end {
+	fill: var(--text-muted);
+	font-weight: 500;
+}
+
+.viz .column {
+	transition: opacity 0.15s var(--ease);
+}
+
+.viz .column.dim {
+	opacity: 0.45;
+}
+
+.viz .hit {
+	fill: transparent;
+}
+
+.viz .line {
+	fill: none;
+	stroke-width: 2;
+	stroke-linejoin: round;
+	stroke-linecap: round;
+}
+
+.viz .area {
+	opacity: 0.1;
+}
+
+.viz .dot {
+	stroke: var(--viz-surface);
+	stroke-width: 2;
+}
+
+.viz .crosshair {
+	stroke: var(--viz-axis);
+	stroke-width: 1;
+	shape-rendering: crispEdges;
+}
+
+.viz .tip {
+	position: absolute;
+	z-index: 5;
+	transform: translate(-50%, -100%);
+	min-width: 150px;
+	padding: 0.65rem 0.8rem;
+	border: 1px solid var(--border);
+	background: var(--bg-elevated);
+	box-shadow: 0 14px 40px rgba(0, 0, 0, 0.18);
+	pointer-events: none;
+	font-size: 0.8rem;
+	white-space: nowrap;
+}
+
+.viz .tip-title {
+	margin-bottom: 0.4rem;
+	font-size: 0.64rem;
+	font-weight: 500;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	color: var(--text-subtle);
+}
+
+.viz .tip-row {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	color: var(--text-muted);
+	line-height: 1.7;
+}
+
+.viz .tip-row.zero {
+	opacity: 0.55;
+}
+
+.viz .tip-row strong,
+.viz .tip-total strong {
+	color: var(--text);
+	font-weight: 600;
+	font-variant-numeric: tabular-nums;
+}
+
+.viz .line-key {
+	width: 12px;
+	height: 2px;
+	border-radius: 1px;
+}
+
+.viz .tip-total {
+	margin-top: 0.35rem;
+	padding-top: 0.35rem;
+	border-top: 1px solid var(--border);
+	color: var(--text-muted);
+}
+
+.viz .empty {
+	padding: 2.5rem 0;
+	text-align: center;
+	color: var(--text-subtle);
+	font-size: 0.88rem;
+}
+
+.viz .table-view {
+	margin-top: 0.75rem;
+}
+
+.viz .table-view summary {
+	display: inline-block;
+	cursor: pointer;
+	font-size: 0.66rem;
+	font-weight: 500;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	color: var(--text-subtle);
+}
+
+.viz .table-view summary:hover {
+	color: var(--text);
+}
+
+.viz .table-view[open] summary {
+	margin-bottom: 0.5rem;
+}
+
+.viz .table-view th[scope='row'] {
+	font-weight: 400;
+	text-transform: none;
+	letter-spacing: 0;
+	font-size: 0.86rem;
+	color: var(--text);
+}
+
+/* Ranked bars */
+
+.viz .bar-list {
+	display: grid;
+	gap: 0.15rem;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.viz .bar-list li {
+	display: grid;
+	grid-template-columns: minmax(90px, 34%) minmax(0, 1fr);
+	align-items: center;
+	gap: 0.2rem 1rem;
+	padding: 0.45rem 0;
+	transition: opacity 0.15s var(--ease);
+}
+
+.viz .bar-list li.dim {
+	opacity: 0.5;
+}
+
+.viz .bar-label {
+	font-size: 0.86rem;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.viz .bar-label a {
+	text-decoration: none;
+}
+
+.viz .bar-label a:hover {
+	text-decoration: underline;
+	text-underline-offset: 3px;
+}
+
+.viz .bar-track {
+	display: flex;
+	align-items: center;
+	gap: 0.6rem;
+	min-width: 0;
+}
+
+.viz .bar {
+	flex: none;
+	height: 10px;
+	border-radius: 0 4px 4px 0;
+}
+
+.viz .bar-value {
+	font-size: 0.82rem;
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+
+.viz .bar-share {
+	margin-left: 0.3rem;
+	color: var(--text-subtle);
+}
+
+.viz .bar-note {
+	grid-column: 2;
+	font-size: 0.74rem;
+	color: var(--text-subtle);
+}

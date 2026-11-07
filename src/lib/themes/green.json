@@ -1,0 +1,32 @@
+{
+	"$schema": "./theme.schema.json",
+	"name": "Green",
+	"description": "Deep bottle green with cream type and antique-gold highlights.",
+	"icon": "leaf",
+	"scheme": "dark",
+	"order": 3,
+	"colors": {
+		"bg": "#14261c",
+		"bg-elevated": "#182c21",
+		"surface": "#1c3226",
+		"surface-strong": "#233b2e",
+		"text": "#efe8d6",
+		"text-muted": "#b3b29b",
+		"text-subtle": "#828b76",
+		"border": "#2a4334",
+		"border-strong": "#4d5f45",
+		"overlay": "rgba(20, 38, 28, 0.84)",
+		"header-bg": "rgba(20, 38, 28, 0.76)",
+		"lightbox-bg": "rgba(10, 20, 14, 0.95)",
+		"danger": "#e39a83",
+		"danger-soft": "rgba(227, 154, 131, 0.1)",
+		"success": "#a8d0a6",
+		"success-soft": "rgba(168, 208, 166, 0.1)",
+		"warning": "#e2c178",
+		"warning-soft": "rgba(226, 193, 120, 0.1)",
+		"highlight": "#e2c068",
+		"accent": "#e2c068",
+		"accent-text": "#14261c",
+		"placeholder": "#1e3428"
+	}
+}

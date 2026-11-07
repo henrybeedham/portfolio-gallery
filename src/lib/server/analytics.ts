@@ -2,6 +2,20 @@ import { placeholders, run, transaction } from './db.js';
 import type { Album } from './albums.js';
 import { notify, notifyPhotoDownload } from './discord.js';
 import type { PhotoRow } from './photos.js';
+import { todayIso } from '#lib/utils.js';
+
+type DailyColumn = 'views' | 'photo_downloads' | 'album_downloads';
+
+/** Adds to today's row for the album, for the charts on the analytics page. */
+function bumpDaily(albumId: number, column: DailyColumn, amount = 1) {
+	run(
+		`INSERT INTO album_daily_stats (album_id, day, ${column}) VALUES (?, ?, ?)
+		 ON CONFLICT(album_id, day) DO UPDATE SET ${column} = ${column} + excluded.${column}`,
+		albumId,
+		todayIso(),
+		amount
+	);
+}
 
 const BOT_PATTERN =
 	/bot|crawl|spider|slurp|facebookexternalhit|preview|embed|whatsapp|telegram|discord|slack|curl|wget|python|headless/i;
@@ -20,13 +34,17 @@ export function recordView(album: Album, visitor: string, userAgent: string | nu
 	if (recentViews.size > 20_000) {
 		for (const [k, t] of recentViews) if (now - t > VIEW_WINDOW) recentViews.delete(k);
 	}
-	run('UPDATE albums SET views = views + 1 WHERE id = ?', album.id);
+	transaction(() => {
+		run('UPDATE albums SET views = views + 1 WHERE id = ?', album.id);
+		bumpDaily(album.id, 'views');
+	});
 }
 
 export function recordPhotoDownload(album: Album, photo: PhotoRow, origin: string) {
 	transaction(() => {
 		run('UPDATE photos SET downloads = downloads + 1 WHERE id = ?', photo.id);
 		run('UPDATE albums SET photo_downloads = photo_downloads + 1 WHERE id = ?', album.id);
+		bumpDaily(album.id, 'photo_downloads');
 	});
 	notifyPhotoDownload(
 		{ id: album.id, title: album.title, url: `${origin}/${album.slug}` },
@@ -36,7 +54,10 @@ export function recordPhotoDownload(album: Album, photo: PhotoRow, origin: strin
 
 export function recordZipDownload(album: Album, photoIds: number[] | null, origin: string) {
 	if (photoIds === null) {
-		run('UPDATE albums SET album_downloads = album_downloads + 1 WHERE id = ?', album.id);
+		transaction(() => {
+			run('UPDATE albums SET album_downloads = album_downloads + 1 WHERE id = ?', album.id);
+			bumpDaily(album.id, 'album_downloads');
+		});
 		notify({
 			title: 'Full album downloaded',
 			description: `**${album.title}** was downloaded as a ZIP archive.`,
@@ -56,6 +77,7 @@ export function recordZipDownload(album: Album, photoIds: number[] | null, origi
 			photoIds.length,
 			album.id
 		);
+		bumpDaily(album.id, 'photo_downloads', photoIds.length);
 	});
 	notify({
 		title: `${photoIds.length} selected photo${photoIds.length === 1 ? '' : 's'} downloaded`,
@@ -71,5 +93,6 @@ export function clearAnalytics(albumId: number) {
 			albumId
 		);
 		run('UPDATE photos SET downloads = 0 WHERE album_id = ?', albumId);
+		run('DELETE FROM album_daily_stats WHERE album_id = ?', albumId);
 	});
 }
