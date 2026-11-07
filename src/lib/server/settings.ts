@@ -19,7 +19,7 @@ export const defaultSettings: SiteSettings = {
 	discordWebhook: '',
 	theme: 'light',
 	defaultDescription: '',
-	defaultAccentColor: '#2a2723',
+	defaultAlbumTheme: '',
 	defaultLayout: 'grid',
 	defaultSort: 'oldest',
 	defaultPublic: true,
@@ -39,7 +39,9 @@ export function getSettings(): SiteSettings {
 				stored = {};
 			}
 		}
-		cache = { ...defaultSettings, ...stored };
+		// Only known keys, so settings that have since been removed (like the old accent colour) drop out.
+		const known = Object.entries(stored).filter(([key]) => key in defaultSettings);
+		cache = { ...defaultSettings, ...Object.fromEntries(known) };
 	}
 	return cache;
 }

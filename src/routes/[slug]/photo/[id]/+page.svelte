@@ -6,7 +6,6 @@
 	import Download from '@lucide/svelte/icons/download';
 	import { downloadWithProgress } from '#lib/download.js';
 	import {
-		contrastText,
 		downloadUrl,
 		formatAperture,
 		formatBytes,
@@ -155,11 +154,7 @@
 	{/if}
 </svelte:head>
 
-<div
-	class="photo-page"
-	style:--accent={album.accentColor}
-	style:--accent-text={contrastText(album.accentColor)}
->
+<div class="photo-page">
 	<header class="bar container">
 		<button class="link" onclick={back}><ArrowLeft size={14} /> Back</button>
 		<span class="counter">{data.index + 1} / {data.total}</span>

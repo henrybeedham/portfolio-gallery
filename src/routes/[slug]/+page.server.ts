@@ -13,6 +13,7 @@ import { renderMarkdown } from '#lib/server/markdown.js';
 import { albumTags, getPhoto, orderedPhotoIds, PAGE_SIZE, photoItems } from '#lib/server/photos.js';
 import { clientIp, rateLimit } from '#lib/server/ratelimit.js';
 import { getSettings } from '#lib/server/settings.js';
+import { albumPageTheme } from '#lib/server/themes.js';
 import { parseView } from '#lib/server/view.js';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -23,7 +24,6 @@ function publicAlbum(album: Album) {
 		title: album.title,
 		albumDate: album.albumDate,
 		expiresAt: album.expiresAt,
-		accentColor: album.accentColor,
 		layout: album.layout,
 		sortOrder: album.sortOrder,
 		hasPassword: !!album.passwordHash,
@@ -47,6 +47,7 @@ export const load: PageServerLoad = (event) => {
 	if (access === 'not_found') error(404, 'Gallery not found');
 
 	const base = {
+		theme: albumPageTheme(locals, album),
 		album: publicAlbum(album),
 		preview,
 		expired: albumIsExpired(album)

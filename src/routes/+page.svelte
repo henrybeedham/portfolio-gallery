@@ -10,7 +10,7 @@
 	import PhotoGallery from '#lib/components/PhotoGallery.svelte';
 	import AlbumCard from '#lib/components/AlbumCard.svelte';
 	import Img from '#lib/components/Img.svelte';
-	import { contrastText, mediaUrl, paragraphs, plural, viewQuery } from '#lib/utils.js';
+	import { mediaUrl, paragraphs, plural, viewQuery } from '#lib/utils.js';
 	import type { PhotoItem } from '#lib/types.js';
 	import type { PageProps } from './$types';
 
@@ -98,12 +98,7 @@
 	</section>
 
 	{#if featured}
-		<section
-			id="work"
-			class="featured container"
-			style:--accent={featured.accentColor}
-			style:--accent-text={contrastText(featured.accentColor)}
-		>
+		<section id="work" class="featured container">
 			<div class="section-head">
 				<div>
 					<p class="eyebrow">Featured collection</p>

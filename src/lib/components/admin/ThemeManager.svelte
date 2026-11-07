@@ -76,7 +76,7 @@
 					? 'The built-in theme with the same name comes back.'
 					: 'The theme file is deleted from the server.') +
 				(uses && theme.source !== 'replaced'
-					? ` It’s used for ${uses}, which will switch to Light.`
+					? ` It’s used for ${uses}, which will go back to the default theme.`
 					: '') +
 				' Invoices that used it are drawn in the default style.',
 			confirmLabel: 'Delete theme',

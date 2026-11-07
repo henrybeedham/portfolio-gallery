@@ -57,8 +57,6 @@ const RESERVED_SLUGS = new Set([
 	'favicon.svg',
 	'robots.txt'
 ]);
-const OLD_DEFAULT_ACCENT = '#3b82f6';
-const NEW_DEFAULT_ACCENT = '#2a2723';
 const CONCURRENCY = Math.max(1, Math.min(3, os.availableParallelism() - 1));
 
 /* ------------------------------------------------------------------ output */
@@ -309,8 +307,6 @@ function hashPassword(password) {
 	const hash = crypto.scryptSync(password, salt, 32, { N: 16384, r: 8, p: 1 });
 	return `scrypt$${salt.toString('base64url')}$${hash.toString('base64url')}`;
 }
-
-const isHex = (value) => /^#[0-9a-f]{6}$/i.test(String(value ?? ''));
 
 /* ------------------------------------------------------------ image files */
 
@@ -615,7 +611,7 @@ function readNewSettings(db) {
 }
 
 /** Maps the old key/value settings onto the new settings object. */
-function convertSettings(old, { replaceOldDefaultAccent }) {
+function convertSettings(old) {
 	const out = {};
 	const str = (key, target = key) => {
 		if (old[key] !== undefined) out[target] = String(old[key]);
@@ -643,11 +639,6 @@ function convertSettings(old, { replaceOldDefaultAccent }) {
 		out.defaultSort = ['newest', 'random'].includes(old.defaultSortOrder)
 			? old.defaultSortOrder
 			: 'oldest';
-	if (isHex(old.defaultColor)) {
-		const color = old.defaultColor.toLowerCase();
-		out.defaultAccentColor =
-			replaceOldDefaultAccent && color === OLD_DEFAULT_ACCENT ? NEW_DEFAULT_ACCENT : color;
-	}
 	if (out.siteTitle !== undefined && !out.siteTitle.trim()) delete out.siteTitle;
 	return out;
 }
@@ -873,26 +864,6 @@ async function main() {
 			);
 		}
 
-		const blueAlbums = newAlbums.filter(
-			(e) => String(e.album.primary_color ?? '').toLowerCase() === OLD_DEFAULT_ACCENT
-		);
-		const blueDefault =
-			importSettings &&
-			String(legacy.settings.defaultColor ?? '').toLowerCase() === OLD_DEFAULT_ACCENT;
-		let replaceOldDefaultAccent = false;
-		if (blueAlbums.length || blueDefault) {
-			const what = [
-				blueAlbums.length && `${blueAlbums.length} album(s)`,
-				blueDefault && 'the default for new albums'
-			]
-				.filter(Boolean)
-				.join(' and ');
-			replaceOldDefaultAccent = await confirm(
-				`${what} use the old app's default blue accent (${OLD_DEFAULT_ACCENT}). Switch to the new default charcoal (${NEW_DEFAULT_ACCENT})?`,
-				true
-			);
-		}
-
 		let importHero = false;
 		if (heroExists) {
 			const newHasHero = !!newSettings.values.heroImage;
@@ -995,9 +966,7 @@ async function main() {
 
 		// Settings and hero image first, so the site looks right even if the photo import is interrupted.
 		if (importSettings || importHero) {
-			const patch = importSettings
-				? convertSettings(legacy.settings, { replaceOldDefaultAccent })
-				: {};
+			const patch = importSettings ? convertSettings(legacy.settings) : {};
 			if (importHero) {
 				status('Importing hero image…');
 				try {
@@ -1032,9 +1001,9 @@ async function main() {
 
 		const insertAlbum = db.prepare(`
 			INSERT INTO albums (title, slug, description, album_date, is_public, show_on_home, show_on_galleries, is_featured,
-				password_hash, expires_at, accent_color, layout, sort_order, views, photo_downloads, album_downloads,
+				password_hash, expires_at, layout, sort_order, views, photo_downloads, album_downloads,
 				created_at, updated_at)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
 		const insertPhoto = db.prepare(`
 			INSERT INTO photos (album_id, key, ext, original_name, mime, size, width, height, taken_at, camera, lens,
 				focal_length, aperture, exposure_time, iso, downloads, created_at)
@@ -1059,9 +1028,6 @@ async function main() {
 			if (!albumId) {
 				try {
 					const events = importAnalytics ? (legacy.albumEvents.get(album.id) ?? null) : null;
-					const accent = isHex(album.primary_color)
-						? album.primary_color.toLowerCase()
-						: NEW_DEFAULT_ACCENT;
 					albumId = transaction(db, () => {
 						const result = insertAlbum.run(
 							String(album.title || 'Untitled').slice(0, 200),
@@ -1074,9 +1040,6 @@ async function main() {
 							featured === entry ? 1 : 0,
 							album.password ? hashPassword(String(album.password)) : null,
 							expiryToIso(album.expires_at),
-							replaceOldDefaultAccent && accent === OLD_DEFAULT_ACCENT
-								? NEW_DEFAULT_ACCENT
-								: accent,
 							album.layout_style === 'masonry' ? 'masonry' : 'grid',
 							['newest', 'random'].includes(album.sort_order) ? album.sort_order : 'oldest',
 							events?.views ?? 0,

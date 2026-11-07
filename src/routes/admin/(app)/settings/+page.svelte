@@ -13,7 +13,7 @@
 
 	const initial = untrack(() => data.current);
 	let theme = $state(initial.theme);
-	let accent = $state(initial.defaultAccentColor);
+	let albumTheme = $state(initial.defaultAlbumTheme);
 	let layout = $state<Layout>(initial.defaultLayout);
 	let sort = $state<SortOrder>(initial.defaultSort);
 	let showContactOnHome = $state(initial.showContactOnHome);
@@ -22,6 +22,9 @@
 	let preview = $state<string | null>(null);
 	let fileInput = $state<HTMLInputElement>();
 	let saving = $state(false);
+
+	// Follows the picker above, so the “Site” choice previews the theme you're about to save.
+	const siteTheme = $derived(data.themes.find((t) => t.id === theme));
 
 	const heroSrc = $derived(
 		preview ?? (data.current.heroImage ? `/site/hero/small?v=${data.current.heroImage}` : null)
@@ -255,24 +258,18 @@
 				placeholder="Markdown supported">{data.current.defaultDescription}</textarea
 			>
 		</div>
-		<div class="grid-3">
-			<div class="field">
-				<span class="label">Accent colour</span>
-				<div class="inline">
-					<input
-						type="color"
-						class="swatch-input"
-						bind:value={accent}
-						aria-label="Default accent colour"
-					/>
-					<input
-						class="input hex"
-						name="defaultAccentColor"
-						bind:value={accent}
-						aria-label="Default accent hex"
-					/>
-				</div>
-			</div>
+		<div class="field">
+			<span class="label">Theme</span>
+			<ThemePicker
+				themes={data.themes}
+				name="defaultAlbumTheme"
+				bind:value={albumTheme}
+				inherit={{ label: `Site (${siteTheme?.name ?? 'default'})`, theme: siteTheme }}
+				compact
+			/>
+			<p class="hint">Albums following the site change with it. Each album can pick its own.</p>
+		</div>
+		<div class="grid-2">
 			<div class="field">
 				<label for="defaultLayout">Layout</label>
 				<select id="defaultLayout" class="select" name="defaultLayout" bind:value={layout}>
@@ -360,8 +357,7 @@
 		font-size: 1.5rem;
 	}
 
-	.grid-2,
-	.grid-3 {
+	.grid-2 {
 		display: grid;
 		gap: 1.25rem;
 	}
@@ -369,10 +365,6 @@
 	@media (min-width: 720px) {
 		.grid-2 {
 			grid-template-columns: 1fr 1fr;
-		}
-
-		.grid-3 {
-			grid-template-columns: repeat(3, 1fr);
 		}
 	}
 
@@ -459,21 +451,6 @@
 
 	.link.danger {
 		color: var(--danger);
-	}
-
-	.swatch-input {
-		width: 44px;
-		height: 44px;
-		padding: 0;
-		border: 1px solid var(--border);
-		background: none;
-		cursor: pointer;
-		flex: none;
-	}
-
-	.hex {
-		font-family: ui-monospace, monospace;
-		font-size: 0.86rem;
 	}
 
 	.toggles {

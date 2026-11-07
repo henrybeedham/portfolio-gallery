@@ -4,6 +4,7 @@ import { parseAlbumForm } from '#lib/server/album-form.js';
 import { requireAdmin } from '#lib/server/guard.js';
 import { getBooking, linkAlbum } from '#lib/server/bookings.js';
 import { getSettings } from '#lib/server/settings.js';
+import { getTheme, hasTheme, themeSummaries } from '#lib/server/themes.js';
 import { slugify } from '#lib/utils.js';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -20,6 +21,8 @@ export const load: PageServerLoad = ({ locals, url }) => {
 	return {
 		origin: url.origin,
 		job: job ? { id: job.id, title: job.title } : null,
+		themes: themeSummaries(),
+		siteTheme: getTheme(settings.theme).id,
 		defaults: {
 			title: job?.title ?? '',
 			slug: job ? slugify(job.title) : '',
@@ -31,7 +34,7 @@ export const load: PageServerLoad = ({ locals, url }) => {
 			isFeatured: false,
 			passwordEnabled: false,
 			expiresAt: '',
-			accentColor: settings.defaultAccentColor,
+			theme: hasTheme(settings.defaultAlbumTheme) ? settings.defaultAlbumTheme : '',
 			layout: settings.defaultLayout,
 			sortOrder: settings.defaultSort
 		}

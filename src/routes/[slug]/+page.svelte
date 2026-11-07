@@ -3,7 +3,7 @@
 	import AlbumView from '#lib/components/AlbumView.svelte';
 	import PasswordGate from '#lib/components/PasswordGate.svelte';
 	import ExpiredNotice from '#lib/components/ExpiredNotice.svelte';
-	import { contrastText, mediaUrl } from '#lib/utils.js';
+	import { mediaUrl } from '#lib/utils.js';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
@@ -31,11 +31,7 @@
 {:else if data.status === 'expired'}
 	<ExpiredNotice title={album.title} expiresAt={album.expiresAt} contact={data.contact} />
 {:else}
-	<div
-		class="album"
-		style:--accent={album.accentColor}
-		style:--accent-text={contrastText(album.accentColor)}
-	>
+	<div class="album">
 		{#if data.background}
 			<div class="backdrop" aria-hidden="true">
 				<img src={mediaUrl(data.background, 'thumb')} alt="" />

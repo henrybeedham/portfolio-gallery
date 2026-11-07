@@ -14,7 +14,8 @@ export interface Album {
 	isFeatured: boolean;
 	passwordHash: string | null;
 	expiresAt: string | null;
-	accentColor: string;
+	/** Theme id, or null to use the site's theme. */
+	theme: string | null;
 	layout: Layout;
 	sortOrder: SortOrder;
 	coverPhotoId: number | null;
@@ -38,7 +39,7 @@ interface AlbumRow {
 	is_featured: number;
 	password_hash: string | null;
 	expires_at: string | null;
-	accent_color: string;
+	theme: string | null;
 	layout: string;
 	sort_order: string;
 	cover_photo_id: number | null;
@@ -63,7 +64,7 @@ function mapAlbum(row: AlbumRow): Album {
 		isFeatured: !!row.is_featured,
 		passwordHash: row.password_hash,
 		expiresAt: row.expires_at,
-		accentColor: row.accent_color,
+		theme: row.theme,
 		layout: row.layout === 'masonry' ? 'masonry' : 'grid',
 		sortOrder: (['oldest', 'newest', 'random'].includes(row.sort_order)
 			? row.sort_order
@@ -127,7 +128,7 @@ export type AlbumInput = Pick<
 	| 'showOnGalleries'
 	| 'isFeatured'
 	| 'expiresAt'
-	| 'accentColor'
+	| 'theme'
 	| 'layout'
 	| 'sortOrder'
 > & { passwordHash: string | null };
@@ -137,7 +138,7 @@ export function createAlbum(input: AlbumInput): number {
 		if (input.isFeatured) run('UPDATE albums SET is_featured = 0');
 		const result = run(
 			`INSERT INTO albums (title, slug, description, album_date, is_public, show_on_home, show_on_galleries,
-				is_featured, password_hash, expires_at, accent_color, layout, sort_order)
+				is_featured, password_hash, expires_at, theme, layout, sort_order)
 			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 			input.title,
 			input.slug,
@@ -149,7 +150,7 @@ export function createAlbum(input: AlbumInput): number {
 			input.isFeatured,
 			input.passwordHash,
 			input.expiresAt,
-			input.accentColor,
+			input.theme,
 			input.layout,
 			input.sortOrder
 		);
@@ -162,7 +163,7 @@ export function updateAlbum(id: number, input: AlbumInput) {
 		if (input.isFeatured) run('UPDATE albums SET is_featured = 0 WHERE id != ?', id);
 		run(
 			`UPDATE albums SET title = ?, slug = ?, description = ?, album_date = ?, is_public = ?, show_on_home = ?,
-				show_on_galleries = ?, is_featured = ?, password_hash = ?, expires_at = ?, accent_color = ?, layout = ?,
+				show_on_galleries = ?, is_featured = ?, password_hash = ?, expires_at = ?, theme = ?, layout = ?,
 				sort_order = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
 			 WHERE id = ?`,
 			input.title,
@@ -175,12 +176,20 @@ export function updateAlbum(id: number, input: AlbumInput) {
 			input.isFeatured,
 			input.passwordHash,
 			input.expiresAt,
-			input.accentColor,
+			input.theme,
 			input.layout,
 			input.sortOrder,
 			id
 		);
 	});
+}
+
+/** How many albums have chosen each theme (albums following the site's theme aren't counted). */
+export function albumThemeCounts(): Map<string, number> {
+	const rows = all<{ theme: string; n: number }>(
+		'SELECT theme, COUNT(*) AS n FROM albums WHERE theme IS NOT NULL GROUP BY theme'
+	);
+	return new Map(rows.map((row) => [row.theme, row.n]));
 }
 
 export function setAlbumImage(id: number, field: 'cover' | 'background', photoId: number | null) {

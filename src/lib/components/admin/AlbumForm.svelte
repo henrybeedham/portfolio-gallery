@@ -3,14 +3,18 @@
 	import { enhance } from '$app/forms';
 	import Grid2x2 from '@lucide/svelte/icons/grid-2x2';
 	import LayoutGrid from '@lucide/svelte/icons/layout-grid';
+	import ThemePicker from './ThemePicker.svelte';
 	import Toggle from './Toggle.svelte';
 	import { feedback } from './feedback.svelte.js';
 	import { slugify } from '#lib/utils.js';
-	import type { AlbumFormInitial, Layout, SortOrder } from '#lib/types.js';
+	import type { AlbumFormInitial, Layout, SortOrder, ThemeSummary } from '#lib/types.js';
 
 	interface Props {
 		mode: 'create' | 'edit';
 		initial: AlbumFormInitial;
+		themes: ThemeSummary[];
+		/** The site's theme id, which albums without their own theme follow. */
+		siteTheme: string;
 		origin: string;
 		action?: string;
 		error?: string | null;
@@ -22,6 +26,8 @@
 	let {
 		mode,
 		initial,
+		themes,
+		siteTheme,
 		origin,
 		action = '',
 		error = null,
@@ -44,7 +50,7 @@
 	let passwordEnabled = $state(start.passwordEnabled);
 	let password = $state('');
 	let expiresLocal = $state('');
-	let accentColor = $state(start.accentColor);
+	let theme = $state(start.theme);
 	let layout = $state<Layout>(start.layout);
 	let sortOrder = $state<SortOrder>(start.sortOrder);
 	let saving = $state(false);
@@ -78,7 +84,7 @@
 		{ value: 'random', label: 'Random' }
 	];
 
-	const PRESETS = ['#26231f', '#8b6f47', '#a0522d', '#6b7a5a', '#4a6274', '#7d4e57', '#b08d57'];
+	const site = $derived(themes.find((t) => t.id === siteTheme));
 </script>
 
 <form
@@ -241,35 +247,17 @@
 	<section class="group">
 		<h3>Appearance</h3>
 		<div class="field">
-			<span class="label">Accent colour</span>
-			<div class="colors">
-				<input
-					type="color"
-					class="swatch-input"
-					bind:value={accentColor}
-					aria-label="Pick accent colour"
-				/>
-				<input
-					class="input hex"
-					name="accent_color"
-					bind:value={accentColor}
-					pattern="#[0-9a-fA-F]{'{6}'}"
-					aria-label="Accent colour hex value"
-				/>
-				<div class="presets">
-					{#each PRESETS as preset (preset)}
-						<button
-							type="button"
-							class="preset"
-							class:current={preset === accentColor.toLowerCase()}
-							style:background={preset}
-							onclick={() => (accentColor = preset)}
-							aria-label="Use {preset}"
-						></button>
-					{/each}
-				</div>
-			</div>
-			<p class="hint">Used for buttons, selections and active filters in the public album.</p>
+			<span class="label">Theme</span>
+			<ThemePicker
+				{themes}
+				name="theme"
+				bind:value={theme}
+				inherit={{ label: `Site (${site?.name ?? 'default'})`, theme: site }}
+				compact
+			/>
+			<p class="hint">
+				The album’s pages, photo pages and password screen use this theme instead of the site’s.
+			</p>
 		</div>
 
 		<div class="field">
@@ -363,53 +351,6 @@
 		display: flex;
 		align-items: center;
 		gap: 1rem;
-	}
-
-	.colors {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: center;
-		gap: 0.75rem;
-	}
-
-	.swatch-input {
-		width: 44px;
-		height: 44px;
-		padding: 0;
-		border: 1px solid var(--border);
-		background: none;
-		cursor: pointer;
-	}
-
-	.swatch-input::-webkit-color-swatch-wrapper {
-		padding: 3px;
-	}
-
-	.swatch-input::-webkit-color-swatch {
-		border: 0;
-	}
-
-	.hex {
-		width: 120px;
-		font-family: ui-monospace, monospace;
-		font-size: 0.88rem;
-	}
-
-	.presets {
-		display: flex;
-		gap: 0.4rem;
-	}
-
-	.preset {
-		width: 26px;
-		height: 26px;
-		border: 1px solid var(--border);
-		cursor: pointer;
-		outline-offset: 2px;
-	}
-
-	.preset.current {
-		outline: 1px solid var(--text);
 	}
 
 	.options {

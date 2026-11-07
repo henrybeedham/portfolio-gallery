@@ -10,7 +10,7 @@ A self-hosted photography portfolio and client-delivery platform. It combines a 
 
 - Editorial homepage with a hero image, a featured album (grid or masonry), “Explore More” album cards and an About section with contact details.
 - `/galleries`: a responsive masonry listing of every public album.
-- Album pages on custom slugs (`/your-album`) with Markdown descriptions, per-album accent colours, an optional blurred background, tag filters, sort order (oldest, newest or random), progressive “Load More” and an expiry countdown.
+- Album pages on custom slugs (`/your-album`) with Markdown descriptions, their own theme or the site’s, an optional blurred background, tag filters, sort order (oldest, newest or random), progressive “Load More” and an expiry countdown.
 - A lightbox with keyboard, swipe and click-outside controls. Every photo also has its own shareable page with EXIF details and Open Graph/Twitter metadata.
 - Downloads: single originals, the whole album, or a selection as a streamed ZIP with a progress percentage.
 - Password-protected galleries, which stay unlocked for the browser session, and expiring galleries that show your contact details once they expire.
@@ -46,7 +46,8 @@ A self-hosted photography portfolio and client-delivery platform. It combines a 
 
 Themes are JSON files: the built-in light, dark and green themes are in `src/lib/themes/`, and you
 can upload your own under **Settings → Appearance** (they're saved in `data/themes/`) without rebuilding. See [`src/lib/themes/README.md`](src/lib/themes/README.md)
-for the format.
+for the format. Any album can use a different theme from the rest of the site (album → **Details →
+Appearance**); its album page, photo pages and password screen are shown in that theme.
 
 ## Quick start (Docker)
 

@@ -2,7 +2,9 @@
 
 Each theme is one JSON file. The file name (without `.json`) is the theme's id. Themes are used by:
 
-- the public site and the admin (Settings → Appearance), and
+- the public site and the admin (Settings → Appearance),
+- albums that use their own theme instead of the site's (album → Details → Appearance; the default for
+  new albums is under Settings → Album defaults), and
 - PDF invoices (each invoice has its own style; the default is under Invoices → Settings).
 
 ## Adding a theme

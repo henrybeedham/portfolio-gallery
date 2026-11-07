@@ -144,6 +144,11 @@ const MIGRATIONS: string[] = [
 		PRIMARY KEY (album_id, day)
 	);
 	CREATE INDEX album_daily_stats_day ON album_daily_stats(day);
+	`,
+	// Albums can use their own theme (NULL follows the site's), replacing the per-album accent colour.
+	`
+	ALTER TABLE albums ADD COLUMN theme TEXT;
+	ALTER TABLE albums DROP COLUMN accent_color;
 	`
 ];
 

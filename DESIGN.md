@@ -47,7 +47,7 @@ Always reference colours through CSS custom properties. Never hard-code a hex va
 
 **The highlight rule.** Some themes define `--highlight`. Wherever the design would use "ink" as an emphasis colour (solid buttons, button hover fills, eyebrows, focus rings, text selection), write `var(--highlight, var(--text))` (or `var(--highlight, var(--text-muted))` for eyebrows). Light and dark stay monochrome, and green picks up gold automatically.
 
-**Per-item accent.** A section can override `--accent` inline (for example, an album's chosen colour). Compute `--accent-text` from luminance: if relative luminance > 0.45 use `#1f1d1a`, otherwise `#ffffff`.
+**Per-album themes.** An album can use a whole theme of its own rather than the site's. Its pages swap `data-theme` on `<html>`, so every token above changes together; don't override single tokens inline.
 
 **Soft tints.** Mix colours with `color-mix(in srgb, var(--x) N%, transparent)` instead of inventing new rgba values.
 
