@@ -1,6 +1,7 @@
 /**
  * Photography jobs. They're called “jobs” in the admin; the code says “bookings” because jobs.ts
- * already means background maintenance tasks.
+ * already means background maintenance tasks. A job holds no money: fees and payments live on its
+ * invoices, and drafts hold the fee you expect before you send anything.
  */
 import { all, get, placeholders, run } from './db.js';
 import type {
@@ -21,13 +22,9 @@ interface BookingRow {
 	billing_label: string | null;
 	location: string;
 	starts_at: string | null;
-	hours: number;
-	rate: number;
 	status: string;
 	shot: number;
 	delivered: number;
-	paid: number;
-	legacy_invoices: string;
 	notes: string;
 }
 
@@ -38,23 +35,25 @@ const SELECT = `
 `;
 
 export function invoiceState(
-	invoice: { paidAt: string | null; dueDate: string | null },
+	invoice: { draft: boolean; paidAt: string | null; dueDate: string | null },
 	today = todayIso()
 ): InvoiceState {
+	if (invoice.draft) return 'draft';
 	if (invoice.paidAt) return 'paid';
 	if (invoice.dueDate && invoice.dueDate < today) return 'overdue';
 	return 'unpaid';
 }
 
-function paymentState(row: BookingRow, invoices: InvoiceRef[]): PaymentState {
-	if (invoices.length) {
-		const paid = invoices.filter((invoice) => invoice.state === 'paid').length;
-		if (paid === invoices.length) return 'paid';
+/** From the issued invoices; drafts only count when there's nothing else. */
+function paymentState(invoices: InvoiceRef[]): PaymentState {
+	const issued = invoices.filter((invoice) => invoice.state !== 'draft');
+	if (issued.length) {
+		const paid = issued.filter((invoice) => invoice.state === 'paid').length;
+		if (paid === issued.length) return 'paid';
 		if (paid > 0) return 'part-paid';
-		return invoices.some((invoice) => invoice.state === 'overdue') ? 'overdue' : 'unpaid';
+		return issued.some((invoice) => invoice.state === 'overdue') ? 'overdue' : 'unpaid';
 	}
-	if (row.paid) return 'paid';
-	return row.legacy_invoices.trim() ? 'unpaid' : 'not-invoiced';
+	return invoices.length ? 'draft' : 'not-invoiced';
 }
 
 /** Current local time as YYYY-MM-DDTHH:mm, comparable with starts_at. */
@@ -77,9 +76,11 @@ function hydrate(rows: BookingRow[]): Booking[] {
 		total: number;
 		paid_at: string | null;
 		due_date: string | null;
+		draft: number;
+		imported: number;
 	}>(
-		`SELECT id, booking_id, number, total, paid_at, due_date FROM invoices
-		 WHERE booking_id IN (${placeholders(ids.length)}) ORDER BY issue_date, id`,
+		`SELECT id, booking_id, number, total, paid_at, due_date, draft, imported FROM invoices
+		 WHERE booking_id IN (${placeholders(ids.length)}) ORDER BY draft, issue_date, id`,
 		...ids
 	)) {
 		const ref: InvoiceRef = {
@@ -88,7 +89,11 @@ function hydrate(rows: BookingRow[]): Booking[] {
 			total: invoice.total,
 			paidAt: invoice.paid_at,
 			dueDate: invoice.due_date,
-			state: invoiceState({ paidAt: invoice.paid_at, dueDate: invoice.due_date }, today)
+			state: invoiceState(
+				{ draft: !!invoice.draft, paidAt: invoice.paid_at, dueDate: invoice.due_date },
+				today
+			),
+			imported: !!invoice.imported
 		};
 		invoices.set(invoice.booking_id, [...(invoices.get(invoice.booking_id) ?? []), ref]);
 	}
@@ -119,18 +124,14 @@ function hydrate(rows: BookingRow[]): Booking[] {
 			billingLabel: row.billing_label,
 			location: row.location,
 			startsAt: row.starts_at,
-			hours: row.hours,
-			rate: row.rate,
-			fee: Math.round(row.hours * row.rate),
 			status,
 			shot: !!row.shot,
 			delivered: !!row.delivered,
-			paid: !!row.paid,
-			legacyInvoices: row.legacy_invoices,
 			notes: row.notes,
+			total: own.reduce((sum, invoice) => sum + invoice.total, 0),
 			invoices: own,
 			albums: albums.get(row.id) ?? [],
-			payment: paymentState(row, own),
+			payment: paymentState(own),
 			upcoming: !row.starts_at || row.starts_at >= (row.starts_at.length > 10 ? now : today)
 		};
 	});
@@ -167,64 +168,59 @@ export interface BookingInput {
 	billingAddressId: number | null;
 	location: string;
 	startsAt: string | null;
-	hours: number;
-	rate: number;
 	status: BookingStatus;
 	shot: boolean;
 	delivered: boolean;
-	paid: boolean;
-	legacyInvoices: string;
 	notes: string;
 }
 
 export function createBooking(input: BookingInput): number {
 	return run(
-		`INSERT INTO bookings (title, client, billing_address_id, location, starts_at, hours, rate, status,
-			shot, delivered, paid, legacy_invoices, notes)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		`INSERT INTO bookings (title, client, billing_address_id, location, starts_at, status, shot,
+			delivered, notes)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		input.title,
 		input.client,
 		input.billingAddressId,
 		input.location,
 		input.startsAt,
-		input.hours,
-		input.rate,
 		input.status,
 		input.shot,
 		input.delivered,
-		input.paid,
-		input.legacyInvoices,
 		input.notes
 	).lastInsertRowid;
 }
 
 export function updateBooking(id: number, input: BookingInput) {
 	run(
-		`UPDATE bookings SET title = ?, client = ?, billing_address_id = ?, location = ?, starts_at = ?, hours = ?,
-			rate = ?, status = ?, shot = ?, delivered = ?, paid = ?, legacy_invoices = ?, notes = ?,
-			updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+		`UPDATE bookings SET title = ?, client = ?, billing_address_id = ?, location = ?, starts_at = ?,
+			status = ?, shot = ?, delivered = ?, notes = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
 		 WHERE id = ?`,
 		input.title,
 		input.client,
 		input.billingAddressId,
 		input.location,
 		input.startsAt,
-		input.hours,
-		input.rate,
 		input.status,
 		input.shot,
 		input.delivered,
-		input.paid,
-		input.legacyInvoices,
 		input.notes,
 		id
 	);
 }
 
-export type BookingFlag = 'shot' | 'delivered' | 'paid';
+export function setBookingNotes(id: number, notes: string) {
+	run(
+		`UPDATE bookings SET notes = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?`,
+		notes,
+		id
+	);
+}
+
+export type BookingFlag = 'shot' | 'delivered';
 
 export function setBookingFlag(id: number, flag: BookingFlag, value: boolean) {
-	const column = { shot: 'shot', delivered: 'delivered', paid: 'paid' }[flag];
+	const column = { shot: 'shot', delivered: 'delivered' }[flag];
 	run(
 		`UPDATE bookings SET ${column} = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?`,
 		value,
@@ -262,8 +258,6 @@ export function bookingOptions() {
 		client: booking.client,
 		billingAddressId: booking.billingAddressId,
 		startsAt: booking.startsAt,
-		hours: booking.hours,
-		rate: booking.rate,
 		status: booking.status
 	}));
 }
@@ -291,41 +285,18 @@ export function clientSuggestions(): { client: string; billingAddressId: number 
 
 export function bookingStats(bookings = listBookings()) {
 	const active = bookings.filter((booking) => booking.status === 'confirmed');
-	const unpaidInvoices = get<{ total: number }>(
-		'SELECT COALESCE(SUM(total), 0) AS total FROM invoices WHERE paid_at IS NULL'
-	)!.total;
-	const paidInvoices = get<{ total: number }>(
-		'SELECT COALESCE(SUM(total), 0) AS total FROM invoices WHERE paid_at IS NOT NULL'
-	)!.total;
-	// Jobs with no invoice here: invoiced elsewhere (legacy numbers) or paid directly.
-	const withoutInvoices = active.filter((booking) => !booking.invoices.length);
+	const sum = (where: string) =>
+		get<{ total: number }>(`SELECT COALESCE(SUM(total), 0) AS total FROM invoices WHERE ${where}`)!
+			.total;
 	return {
 		upcoming: active.filter((booking) => booking.upcoming).length,
 		toDeliver: active.filter((booking) => !booking.delivered && (booking.shot || !booking.upcoming))
 			.length,
-		toInvoice: active.filter((booking) => booking.payment === 'not-invoiced').length,
-		outstanding:
-			unpaidInvoices +
-			withoutInvoices
-				.filter((booking) => booking.payment === 'unpaid')
-				.reduce((sum, booking) => sum + booking.fee, 0),
-		paid:
-			paidInvoices +
-			withoutInvoices
-				.filter((booking) => booking.paid)
-				.reduce((sum, booking) => sum + booking.fee, 0)
+		// Nothing sent yet: no invoices, or only drafts.
+		toInvoice: active.filter(
+			(booking) => booking.payment === 'not-invoiced' || booking.payment === 'draft'
+		).length,
+		outstanding: sum('draft = 0 AND paid_at IS NULL'),
+		paid: sum('paid_at IS NOT NULL')
 	};
-}
-
-/** Every legacy invoice number, so new random numbers never repeat one. */
-export function legacyInvoiceNumbers(): Set<string> {
-	const numbers = new Set<string>();
-	for (const row of all<{ legacy_invoices: string }>(
-		"SELECT legacy_invoices FROM bookings WHERE legacy_invoices != ''"
-	)) {
-		for (const number of row.legacy_invoices.split(/[,\s]+/)) {
-			if (number) numbers.add(number);
-		}
-	}
-	return numbers;
 }

@@ -80,6 +80,11 @@
 		time, Hours, Rate, Paid, Shot and Delivered. “Mine” becomes the booking status (yes → confirmed,
 		maybe → tentative, no → cancelled).
 	</p>
+	<p class="muted intro">
+		Jobs don’t hold money, so each row’s fee goes onto an invoice for the job. A row that’s paid or
+		has an invoice number becomes an imported record with that number. A fee that wasn’t invoiced
+		becomes a draft, ready to send.
+	</p>
 </header>
 
 <section class="ui-card paste">
@@ -175,6 +180,11 @@
 							<td class="ui-num">
 								{formatMoney(Math.round(row.hours * row.rate))}
 								<span class="ui-sub">{formatHours(row.hours)} × {formatMoney(row.rate)}</span>
+								{#if row.paid || row.legacyInvoices}
+									<span class="ui-sub">Imported record</span>
+								{:else if row.hours * row.rate > 0 && row.status !== 'cancelled'}
+									<span class="ui-sub">Draft invoice</span>
+								{/if}
 							</td>
 							<td>
 								<div class="ui-badges">
@@ -209,6 +219,10 @@
 
 	.intro {
 		line-height: 1.7;
+	}
+
+	.intro + .intro {
+		margin-top: 0.75rem;
 	}
 
 	.paste {

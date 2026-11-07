@@ -24,21 +24,28 @@ A self-hosted photography portfolio and client-delivery platform. It combines a 
 
 **Jobs, invoices and analytics**
 
-- **Jobs** (`/admin/jobs`): each shoot with its date, client, hours, rate and location, plus
-  whether it's confirmed, tentative or cancelled. Tick off shot, delivered and paid straight from the
-  list, and link one or more albums. Albums never need a job or an invoice.
+- **Jobs** (`/admin/jobs`): each shoot with its date, client and location, plus whether it's
+  confirmed, tentative or cancelled. Tick off shot and delivered straight from the list, and link one
+  or more albums. Albums never need a job or an invoice. Jobs hold no money: a job's fee and whether
+  it's paid come from its invoices.
 - **Saved addresses**: type a client's name and pick AU, Guild or any other saved address (or
   type one in for one-off clients). Clients you've billed before pick their address automatically.
 - **Invoices** (`/admin/invoices`): PDF invoices with a live preview, a unique random 8-digit number,
   line items, a due date (by default the shoot date, or your payment terms), and a paid stamp once
   paid. Your details, bank details and notes are copied onto each invoice, so changing your defaults
   later never alters old invoices. Nothing is shared by link; download the PDF and send it yourself.
+- **Drafts**: save an invoice as a draft to hold a job's fee before you send anything, for example
+  5 hours of video at £60, 2 hours of editing at £40 and 2 hours of photography at £60. Drafts count
+  as booked work in Analytics. **Issue Invoice** dates it that day and works out the due date again.
+- **Imported records**: money that jobs used to hold (hours × rate, a paid tick and earlier invoice
+  numbers) became invoices marked “Imported”, which keep the earlier numbers and have no PDF.
 - **Invoice styles** use the same themes as the site but are chosen separately: a default under
   **Invoices → Settings**, and per invoice.
 - **Import from a spreadsheet**: paste rows copied from Google Sheets (with the header row). Delivered
-  and cancelled jobs are left out by default, and re-importing skips jobs that are already there.
+  and cancelled jobs are left out by default, and re-importing skips jobs that are already there. A
+  row's fee becomes a draft invoice, or an imported record if it's paid or has an invoice number.
 - **Analytics** (`/admin/analytics`): earnings, money awaiting payment, booked work, average job and
-  time to get paid, income by month (paid → invoiced → booked → tentative), top clients, AU vs Guild,
+  time to get paid, income by month (paid → invoiced → drafts → tentative), top clients, AU vs Guild,
   and weekly gallery views and downloads. Filter by this or last academic year, the last 12 months, the calendar year, all time, or
   any custom dates.
 

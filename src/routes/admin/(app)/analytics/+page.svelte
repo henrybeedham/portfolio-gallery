@@ -22,7 +22,7 @@
 	const series = [
 		{ key: 'paid', label: 'Paid', color: 'var(--viz-1)' },
 		{ key: 'invoiced', label: 'Invoiced, awaiting payment', color: 'var(--viz-2)' },
-		{ key: 'booked', label: 'Booked, not invoiced', color: 'var(--viz-3)' },
+		{ key: 'booked', label: 'Draft invoices, not sent', color: 'var(--viz-3)' },
 		{ key: 'tentative', label: 'Tentative', color: 'var(--viz-4)' }
 	];
 

@@ -11,9 +11,9 @@
 	import FlagCheck from '#lib/components/admin/FlagCheck.svelte';
 	import StateBadge from '#lib/components/admin/StateBadge.svelte';
 	import { api, feedback } from '#lib/components/admin/feedback.svelte.js';
-	import { formatHours, formatMoney } from '#lib/money.js';
+	import { formatMoney } from '#lib/money.js';
 	import type { Booking } from '#lib/types.js';
-	import { formatJobDate } from '#lib/utils.js';
+	import { formatJobDate, invoiceLabel } from '#lib/utils.js';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -39,7 +39,9 @@
 		{
 			id: 'invoice',
 			label: 'To invoice',
-			test: (b) => b.status === 'confirmed' && b.payment === 'not-invoiced'
+			// Nothing sent yet: no invoices, or only drafts.
+			test: (b) =>
+				b.status === 'confirmed' && (b.payment === 'not-invoiced' || b.payment === 'draft')
 		},
 		{
 			id: 'unpaid',
@@ -65,7 +67,7 @@
 		{ label: 'Paid', value: formatMoney(data.stats.paid), href: null }
 	]);
 
-	async function setFlag(booking: Booking, flag: 'shot' | 'delivered' | 'paid', value: boolean) {
+	async function setFlag(booking: Booking, flag: 'shot' | 'delivered', value: boolean) {
 		pending = `${booking.id}:${flag}`;
 		try {
 			await api(`/admin/api/bookings/${booking.id}`, { action: 'set-flag', flag, value });
@@ -75,10 +77,6 @@
 		} finally {
 			pending = null;
 		}
-	}
-
-	function legacy(booking: Booking) {
-		return booking.legacyInvoices.split(/,\s*/).filter(Boolean);
 	}
 </script>
 
@@ -162,11 +160,11 @@
 								{/if}
 							</td>
 							<td class="ui-num">
-								{formatMoney(booking.fee)}
-								{#if booking.hours}
-									<span class="ui-sub"
-										>{formatHours(booking.hours)} × {formatMoney(booking.rate)}</span
-									>
+								{#if booking.invoices.length}
+									{formatMoney(booking.total)}
+									{#if booking.payment === 'draft'}<span class="ui-sub">Draft</span>{/if}
+								{:else}
+									<span class="none">—</span>
 								{/if}
 							</td>
 							<td>
@@ -176,27 +174,25 @@
 											class="ui-badge"
 											class:ok={invoice.state === 'paid'}
 											class:danger={invoice.state === 'overdue'}
-											href="/admin/invoices/{invoice.id}">{invoice.number}</a
+											class:draft={invoice.state === 'draft'}
+											title={invoice.state === 'draft'
+												? 'Draft, not sent yet'
+												: invoice.imported
+													? 'Imported record'
+													: undefined}
+											href="/admin/invoices/{invoice.id}">{invoiceLabel(invoice.number)}</a
 										>
 									{/each}
-									{#each legacy(booking) as number (number)}
-										<span class="ui-badge" title="Invoiced before this system">{number}</span>
-									{/each}
-									{#if !booking.invoices.length && !legacy(booking).length && booking.status !== 'cancelled'}
+									{#if !booking.invoices.length && booking.status !== 'cancelled'}
 										<a class="create" href="/admin/invoices/new?job={booking.id}">Create</a>
 									{/if}
 								</div>
 							</td>
 							<td>
-								{#if booking.invoices.length}
-									<StateBadge state={booking.payment} />
+								{#if booking.payment === 'not-invoiced' || booking.payment === 'draft'}
+									<span class="none">—</span>
 								{:else}
-									<FlagCheck
-										on={booking.paid}
-										label={booking.paid ? 'Mark as unpaid' : 'Mark as paid'}
-										busy={pending === `${booking.id}:paid`}
-										onclick={() => setFlag(booking, 'paid', !booking.paid)}
-									/>
+									<StateBadge state={booking.payment} />
 								{/if}
 							</td>
 							<td class="ui-center">
@@ -283,6 +279,15 @@
 
 	.status {
 		margin-top: 0.35rem;
+	}
+
+	.ui-badge.draft {
+		border-style: dashed;
+		color: var(--text-muted);
+	}
+
+	.none {
+		color: var(--text-subtle);
 	}
 
 	.create {

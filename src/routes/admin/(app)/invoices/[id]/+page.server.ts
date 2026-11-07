@@ -15,7 +15,7 @@ export const load: PageServerLoad = ({ params, locals, depends }) => {
 	return {
 		invoice,
 		state: invoiceState(invoice),
-		booking: booking ? { id: booking.id, title: booking.title } : null,
+		booking: booking ? { id: booking.id, title: booking.title, startsAt: booking.startsAt } : null,
 		...editorOptions()
 	};
 };

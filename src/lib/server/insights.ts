@@ -17,7 +17,7 @@ export interface Range {
 	previous: { from: string; to: string; label: string } | null;
 }
 
-/** The pipeline a job's money moves through, in order. */
+/** The pipeline money moves through, in order. Drafts are booked, or tentative for a tentative job. */
 export const STAGES = ['paid', 'invoiced', 'booked', 'tentative'] as const;
 export type Stage = (typeof STAGES)[number];
 
@@ -43,7 +43,10 @@ interface Entry {
 	bookingId: number | null;
 }
 
-/** Every amount of money, dated by the shoot (or the invoice date for invoices without a job). */
+/**
+ * Every amount of money, all of it from invoices. Dated by the job's shoot, or the invoice date for
+ * invoices without a job.
+ */
 function entries(): Entry[] {
 	const out: Entry[] = [];
 	for (const booking of listBookings()) {
@@ -55,35 +58,33 @@ function entries(): Entry[] {
 			billing: booking.billingLabel ?? 'Other',
 			bookingId: booking.id
 		};
-		if (booking.invoices.length) {
-			for (const invoice of booking.invoices) {
-				out.push({ ...base, stage: invoice.paidAt ? 'paid' : 'invoiced', amount: invoice.total });
-			}
-		} else {
-			const stage: Stage = booking.paid
-				? 'paid'
-				: booking.status === 'tentative'
-					? 'tentative'
-					: booking.legacyInvoices.trim()
-						? 'invoiced'
-						: 'booked';
-			out.push({ ...base, stage, amount: booking.fee });
+		for (const invoice of booking.invoices) {
+			const stage: Stage =
+				invoice.state === 'draft'
+					? booking.status === 'tentative'
+						? 'tentative'
+						: 'booked'
+					: invoice.paidAt
+						? 'paid'
+						: 'invoiced';
+			out.push({ ...base, stage, amount: invoice.total });
 		}
 	}
 	for (const invoice of all<{
 		issue_date: string;
 		total: number;
 		paid_at: string | null;
+		draft: number;
 		bill_to_name: string;
 		label: string | null;
 	}>(
-		`SELECT i.issue_date, i.total, i.paid_at, i.bill_to_name, ba.label
+		`SELECT i.issue_date, i.total, i.paid_at, i.draft, i.bill_to_name, ba.label
 		 FROM invoices i LEFT JOIN billing_addresses ba ON ba.id = i.billing_address_id
 		 WHERE i.booking_id IS NULL`
 	)) {
 		out.push({
 			day: invoice.issue_date,
-			stage: invoice.paid_at ? 'paid' : 'invoiced',
+			stage: invoice.draft ? 'booked' : invoice.paid_at ? 'paid' : 'invoiced',
 			amount: invoice.total,
 			client: invoice.bill_to_name || 'Unnamed',
 			billing: invoice.label ?? 'Other',
@@ -211,7 +212,7 @@ function moneyStats(list: Entry[]) {
 function daysToPayment(range: Pick<Range, 'from' | 'to'>) {
 	const row = get<{ days: number | null; n: number }>(
 		`SELECT AVG(julianday(paid_at) - julianday(issue_date)) AS days, COUNT(*) AS n
-		 FROM invoices WHERE paid_at IS NOT NULL AND issue_date BETWEEN ? AND ?`,
+		 FROM invoices WHERE paid_at IS NOT NULL AND imported = 0 AND issue_date BETWEEN ? AND ?`,
 		range.from,
 		range.to
 	)!;

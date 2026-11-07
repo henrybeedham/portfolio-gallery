@@ -9,6 +9,7 @@ export const GET: RequestHandler = async ({ params, locals, url }) => {
 	requireAdmin(locals);
 	const invoice = getInvoice(Number(params.id));
 	if (!invoice) error(404, 'Invoice not found');
+	if (invoice.imported) error(404, 'Imported records have no PDF.');
 	const pdf = await renderInvoicePdf(invoice);
 	const filename = invoiceFilename(invoice.number);
 	const disposition = url.searchParams.has('inline') ? 'inline' : 'attachment';

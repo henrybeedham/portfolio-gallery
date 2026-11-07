@@ -13,7 +13,7 @@
 	import { api, feedback } from '#lib/components/admin/feedback.svelte.js';
 	import { formatMoney } from '#lib/money.js';
 	import type { InvoiceSummary } from '#lib/types.js';
-	import { formatShortDay, plural } from '#lib/utils.js';
+	import { formatShortDay, invoiceLabel, plural } from '#lib/utils.js';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -22,10 +22,11 @@
 	$effect(() => rememberList('invoices', page.url.search));
 	let pending = $state<number | null>(null);
 
-	type Filter = 'all' | 'unpaid' | 'overdue' | 'paid';
+	type Filter = 'all' | 'drafts' | 'unpaid' | 'overdue' | 'paid';
 	const filters: { id: Filter; label: string; test: (i: InvoiceSummary) => boolean }[] = [
 		{ id: 'all', label: 'All', test: () => true },
-		{ id: 'unpaid', label: 'Unpaid', test: (i) => i.state !== 'paid' },
+		{ id: 'drafts', label: 'Drafts', test: (i) => i.state === 'draft' },
+		{ id: 'unpaid', label: 'Unpaid', test: (i) => i.state === 'unpaid' || i.state === 'overdue' },
 		{ id: 'overdue', label: 'Overdue', test: (i) => i.state === 'overdue' },
 		{ id: 'paid', label: 'Paid', test: (i) => i.state === 'paid' }
 	];
@@ -42,11 +43,8 @@
 				paid: invoice.state !== 'paid'
 			});
 			await invalidate('admin:invoices');
-			feedback.toast(
-				invoice.state === 'paid'
-					? `${invoice.number} marked unpaid`
-					: `${invoice.number} marked paid`
-			);
+			const label = invoiceLabel(invoice.number);
+			feedback.toast(invoice.state === 'paid' ? `${label} marked unpaid` : `${label} marked paid`);
 		} catch (error) {
 			feedback.toast((error as Error).message, 'error');
 		} finally {
@@ -55,17 +53,19 @@
 	}
 
 	async function remove(invoice: InvoiceSummary) {
+		const kind = invoice.state === 'draft' ? 'draft' : 'invoice';
+		const label = invoiceLabel(invoice.number);
 		const ok = await feedback.confirm({
-			title: `Delete invoice ${invoice.number}?`,
-			message: 'This permanently deletes the invoice.',
-			confirmLabel: 'Delete invoice',
+			title: `Delete ${kind} ${label}?`,
+			message: `This permanently deletes the ${kind}.`,
+			confirmLabel: `Delete ${kind}`,
 			danger: true
 		});
 		if (!ok) return;
 		try {
 			await api(`/admin/api/invoices/${invoice.id}`, undefined, 'DELETE');
 			await invalidate('admin:invoices');
-			feedback.toast(`Deleted invoice ${invoice.number}`);
+			feedback.toast(`Deleted ${kind} ${label}`);
 		} catch (error) {
 			feedback.toast((error as Error).message, 'error');
 		}
@@ -102,6 +102,11 @@
 		<span class="eyebrow">Paid in {data.stats.year}</span>
 		<strong>{formatMoney(data.stats.paidThisYear)}</strong>
 		<span class="ui-note">{plural(data.stats.paidThisYearCount, 'invoice')}</span>
+	</a>
+	<a class="ui-stat" href="?show=drafts">
+		<span class="eyebrow">Drafts</span>
+		<strong>{formatMoney(data.stats.drafted)}</strong>
+		<span class="ui-note">{plural(data.stats.draftCount, 'draft')}, not sent yet</span>
 	</a>
 </section>
 
@@ -142,7 +147,10 @@
 					{#each shown as invoice (invoice.id)}
 						<tr>
 							<td>
-								<a class="ui-title num" href="/admin/invoices/{invoice.id}">{invoice.number}</a>
+								<a class="ui-title num" href="/admin/invoices/{invoice.id}"
+									>{invoiceLabel(invoice.number)}</a
+								>
+								{#if invoice.imported}<span class="ui-sub">Imported</span>{/if}
 							</td>
 							<td>
 								{invoice.billToName || '—'}
@@ -152,34 +160,44 @@
 									>
 								{/if}
 							</td>
-							<td class="nowrap">{formatShortDay(invoice.issueDate)}</td>
-							<td class="nowrap">{invoice.dueDate ? formatShortDay(invoice.dueDate) : '—'}</td>
+							<td class="nowrap">
+								{invoice.state === 'draft' ? '—' : formatShortDay(invoice.issueDate)}
+							</td>
+							<td class="nowrap">
+								{invoice.state !== 'draft' && invoice.dueDate
+									? formatShortDay(invoice.dueDate)
+									: '—'}
+							</td>
 							<td class="ui-num">{formatMoney(invoice.total)}</td>
 							<td><StateBadge state={invoice.state} /></td>
 							<td class="ui-center">
-								<FlagCheck
-									on={invoice.state === 'paid'}
-									label={invoice.state === 'paid' ? 'Mark as unpaid' : 'Mark as paid today'}
-									busy={pending === invoice.id}
-									onclick={() => togglePaid(invoice)}
-								/>
+								{#if invoice.state !== 'draft'}
+									<FlagCheck
+										on={invoice.state === 'paid'}
+										label={invoice.state === 'paid' ? 'Mark as unpaid' : 'Mark as paid today'}
+										busy={pending === invoice.id}
+										onclick={() => togglePaid(invoice)}
+									/>
+								{/if}
 							</td>
 							<td class="ui-shrink">
 								<div class="ui-row-actions">
-									<a
-										class="ui-icon-btn"
-										href="/admin/api/invoices/{invoice.id}/pdf"
-										download
-										title="Download PDF"
-										aria-label="Download invoice {invoice.number}"
-									>
-										<Download size={15} strokeWidth={1.5} />
-									</a>
+									{#if invoice.state !== 'draft' && !invoice.imported}
+										<a
+											class="ui-icon-btn"
+											href="/admin/api/invoices/{invoice.id}/pdf"
+											download
+											title="Download PDF"
+											aria-label="Download invoice {invoice.number}"
+										>
+											<Download size={15} strokeWidth={1.5} />
+										</a>
+									{/if}
 									<a
 										class="ui-icon-btn"
 										href="/admin/invoices/{invoice.id}"
 										title="Edit"
-										aria-label="Edit invoice {invoice.number}"
+										aria-label="Edit invoice {invoiceLabel(invoice.number)}"
 									>
 										<Pencil size={15} strokeWidth={1.5} />
 									</a>
@@ -187,7 +205,7 @@
 										class="ui-icon-btn danger"
 										onclick={() => remove(invoice)}
 										title="Delete"
-										aria-label="Delete invoice {invoice.number}"
+										aria-label="Delete invoice {invoiceLabel(invoice.number)}"
 									>
 										<Trash2 size={15} strokeWidth={1.5} />
 									</button>

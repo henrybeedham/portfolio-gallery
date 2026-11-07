@@ -170,12 +170,13 @@ export type BookingStatus = 'confirmed' | 'tentative' | 'cancelled';
 export const BOOKING_STATUSES: BookingStatus[] = ['confirmed', 'tentative', 'cancelled'];
 
 /**
- * A job's payment state. It comes from the job's invoices when it has any; otherwise from the job's
- * own “paid” flag (paid without an invoice here, or invoiced before this system existed).
+ * A job's payment state, from its invoices. Drafts don't count as invoiced until they're issued, so a
+ * job with only drafts is “draft”, and one with none is “not-invoiced”.
  */
-export type PaymentState = 'paid' | 'part-paid' | 'unpaid' | 'overdue' | 'not-invoiced';
+export type PaymentState = 'paid' | 'part-paid' | 'unpaid' | 'overdue' | 'draft' | 'not-invoiced';
 
-export type InvoiceState = 'paid' | 'unpaid' | 'overdue';
+/** A draft hasn't been sent yet; it holds the fee you expect, and is dated when it's issued. */
+export type InvoiceState = 'draft' | 'paid' | 'unpaid' | 'overdue';
 
 export interface BillingAddress {
 	id: number;
@@ -237,6 +238,8 @@ export interface InvoiceRef {
 	paidAt: string | null;
 	dueDate: string | null;
 	state: InvoiceState;
+	/** Converted from a job's old fee, paid tick or earlier invoice numbers; there's no PDF. */
+	imported: boolean;
 }
 
 export interface AlbumRef {
@@ -256,19 +259,12 @@ export interface Booking {
 	location: string;
 	/** Naive local date and time, YYYY-MM-DDTHH:mm (or just the date). */
 	startsAt: string | null;
-	hours: number;
-	/** Pence per hour. */
-	rate: number;
-	/** hours × rate, in pence. */
-	fee: number;
 	status: BookingStatus;
 	shot: boolean;
 	delivered: boolean;
-	/** Paid without an invoice in this system. Ignored once the job has invoices here. */
-	paid: boolean;
-	/** Invoice numbers sent before this system existed, comma separated. */
-	legacyInvoices: string;
 	notes: string;
+	/** Money lives on invoices only; this is the sum of the job's invoices, drafts included. */
+	total: number;
 	invoices: InvoiceRef[];
 	albums: AlbumRef[];
 	payment: PaymentState;
@@ -286,5 +282,6 @@ export interface InvoiceSummary {
 	total: number;
 	paidAt: string | null;
 	state: InvoiceState;
+	imported: boolean;
 	style: string;
 }
