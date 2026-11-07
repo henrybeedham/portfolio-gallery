@@ -189,29 +189,33 @@ export async function addPhoto(
 			fsp.stat(destination)
 		]);
 
-		const result = run(
-			`INSERT INTO photos (album_id, key, ext, original_name, mime, size, width, height, taken_at, camera, lens,
-				focal_length, aperture, exposure_time, iso)
-			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-			albumId,
-			key,
-			ext,
-			originalName,
-			mime,
-			stat.size,
-			width,
-			height,
-			metadata.takenAt,
-			metadata.camera,
-			metadata.lens,
-			metadata.focalLength,
-			metadata.aperture,
-			metadata.exposureTime,
-			metadata.iso
-		);
-		const row = getPhoto(result.lastInsertRowid)!;
+		const photoId = transaction(() => {
+			const result = run(
+				`INSERT INTO photos (album_id, key, ext, original_name, mime, size, width, height, taken_at, camera, lens,
+					focal_length, aperture, exposure_time, iso)
+				 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				albumId,
+				key,
+				ext,
+				originalName,
+				mime,
+				stat.size,
+				width,
+				height,
+				metadata.takenAt,
+				metadata.camera,
+				metadata.lens,
+				metadata.focalLength,
+				metadata.aperture,
+				metadata.exposureTime,
+				metadata.iso
+			);
+			tagWithKeywords(albumId, result.lastInsertRowid, metadata.keywords);
+			return result.lastInsertRowid;
+		});
+		const row = getPhoto(photoId)!;
 		return {
-			...toItem(row, []),
+			...toItem(row, tagsFor([row.id]).get(row.id) ?? []),
 			size: row.size,
 			downloads: 0,
 			takenAt: row.taken_at,
@@ -267,21 +271,24 @@ export async function refreshMetadata(row: PhotoRow) {
 		fsp.stat(file),
 		orientedSize(file)
 	]);
-	run(
-		`UPDATE photos SET size = ?, width = ?, height = ?, taken_at = ?, camera = ?, lens = ?, focal_length = ?,
-			aperture = ?, exposure_time = ?, iso = ? WHERE id = ?`,
-		stat.size,
-		size.width,
-		size.height,
-		metadata.takenAt,
-		metadata.camera,
-		metadata.lens,
-		metadata.focalLength,
-		metadata.aperture,
-		metadata.exposureTime,
-		metadata.iso,
-		row.id
-	);
+	transaction(() => {
+		run(
+			`UPDATE photos SET size = ?, width = ?, height = ?, taken_at = ?, camera = ?, lens = ?, focal_length = ?,
+				aperture = ?, exposure_time = ?, iso = ? WHERE id = ?`,
+			stat.size,
+			size.width,
+			size.height,
+			metadata.takenAt,
+			metadata.camera,
+			metadata.lens,
+			metadata.focalLength,
+			metadata.aperture,
+			metadata.exposureTime,
+			metadata.iso,
+			row.id
+		);
+		tagWithKeywords(row.album_id, row.id, metadata.keywords);
+	});
 }
 
 /* --------------------------------------------------------------------- tags */
@@ -302,6 +309,17 @@ export function createTag(albumId: number, name: string): Tag {
 	if (existing) return existing;
 	const result = run('INSERT INTO tags (album_id, name) VALUES (?, ?)', albumId, name);
 	return { id: result.lastInsertRowid, name };
+}
+
+/**
+ * Applies a photo's embedded keywords as album tags, creating any the album doesn't have yet.
+ * Only ever adds: tags applied by hand, or keywords since removed in Lightroom, are left alone.
+ */
+function tagWithKeywords(albumId: number, photoId: number, keywords: string[]) {
+	for (const name of keywords) {
+		const tag = createTag(albumId, name);
+		run('INSERT OR IGNORE INTO photo_tags (photo_id, tag_id) VALUES (?, ?)', photoId, tag.id);
+	}
 }
 
 export function deleteTag(albumId: number, tagId: number) {
