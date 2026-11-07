@@ -140,3 +140,48 @@ export function paragraphs(text: string): string[] {
 export function copyrightText(template: string) {
 	return template.replace(/\{year\}/g, String(new Date().getFullYear()));
 }
+
+/** Today's date as YYYY-MM-DD in the server's (or browser's) local timezone. */
+export function todayIso(now = new Date()): string {
+	const local = new Date(now.getTime() - now.getTimezoneOffset() * 60_000);
+	return local.toISOString().slice(0, 10);
+}
+
+/** Adds days to a YYYY-MM-DD date. */
+export function addDays(day: string, days: number): string {
+	const [y, m, d] = day.split('-').map(Number);
+	return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
+}
+
+export function isIsoDay(value: string): boolean {
+	return /^\d{4}-\d{2}-\d{2}$/.test(value) && !isNaN(Date.parse(value));
+}
+
+/** “4 Nov 2026” from YYYY-MM-DD. */
+export function formatShortDay(day: string | null | undefined): string {
+	if (!day) return '';
+	const [y, m, d] = day.slice(0, 10).split('-').map(Number);
+	if (!y || !m || !d) return day;
+	return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString('en-GB', {
+		day: 'numeric',
+		month: 'short',
+		year: 'numeric',
+		timeZone: 'UTC'
+	});
+}
+
+/** “Tue 8 Dec 2026” and “18:15” from a naive local YYYY-MM-DDTHH:mm. */
+export function formatJobDate(startsAt: string | null | undefined): { day: string; time: string } {
+	if (!startsAt) return { day: '', time: '' };
+	const [y, m, d] = startsAt.slice(0, 10).split('-').map(Number);
+	if (!y || !m || !d) return { day: startsAt, time: '' };
+	const day = new Date(Date.UTC(y, m - 1, d)).toLocaleDateString('en-GB', {
+		weekday: 'short',
+		day: 'numeric',
+		month: 'short',
+		year: 'numeric',
+		timeZone: 'UTC'
+	});
+	const time = /T(\d{2}:\d{2})/.exec(startsAt)?.[1] ?? '';
+	return { day, time: time === '00:00' ? '' : time };
+}

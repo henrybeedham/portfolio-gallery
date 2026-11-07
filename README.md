@@ -20,7 +20,33 @@ A self-hosted photography portfolio and client-delivery platform. It combines a 
 - Dashboard with totals (albums, photos, page views, photo and album downloads) and an album table.
 - Album editor with batched multi-file uploads and progress, shift-click range selection, bulk delete and tagging, cover and background images, analytics, and sharing links.
 - Maintenance jobs: regenerate thumbnails, re-extract metadata, and import from a server folder.
-- Settings for branding, the hero image, homepage copy, contact details, Discord notifications, light or dark theme, and defaults for new albums.
+- Settings for branding, the hero image, homepage copy, contact details, Discord notifications, the theme, and defaults for new albums.
+
+**Jobs, invoices and analytics**
+
+- **Jobs** (`/admin/jobs`): each shoot with its date, client (society), hours, rate and location, plus
+  whether it's confirmed, tentative or cancelled. Tick off shot, delivered and paid straight from the
+  list, and link one or more albums. Albums never need a job or an invoice.
+- **Saved addresses**: type a society's name and pick AU, Guild or any other saved address. Societies
+  you've billed before pick their address automatically.
+- **Invoices** (`/admin/invoices`): PDF invoices with a live preview, a unique random 8-digit number,
+  line items, a due date (by default the shoot date, or your payment terms), and a paid stamp once
+  paid. Your details, bank details and notes are copied onto each invoice, so changing your defaults
+  later never alters old invoices. Nothing is shared by link; download the PDF and send it yourself.
+- **Invoice styles** use the same themes as the site but are chosen separately: a default under
+  **Invoices → Settings**, and per invoice.
+- **Import from a spreadsheet**: paste rows copied from Google Sheets (with the header row). Delivered
+  and cancelled jobs are left out by default, and re-importing skips jobs that are already there.
+- **Analytics** (`/admin/analytics`): earnings, money awaiting payment, booked work, average job and
+  time to get paid, income by month (paid → invoiced → booked → tentative), top clients, AU vs Guild,
+  and weekly gallery views and downloads. Filter by academic year, the last 12 months, calendar year
+  or all time.
+
+**Themes**
+
+Themes are JSON files: the built-in light, dark and green themes are in `src/lib/themes/`, and you
+can drop your own into `data/themes/` without rebuilding. See [`src/lib/themes/README.md`](src/lib/themes/README.md)
+for the format.
 
 ## Quick start (Docker)
 
@@ -37,13 +63,14 @@ If `ADMIN_PASSWORD` isn't set, a password is generated on first start and saved 
 
 Everything lives in the `./data` volume:
 
-| Path                                 | Contents                                   |
-| ------------------------------------ | ------------------------------------------ |
-| `gallery.db`                         | SQLite database (albums, photos, settings) |
-| `photos/originals/`                  | Original uploads, untouched                |
-| `photos/thumbs/`, `photos/medium/`   | Generated WebP derivatives                 |
-| `site/`                              | Hero image                                 |
-| `.session-secret`, `.admin-password` | Generated secrets (if not set via env)     |
+| Path                                 | Contents                                                   |
+| ------------------------------------ | ---------------------------------------------------------- |
+| `gallery.db`                         | SQLite database (albums, photos, jobs, invoices, settings) |
+| `photos/originals/`                  | Original uploads, untouched                                |
+| `photos/thumbs/`, `photos/medium/`   | Generated WebP derivatives                                 |
+| `site/`                              | Hero image                                                 |
+| `themes/`                            | Your own theme files (optional)                            |
+| `.session-secret`, `.admin-password` | Generated secrets (if not set via env)                     |
 
 To back up, copy the `data` folder; stop the container first, or use `sqlite3 gallery.db .backup` for a live copy. Thumbnails can always be rebuilt from the originals with **Maintenance → Regenerate thumbnails**.
 
@@ -125,3 +152,4 @@ In development, set `ADMIN_PASSWORD` in `.env` or use the generated one in `data
 - SQLite via `node:sqlite` (WAL mode)
 - `sharp` for thumbnails (WebP), `exifr` for EXIF, `yazl` for streaming uncompressed ZIPs with an exact `Content-Length`
 - `marked` for album descriptions (raw HTML is escaped, and only safe link protocols are allowed)
+- `pdfkit` for invoices, with the site's typefaces embedded from `@fontsource/inter` and `@fontsource/playfair-display`

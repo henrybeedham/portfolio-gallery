@@ -8,21 +8,25 @@ import { sendDiscord } from '#lib/server/discord.js';
 import { requireAdmin } from '#lib/server/guard.js';
 import { detectType, removeHeroImage, saveHeroImage, tempFile } from '#lib/server/images.js';
 import { getSettings, updateSettings } from '#lib/server/settings.js';
+import { customThemesDir, getTheme, hasTheme, themeSummaries } from '#lib/server/themes.js';
 import {
 	LAYOUTS,
 	SORT_ORDERS,
-	THEMES,
 	type Layout,
 	type SiteSettings,
-	type SortOrder,
-	type Theme
+	type SortOrder
 } from '#lib/types.js';
 import { isHexColor } from '#lib/utils.js';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = ({ locals }) => {
 	requireAdmin(locals);
-	return { current: getSettings() };
+	const current = getSettings();
+	return {
+		current: { ...current, theme: getTheme(current.theme).id },
+		themes: themeSummaries(),
+		customThemesDir
+	};
 };
 
 function text(data: FormData, name: string, max = 5000) {
@@ -74,9 +78,7 @@ export const actions: Actions = {
 			contactPhone: text(data, 'contactPhone', 60),
 			showContactOnHome: data.get('showContactOnHome') === 'on',
 			discordWebhook: webhook,
-			theme: (THEMES as string[]).includes(text(data, 'theme'))
-				? (text(data, 'theme') as Theme)
-				: 'light',
+			theme: hasTheme(text(data, 'theme')) ? text(data, 'theme') : current.theme,
 			defaultDescription: text(data, 'defaultDescription', 20000),
 			defaultAccentColor: isHexColor(accent) ? accent.toLowerCase() : current.defaultAccentColor,
 			defaultLayout: LAYOUTS.includes(layout) ? layout : current.defaultLayout,
