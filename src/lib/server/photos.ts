@@ -1,6 +1,7 @@
 import fsp from 'node:fs/promises';
 import { all, get, placeholders, run, transaction } from './db.js';
 import {
+	detectType,
 	extractMetadata,
 	generateVariants,
 	moveFile,
@@ -9,8 +10,9 @@ import {
 	originalPath,
 	removePhotoFiles
 } from './images.js';
+import { detectVideo, prepareVideo, probeVideo } from './video.js';
 import { seededShuffle } from '#lib/sort.js';
-import type { AdminPhoto, PhotoDetail, PhotoItem, SortOrder, Tag } from '#lib/types.js';
+import type { AdminPhoto, PhotoItem, SortOrder, Tag } from '#lib/types.js';
 
 export interface PhotoRow {
 	id: number;
@@ -23,12 +25,9 @@ export interface PhotoRow {
 	width: number;
 	height: number;
 	taken_at: string | null;
-	camera: string | null;
-	lens: string | null;
-	focal_length: number | null;
-	aperture: number | null;
-	exposure_time: number | null;
-	iso: number | null;
+	kind: string;
+	/** Seconds, for videos. */
+	duration: number | null;
 	downloads: number;
 	version: number;
 	created_at: string;
@@ -68,30 +67,27 @@ export function orderedPhotoIds(
 	return view.sort === 'random' ? seededShuffle(ids, view.seed ?? 1) : ids;
 }
 
-function tagsFor(ids: number[]): Map<number, number[]> {
-	const map = new Map<number, number[]>();
-	if (!ids.length) return map;
-	const rows = all<{ photo_id: number; tag_id: number }>(
-		`SELECT photo_id, tag_id FROM photo_tags WHERE photo_id IN (${placeholders(ids.length)})`,
-		...ids
-	);
-	for (const row of rows) {
-		const list = map.get(row.photo_id) ?? [];
-		list.push(row.tag_id);
-		map.set(row.photo_id, list);
-	}
-	return map;
+export type MediaType = { mime: string; ext: string; kind: 'photo' | 'video' };
+
+/** What a file really is, whatever its name says: a supported photo or video, or null. */
+export async function detectMedia(file: string): Promise<MediaType | null> {
+	const image = await detectType(file);
+	return image ? { ...image, kind: 'photo' } : detectVideo(file);
 }
 
-function toItem(row: PhotoRow, tags: number[]): PhotoItem {
+function toItem(row: PhotoRow): PhotoItem {
+	if (row.kind === 'video') return { ...photoItem(row), kind: 'video', duration: row.duration };
+	return photoItem(row);
+}
+
+function photoItem(row: PhotoRow): PhotoItem {
 	return {
 		id: row.id,
 		key: row.key,
 		v: row.version,
 		w: row.width,
 		h: row.height,
-		name: row.original_name,
-		tags
+		name: row.original_name
 	};
 }
 
@@ -103,25 +99,10 @@ export function photoItems(ids: number[]): PhotoItem[] {
 		...ids
 	);
 	const byId = new Map(rows.map((row) => [row.id, row]));
-	const tags = tagsFor(ids);
 	return ids
 		.map((id) => byId.get(id))
 		.filter((row): row is PhotoRow => !!row)
-		.map((row) => toItem(row, tags.get(row.id) ?? []));
-}
-
-export function photoDetail(row: PhotoRow): PhotoDetail {
-	return {
-		...toItem(row, tagsFor([row.id]).get(row.id) ?? []),
-		size: row.size,
-		takenAt: row.taken_at,
-		camera: row.camera,
-		lens: row.lens,
-		focalLength: row.focal_length,
-		aperture: row.aperture,
-		exposureTime: row.exposure_time,
-		iso: row.iso
-	};
+		.map(toItem);
 }
 
 export function adminPhotos(albumId: number): AdminPhoto[] {
@@ -140,7 +121,8 @@ export function adminPhotos(albumId: number): AdminPhoto[] {
 		tags.set(row.photo_id, list);
 	}
 	return rows.map((row) => ({
-		...toItem(row, tags.get(row.id) ?? []),
+		...toItem(row),
+		tags: tags.get(row.id) ?? [],
 		size: row.size,
 		downloads: row.downloads,
 		takenAt: row.taken_at,
@@ -166,56 +148,65 @@ export function photosForAlbum(albumId: number, ids?: number[]): PhotoRow[] {
 
 /* ------------------------------------------------------------------- writes */
 
+async function photoDetails(file: string, key: string) {
+	const [{ width, height }, metadata] = await Promise.all([
+		generateVariants(file, key),
+		extractMetadata(file)
+	]);
+	return { width, height, takenAt: metadata.takenAt, keywords: metadata.keywords, duration: null };
+}
+
+async function videoDetails(file: string, key: string) {
+	return { ...(await prepareVideo(file, key)), keywords: [] as string[] };
+}
+
 /**
- * Takes ownership of `tmpFile`, stores it as an original, generates thumbnails
- * and records it in the database.
+ * Takes ownership of `tmpFile`, stores it as an original, generates thumbnails (a video's from its
+ * poster frame) and records it in the database.
  */
 export async function addPhoto(
 	albumId: number,
 	tmpFile: string,
 	originalName: string,
-	mime: string,
-	ext: string,
+	type: MediaType,
 	options: { keepSourceOnFailure?: boolean } = {}
 ): Promise<AdminPhoto> {
 	const key = newKey();
-	const destination = originalPath(key, ext);
+	const destination = originalPath(key, type.ext);
 	await moveFile(tmpFile, destination);
 
 	try {
-		const [{ width, height }, metadata, stat] = await Promise.all([
-			generateVariants(destination, key),
-			extractMetadata(destination),
+		const [details, stat] = await Promise.all([
+			type.kind === 'video' ? videoDetails(destination, key) : photoDetails(destination, key),
 			fsp.stat(destination)
 		]);
 
 		const photoId = transaction(() => {
 			const result = run(
-				`INSERT INTO photos (album_id, key, ext, original_name, mime, size, width, height, taken_at, camera, lens,
-					focal_length, aperture, exposure_time, iso)
-				 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				`INSERT INTO photos (album_id, key, ext, original_name, mime, size, width, height, taken_at,
+					kind, duration)
+				 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 				albumId,
 				key,
-				ext,
+				type.ext,
 				originalName,
-				mime,
+				type.mime,
 				stat.size,
-				width,
-				height,
-				metadata.takenAt,
-				metadata.camera,
-				metadata.lens,
-				metadata.focalLength,
-				metadata.aperture,
-				metadata.exposureTime,
-				metadata.iso
+				details.width,
+				details.height,
+				details.takenAt,
+				type.kind,
+				details.duration
 			);
-			tagWithKeywords(albumId, result.lastInsertRowid, metadata.keywords);
+			tagWithKeywords(albumId, result.lastInsertRowid, details.keywords);
 			return result.lastInsertRowid;
 		});
 		const row = getPhoto(photoId)!;
 		return {
-			...toItem(row, tagsFor([row.id]).get(row.id) ?? []),
+			...toItem(row),
+			tags: all<{ tag_id: number }>('SELECT tag_id FROM photo_tags WHERE photo_id = ?', row.id).map(
+				(tag) => tag.tag_id
+			),
 			size: row.size,
 			downloads: 0,
 			takenAt: row.taken_at,
@@ -223,7 +214,7 @@ export async function addPhoto(
 		};
 	} catch (error) {
 		if (options.keepSourceOnFailure) await moveFile(destination, tmpFile).catch(() => {});
-		await removePhotoFiles(key, ext);
+		await removePhotoFiles(key, type.ext);
 		throw error;
 	}
 }
@@ -264,8 +255,27 @@ export function bumpVersion(photoId: number, fields: { width: number; height: nu
 	);
 }
 
+/** Makes a photo's thumbnails, or a video's poster, again. */
+export function regenerateVariants(row: PhotoRow): Promise<{ width: number; height: number }> {
+	const file = originalPath(row.key, row.ext);
+	return row.kind === 'video' ? prepareVideo(file, row.key) : generateVariants(file, row.key);
+}
+
 export async function refreshMetadata(row: PhotoRow) {
 	const file = originalPath(row.key, row.ext);
+	if (row.kind === 'video') {
+		const [info, stat] = await Promise.all([probeVideo(file), fsp.stat(file)]);
+		run(
+			'UPDATE photos SET size = ?, width = ?, height = ?, taken_at = ?, duration = ? WHERE id = ?',
+			stat.size,
+			info?.width || row.width,
+			info?.height || row.height,
+			info?.takenAt ?? row.taken_at,
+			info?.duration ?? row.duration,
+			row.id
+		);
+		return;
+	}
 	const [metadata, stat, size] = await Promise.all([
 		extractMetadata(file),
 		fsp.stat(file),
@@ -273,18 +283,11 @@ export async function refreshMetadata(row: PhotoRow) {
 	]);
 	transaction(() => {
 		run(
-			`UPDATE photos SET size = ?, width = ?, height = ?, taken_at = ?, camera = ?, lens = ?, focal_length = ?,
-				aperture = ?, exposure_time = ?, iso = ? WHERE id = ?`,
+			'UPDATE photos SET size = ?, width = ?, height = ?, taken_at = ? WHERE id = ?',
 			stat.size,
 			size.width,
 			size.height,
 			metadata.takenAt,
-			metadata.camera,
-			metadata.lens,
-			metadata.focalLength,
-			metadata.aperture,
-			metadata.exposureTime,
-			metadata.iso,
 			row.id
 		);
 		tagWithKeywords(row.album_id, row.id, metadata.keywords);

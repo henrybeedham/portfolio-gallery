@@ -21,9 +21,14 @@ const EXTENSION_TYPES: Record<string, string> = {
 	jpeg: 'image/jpeg',
 	png: 'image/png',
 	webp: 'image/webp',
-	gif: 'image/gif'
+	gif: 'image/gif',
+	mp4: 'video/mp4',
+	m4v: 'video/mp4',
+	mov: 'video/quicktime',
+	webm: 'video/webm'
 };
 
+/** The type a file's name suggests, for listing importable photos and videos. */
 export function typeFromFilename(name: string): string | null {
 	const ext = path.extname(name).slice(1).toLowerCase();
 	return EXTENSION_TYPES[ext] ?? null;
@@ -36,7 +41,7 @@ const FORMAT_TYPES: Record<string, string> = {
 	gif: 'image/gif'
 };
 
-/** Detects the real image type from the file contents, ignoring the claimed extension. */
+/** Detects the real image type from the file contents, ignoring the claimed extension. Photos only. */
 export async function detectType(file: string): Promise<{ mime: string; ext: string } | null> {
 	try {
 		const meta = await sharp(file, { failOn: 'none' }).metadata();
@@ -94,7 +99,7 @@ function thumbSize(width: number, height: number) {
 	};
 }
 
-export async function orientedSize(source: string) {
+export async function orientedSize(source: string | Buffer) {
 	const meta = await sharp(source, { failOn: 'none' }).metadata();
 	const swap = (meta.orientation ?? 1) >= 5;
 	const width = (swap ? meta.height : meta.width) ?? 0;
@@ -102,7 +107,8 @@ export async function orientedSize(source: string) {
 	return { width, height };
 }
 
-export async function generateVariants(source: string, key: string) {
+/** Thumbnails from a photo, or from a video's poster frame. */
+export async function generateVariants(source: string | Buffer, key: string) {
 	return processing.run(async () => {
 		const { width, height } = await orientedSize(source);
 		if (!width || !height) throw new Error('Could not read image dimensions');
@@ -133,25 +139,9 @@ export async function generateVariants(source: string, key: string) {
 
 export interface PhotoMetadata {
 	takenAt: string | null;
-	camera: string | null;
-	lens: string | null;
-	focalLength: number | null;
-	aperture: number | null;
-	exposureTime: number | null;
-	iso: number | null;
 	/** Keywords from Lightroom and similar tools, which become album tags. */
 	keywords: string[];
 }
-
-const EMPTY_METADATA: Omit<PhotoMetadata, 'keywords'> = {
-	takenAt: null,
-	camera: null,
-	lens: null,
-	focalLength: null,
-	aperture: null,
-	exposureTime: null,
-	iso: null
-};
 
 function exifDate(value: unknown): string | null {
 	if (value instanceof Date && !isNaN(value.getTime())) {
@@ -162,18 +152,6 @@ function exifDate(value: unknown): string | null {
 	if (!match || match[1] === '0000') return null;
 	const [, y, m, d, hh, mm, ss] = match;
 	return `${y}-${m}-${d}T${hh}:${mm}:${ss}`;
-}
-
-function num(value: unknown): number | null {
-	if (typeof value === 'number' && isFinite(value) && value > 0) return value;
-	if (Array.isArray(value)) return num(value[0]);
-	return null;
-}
-
-function text(value: unknown): string | null {
-	if (typeof value !== 'string') return null;
-	const trimmed = value.replace(/\0/g, '').trim();
-	return trimmed || null;
 }
 
 /** The longest tag name, matching what the admin UI allows. */
@@ -276,27 +254,12 @@ export async function extractMetadata(source: string): Promise<PhotoMetadata> {
 	} catch {
 		exif = undefined;
 	}
-	if (!exif) return { ...EMPTY_METADATA, keywords: [] };
+	if (!exif) return { takenAt: null, keywords: [] };
 	const xmp = xmpKeywords(exif.xmp);
-
-	const make = text(exif.Make);
-	const model = text(exif.Model);
-	let camera = model;
-	if (make && model && !model.toLowerCase().startsWith(make.split(' ')[0].toLowerCase())) {
-		camera = `${make} ${model}`;
-	} else if (!model) {
-		camera = make;
-	}
 
 	return {
 		takenAt:
 			exifDate(exif.DateTimeOriginal) ?? exifDate(exif.CreateDate) ?? exifDate(exif.ModifyDate),
-		camera,
-		lens: text(exif.LensModel) ?? text(exif.Lens),
-		focalLength: num(exif.FocalLength),
-		aperture: num(exif.FNumber) ?? num(exif.ApertureValue),
-		exposureTime: num(exif.ExposureTime),
-		iso: num(exif.ISO) ?? num(exif.ISOSpeedRatings) ?? num(exif.PhotographicSensitivity),
 		keywords: cleanKeywords(xmp.length ? xmp : iptcKeywords(exif.Keywords))
 	};
 }

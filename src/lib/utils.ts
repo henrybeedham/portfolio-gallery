@@ -19,6 +19,16 @@ export function downloadUrl(image: ImageRef) {
 	return `/media/${image.key}/original?download=1`;
 }
 
+/** 42 → “0:42”, 3725 → “1:02:05”. */
+export function formatDuration(seconds: number | null | undefined): string {
+	if (!seconds || !Number.isFinite(seconds)) return '';
+	const total = Math.round(seconds);
+	const s = String(total % 60).padStart(2, '0');
+	const m = Math.floor(total / 60) % 60;
+	const h = Math.floor(total / 3600);
+	return h ? `${h}:${String(m).padStart(2, '0')}:${s}` : `${m}:${s}`;
+}
+
 export function formatBytes(bytes: number): string {
 	if (!bytes) return '0 B';
 	const units = ['B', 'KB', 'MB', 'GB', 'TB'];
@@ -51,30 +61,6 @@ export function formatDateTime(iso: string | null | undefined): string {
 		hour: '2-digit',
 		minute: '2-digit'
 	});
-}
-
-/** EXIF capture times are stored as naive local wall-clock strings (YYYY-MM-DDTHH:mm:ss). */
-export function formatCaptureTime(value: string | null | undefined): string {
-	if (!value) return '';
-	const match = /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?/.exec(value);
-	if (!match) return value;
-	const [, y, m, d, hh, mm] = match;
-	const date = formatDay(`${y}-${m}-${d}`);
-	return hh ? `${date} at ${hh}:${mm}` : date;
-}
-
-export function formatShutter(seconds: number | null | undefined): string {
-	if (!seconds) return '';
-	if (seconds >= 1) return `${Number(seconds.toFixed(1))}s`;
-	return `1/${Math.round(1 / seconds)}s`;
-}
-
-export function formatAperture(value: number | null | undefined) {
-	return value ? `ƒ/${Number(value.toFixed(1))}` : '';
-}
-
-export function formatFocal(value: number | null | undefined) {
-	return value ? `${Math.round(value)}mm` : '';
 }
 
 export function isExpired(expiresAt: string | null | undefined, now = Date.now()) {
@@ -173,8 +159,41 @@ export function formatShortDay(day: string | null | undefined): string {
 	});
 }
 
-/** “Tue 8 Dec 2026” and “18:15” from a naive local YYYY-MM-DDTHH:mm. */
-export function formatJobDate(startsAt: string | null | undefined): { day: string; time: string } {
+/** A job's length in hours, from its naive local start and end. */
+export function jobHours(
+	startsAt: string | null | undefined,
+	endsAt: string | null | undefined
+): number | null {
+	if (!startsAt || !endsAt) return null;
+	const ms = Date.parse(`${endsAt}Z`) - Date.parse(`${startsAt}Z`);
+	return ms > 0 ? Math.round((ms / 36e5) * 100) / 100 : null;
+}
+
+/**
+ * When a job that starts at `startsAt` and lasts `hours` ends, as a naive local YYYY-MM-DDTHH:mm.
+ * Null without a start time (a lone midnight counts as none) or for a day's hours or more.
+ */
+export function jobEndFromHours(startsAt: string | null | undefined, hours: number): string | null {
+	if (!startsAt || !/T\d{2}:\d{2}$/.test(startsAt) || startsAt.endsWith('T00:00')) return null;
+	const minutes = Math.round(hours * 60);
+	if (minutes <= 0 || minutes >= 24 * 60) return null;
+	return new Date(Date.parse(`${startsAt}Z`) + minutes * 60_000).toISOString().slice(0, 16);
+}
+
+/** The latest shoot date among an invoice's jobs, which its due date follows. */
+export function lastShootDay(jobs: { startsAt: string | null }[]): string | undefined {
+	return jobs
+		.map((job) => job.startsAt?.slice(0, 10))
+		.filter((day): day is string => !!day)
+		.sort()
+		.at(-1);
+}
+
+/** “Tue 8 Dec 2026” and “18:15” (or “18:15–23:00”) from naive local YYYY-MM-DDTHH:mm values. */
+export function formatJobDate(
+	startsAt: string | null | undefined,
+	endsAt?: string | null
+): { day: string; time: string } {
 	if (!startsAt) return { day: '', time: '' };
 	const [y, m, d] = startsAt.slice(0, 10).split('-').map(Number);
 	if (!y || !m || !d) return { day: startsAt, time: '' };
@@ -186,5 +205,6 @@ export function formatJobDate(startsAt: string | null | undefined): { day: strin
 		timeZone: 'UTC'
 	});
 	const time = /T(\d{2}:\d{2})/.exec(startsAt)?.[1] ?? '';
+	if (time && endsAt) return { day, time: `${time}–${endsAt.slice(11, 16)}` };
 	return { day, time: time === '00:00' ? '' : time };
 }

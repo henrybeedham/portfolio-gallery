@@ -7,7 +7,7 @@ import { requireAdmin } from '#lib/server/guard.js';
 import { createInvoice, generateInvoiceNumber } from '#lib/server/invoices.js';
 import { appendNote, convertLegacyMoney } from '#lib/server/legacy-money.js';
 import { BOOKING_STATUSES, type BookingStatus } from '#lib/types.js';
-import { isIsoDay, todayIso } from '#lib/utils.js';
+import { isIsoDay, jobEndFromHours, todayIso } from '#lib/utils.js';
 import type { RequestHandler } from './$types';
 
 function startsAt(value: unknown): string | null {
@@ -59,6 +59,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 					: null,
 				location: text(raw.location),
 				startsAt: when,
+				endsAt: jobEndFromHours(when, number(raw.hours)),
 				status: BOOKING_STATUSES.includes(raw.status as BookingStatus)
 					? (raw.status as BookingStatus)
 					: 'confirmed',

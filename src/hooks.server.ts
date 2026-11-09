@@ -11,6 +11,28 @@ export const init: ServerInit = () => {
 };
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+const COMPRESSIBLE = /^(?:text\/html|application\/json)\b/;
+
+/** Gzips pages and JSON. Static assets are precompressed at build time; images and ZIPs don't shrink. */
+function gzip(request: Request, response: Response) {
+	if (
+		!response.body ||
+		response.headers.has('content-encoding') ||
+		!COMPRESSIBLE.test(response.headers.get('content-type') ?? '') ||
+		!/\bgzip\b/.test(request.headers.get('accept-encoding') ?? '')
+	) {
+		return response;
+	}
+	const headers = new Headers(response.headers);
+	headers.set('content-encoding', 'gzip');
+	headers.delete('content-length');
+	headers.append('vary', 'Accept-Encoding');
+	return new Response(response.body.pipeThrough(new CompressionStream('gzip')), {
+		status: response.status,
+		statusText: response.statusText,
+		headers
+	});
+}
 
 export const handle: Handle = async ({ event, resolve }) => {
 	// SvelteKit already rejects cross-site form posts. JSON and binary requests (uploads, admin API)
@@ -47,5 +69,5 @@ export const handle: Handle = async ({ event, resolve }) => {
 	if (event.url.protocol === 'https:') {
 		response.headers.set('strict-transport-security', 'max-age=31536000');
 	}
-	return response;
+	return gzip(event.request, response);
 };

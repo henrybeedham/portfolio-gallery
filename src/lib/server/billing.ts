@@ -13,6 +13,11 @@ export function getInvoiceSettings(): InvoiceSettings {
 	return cache;
 }
 
+/** Forgets the cached settings, after the database is restored from a backup. */
+export function resetInvoiceSettings() {
+	cache = undefined;
+}
+
 export function updateInvoiceSettings(patch: Partial<InvoiceSettings>): InvoiceSettings {
 	const next = { ...getInvoiceSettings(), ...patch };
 	run(
