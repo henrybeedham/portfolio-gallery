@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
 	import ArrowRight from '@lucide/svelte/icons/arrow-right';
 	import Lock from '@lucide/svelte/icons/lock';
 	import Mail from '@lucide/svelte/icons/mail';
@@ -10,6 +11,7 @@
 	import PhotoGallery from '#lib/components/PhotoGallery.svelte';
 	import AlbumCard from '#lib/components/AlbumCard.svelte';
 	import Img from '#lib/components/Img.svelte';
+	import Lightbox from '#lib/components/Lightbox.svelte';
 	import { mediaUrl, paragraphs, plural, viewQuery } from '#lib/utils.js';
 	import type { PhotoItem } from '#lib/types.js';
 	import type { PageProps } from './$types';
@@ -19,6 +21,7 @@
 	const settings = $derived(data.settings);
 	const heroLines = $derived(settings.heroTitle.split('\n').filter((line) => line.trim()));
 	const featured = $derived(data.featured);
+	const featuredPhotos = $derived(featured?.photos ?? []);
 	const hasContact = $derived(
 		settings.showContactOnHome && !!(settings.contactEmail || settings.contactPhone)
 	);
@@ -36,6 +39,23 @@
 		} catch {
 			// storage unavailable
 		}
+	}
+
+	const lightboxIndex = $derived(
+		page.state.lightbox != null
+			? featuredPhotos.findIndex((photo) => photo.id === page.state.lightbox)
+			: -1
+	);
+
+	function openLightbox(index: number) {
+		rememberScroll();
+		const photo = featuredPhotos[index];
+		goto(photoHref(photo), { shallow: true, state: { lightbox: photo.id } });
+	}
+
+	function navigateLightbox(index: number) {
+		const photo = featuredPhotos[index];
+		goto(photoHref(photo), { shallow: true, replace: true, state: { lightbox: photo.id } });
 	}
 
 	onMount(() => {
@@ -121,10 +141,7 @@
 					photos={featured.photos}
 					layout={featured.layout}
 					href={photoHref}
-					onopen={(index) => {
-						rememberScroll();
-						goto(photoHref(featured.photos[index]));
-					}}
+					onopen={openLightbox}
 				/>
 			{:else}
 				<p class="empty">Photos from this collection will appear here soon.</p>
@@ -188,6 +205,16 @@
 </main>
 
 <SiteFooter copyright={settings.copyright} isAdmin={data.isAdmin} />
+
+{#if lightboxIndex >= 0}
+	<Lightbox
+		photos={featuredPhotos}
+		index={lightboxIndex}
+		total={featuredPhotos.length}
+		onclose={() => history.back()}
+		onnavigate={navigateLightbox}
+	/>
+{/if}
 
 <style>
 	.hero {

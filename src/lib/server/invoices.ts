@@ -19,7 +19,7 @@ export interface Invoice extends InvoiceDocument {
 	billingAddressId: number | null;
 	/** Not sent yet: it holds the expected fee and is dated when it's issued. */
 	draft: boolean;
-	/** Converted from a job's old fee, paid tick or earlier invoice numbers; there's no PDF. */
+	/** Sent from another platform, or converted from a job's old fee or paid tick; there's no PDF. */
 	imported: boolean;
 	total: number;
 	createdAt: string;
@@ -223,6 +223,65 @@ export function setInvoicePaid(id: number, paidAt: string | null) {
 
 export function deleteInvoice(id: number) {
 	run('DELETE FROM invoices WHERE id = ?', id);
+}
+
+/**
+ * Records an invoice sent from another platform as an imported record. A draft on the job becomes
+ * that record, so its fee isn't counted twice. A blank amount keeps the draft's fee. Returns an
+ * error message if the details aren't usable.
+ */
+export function recordExternalInvoice(
+	booking: Booking,
+	raw: Record<string, unknown>
+): string | null {
+	const issueDate = day(raw.date);
+	if (!issueDate) return 'Please set the date you invoiced.';
+	const amount = raw.amount == null ? null : Number(raw.amount);
+	if (amount !== null && (!Number.isInteger(amount) || amount < 0 || amount > 100_000_000)) {
+		return 'Check the amount.';
+	}
+	const number = text(raw.number, 40);
+	const paidAt = day(raw.paidAt);
+	const settings = getInvoiceSettings();
+	const fee = [{ description: settings.itemDescription, quantity: 1, rate: amount ?? 0 }];
+
+	const ref = booking.invoices.find((invoice) => invoice.state === 'draft');
+	const draft = ref && getInvoice(ref.id);
+	if (draft) {
+		const items = amount === null || amount === draft.total ? draft.items : fee;
+		run(
+			`UPDATE invoices SET number = ?, issue_date = ?, due_date = NULL, items = ?, total = ?, paid_at = ?,
+				draft = 0, imported = 1, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+			 WHERE id = ?`,
+			number,
+			issueDate,
+			JSON.stringify(items),
+			itemsTotal(items),
+			paidAt,
+			draft.id
+		);
+		return null;
+	}
+
+	const address = getBillingAddress(booking.billingAddressId);
+	createInvoice({
+		number,
+		bookingId: booking.id,
+		billingAddressId: address?.id ?? null,
+		issueDate,
+		dueDate: null,
+		billToName: booking.client || booking.title,
+		billToAddress: address ? billingAddressText(address) : '',
+		sender: { name: '', address: '', phone: '', email: '' },
+		paymentDetails: '',
+		notes: '',
+		items: fee,
+		style: settings.style,
+		paidAt,
+		draft: false,
+		imported: true
+	});
+	return null;
 }
 
 /** A new invoice filled in from your invoice settings and, optionally, a job. */

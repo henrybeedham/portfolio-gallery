@@ -53,30 +53,6 @@ export function formatDateTime(iso: string | null | undefined): string {
 	});
 }
 
-/** EXIF capture times are stored as naive local wall-clock strings (YYYY-MM-DDTHH:mm:ss). */
-export function formatCaptureTime(value: string | null | undefined): string {
-	if (!value) return '';
-	const match = /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?/.exec(value);
-	if (!match) return value;
-	const [, y, m, d, hh, mm] = match;
-	const date = formatDay(`${y}-${m}-${d}`);
-	return hh ? `${date} at ${hh}:${mm}` : date;
-}
-
-export function formatShutter(seconds: number | null | undefined): string {
-	if (!seconds) return '';
-	if (seconds >= 1) return `${Number(seconds.toFixed(1))}s`;
-	return `1/${Math.round(1 / seconds)}s`;
-}
-
-export function formatAperture(value: number | null | undefined) {
-	return value ? `ƒ/${Number(value.toFixed(1))}` : '';
-}
-
-export function formatFocal(value: number | null | undefined) {
-	return value ? `${Math.round(value)}mm` : '';
-}
-
 export function isExpired(expiresAt: string | null | undefined, now = Date.now()) {
 	return !!expiresAt && new Date(expiresAt).getTime() <= now;
 }

@@ -121,8 +121,8 @@
 
 {#if invoice.imported}
 	<p class="alert notice">
-		Converted from the job’s old fee, paid tick or earlier invoice numbers when money moved onto
-		invoices. There’s no PDF, because it wasn’t made here.
+		An invoice sent from another platform, or converted from a job’s old fee, paid tick or earlier
+		invoice numbers. There’s no PDF, because it wasn’t made here.
 	</p>
 {/if}
 

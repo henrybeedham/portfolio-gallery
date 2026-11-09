@@ -3,6 +3,7 @@
 	import { invalidate } from '$app/navigation';
 	import { page } from '$app/state';
 	import Plus from '@lucide/svelte/icons/plus';
+	import CalendarPlus from '@lucide/svelte/icons/calendar-plus';
 	import Pencil from '@lucide/svelte/icons/pencil';
 	import FilePlus from '@lucide/svelte/icons/file-plus';
 	import ClipboardPaste from '@lucide/svelte/icons/clipboard-paste';
@@ -90,6 +91,7 @@
 		<h1>Jobs</h1>
 	</div>
 	<div class="ui-actions">
+		<a class="btn btn-quiet" href="/admin/jobs/calendar"><CalendarPlus size={14} /> Calendar</a>
 		<a class="btn btn-quiet" href="/admin/jobs/import"><ClipboardPaste size={14} /> Import</a>
 		<a class="btn btn-solid" href="/admin/jobs/new"><Plus size={14} /> New Job</a>
 	</div>

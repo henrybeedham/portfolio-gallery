@@ -27,7 +27,10 @@ A self-hosted photography portfolio and client-delivery platform. It combines a 
 - **Jobs** (`/admin/jobs`): each shoot with its date, client and location, plus whether it's
   confirmed, tentative or cancelled. Tick off shot and delivered straight from the list, and link one
   or more albums. Albums never need a job or an invoice. Jobs hold no money: a job's fee and whether
-  it's paid come from its invoices.
+  it's paid come from its invoices. Sent an invoice from another platform? Use “Invoiced Elsewhere”
+  on the job to record it.
+- **Calendar** (`/admin/jobs/calendar`): a private link that puts your jobs in Apple Calendar and
+  keeps them up to date.
 - **Saved addresses**: type a client's name and pick AU, Guild or any other saved address (or
   type one in for one-off clients). Clients you've billed before pick their address automatically.
 - **Invoices** (`/admin/invoices`): PDF invoices with a live preview, a unique random 8-digit number,
