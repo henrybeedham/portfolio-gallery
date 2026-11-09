@@ -18,7 +18,8 @@ export const paths = {
 	thumbs: path.join(dataDir, 'photos', 'thumbs'),
 	medium: path.join(dataDir, 'photos', 'medium'),
 	site: path.join(dataDir, 'site'),
-	tmp: path.join(dataDir, 'tmp')
+	tmp: path.join(dataDir, 'tmp'),
+	backups: path.join(dataDir, 'backups')
 };
 
 export function ensureDirs() {

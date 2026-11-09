@@ -86,7 +86,8 @@ Prettier-formatted, so `bun run lint` reports it; leave it alone unless asked.
   routing (`PageState.lightbox`). Each photo also has its own URL at `/[slug]/photo/[id]`, for
   reloads and shared links, which renders the same viewer.
 - **Album endpoints:** `/[slug]/photos` returns JSON pages for infinite scroll; `/[slug]/download`
-  streams a ZIP.
+  streams a ZIP (resumable: `zip.ts`); `/[slug]/view` counts a view. The album page posts to it once
+  it's shown, so hover-preloading a link doesn't count; don't count views in a `load`.
 - **Images:** `/media/[key]/[variant]` (`thumb|medium|original`) and `/site/hero/[size]`.
 - **Other:** `/site/themes.css`, `/site/calendar/[token].ics` (the jobs feed), `/album/[...path]`
   (legacy redirects) and `/healthz`.
@@ -128,7 +129,8 @@ Prettier-formatted, so `bun run lint` reports it; leave it alone unless asked.
   - `photos/{originals,thumbs,medium}/<first two chars of key>/…`
   - `site/` (the hero image)
   - `themes/` (uploaded themes)
-  - `tmp/`
+  - `tmp/` (including unfinished uploads, `upload-<id>.part`, removed after a day)
+  - `backups/` (database backups)
   - the generated `.session-secret` and `.admin-password`
 - **Database.** It uses `node:sqlite`, which is synchronous. Use the helpers in `db.ts`: `run`,
   `get`, `all`, `transaction` (nested calls join the outer one) and `placeholders(n)`.
@@ -138,6 +140,11 @@ Prettier-formatted, so `bun run lint` reports it; leave it alone unless asked.
   `PRAGMA user_version`, each in its own transaction. Add a new entry at the end; never edit or
   reorder existing ones. An entry is SQL, or a function given the raw `DatabaseSync` for data
   conversions (it can't use the `db.ts` helpers, which open the database themselves).
+- **Backups** (`backups.ts`, `backup-files.ts`). `db.ts` saves a `VACUUM INTO` copy to `backups/`
+  before migrating, and whenever the app version (`$app/env`) differs from the `'app-version'`
+  settings row, i.e. after every deploy. Ten automatic backups are kept; ones made by hand stay until
+  deleted. A restore backs up first, swaps the file through `replaceDatabase` and resets the settings
+  caches. Photos are only in the streamed **Download Everything** ZIP, which is never stored.
 - **Site settings.**
   - They're stored as one JSON row (`settings.key = 'site'`) and cached in `settings.ts`.
   - Unknown keys are dropped when read, so a new setting needs adding to both `defaultSettings`
@@ -149,7 +156,17 @@ Prettier-formatted, so `bun run lint` reports it; leave it alone unless asked.
     is used for cache-busting (`?v=`).
   - `sharp` work goes through the `processing` limiter in `images.ts`.
   - Client downloads go through the browser's own download manager (`download.ts`), so a large ZIP
-    never sits in the page's memory.
+    never sits in the page's memory. `serveFile` honours single byte ranges with If-Range, so
+    downloads resume and videos seek. A continued range isn't counted as a new download
+    (`isContinuation`).
+  - Uploads arrive in 8 MB pieces (`Uploader.svelte` and the upload endpoint), each with an upload id
+    and offset, so every request stays inside Traefik's 60-second limit and a dropped piece resumes.
+- **Videos** (`video.ts`) are rows in `photos` with `kind = 'video'` and a `duration`. ffprobe reads
+  their size (after rotation), length and date; ffmpeg's poster frame goes through
+  `generateVariants`, so thumbnails, covers and the grid work unchanged. Use `detectMedia` and
+  `regenerateVariants` from `photos.ts` rather than the photo-only `detectType` and
+  `generateVariants`. ffmpeg comes from the `mwader/static-ffmpeg` image; without it, videos get a
+  plain poster. The lightbox plays the original.
   - The Dockerfile and `bun run start` set `UV_THREADPOOL_SIZE=16`, so bulk image processing doesn't
     delay file requests, which share libuv's thread pool.
   - Embedded keywords (XMP `dc:subject`, falling back to IPTC) become album tags on upload, folder
@@ -209,6 +226,9 @@ background maintenance tasks (`jobs.ts`, `/admin/api/jobs`). The page route is s
 - **Calendar feed** (`calendar.ts`): a private iCalendar feed of dated, non-cancelled jobs. Calendar
   apps can't sign in, so a random token in the URL is the access; it's a separate settings row
   (`'calendar-token'`), reset from `/admin/jobs/calendar`. Times are floating, matching `starts_at`.
+- **Tax year export** (`tax-year.ts`): UK tax years (6 April to 5 April, named by the starting
+  year) as CSV, by `paid_at` (cash basis) or `issue_date`. Drafts are left out, and text cells that
+  look like formulas are prefixed so spreadsheets don't run them.
 - **Analytics** (`insights.ts`):
   - Academic years start in September.
   - Gallery charts read `album_daily_stats`, updated in `analytics.ts`.

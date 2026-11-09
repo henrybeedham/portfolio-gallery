@@ -1,5 +1,8 @@
 import { DatabaseSync, type StatementSync, type SQLInputValue } from 'node:sqlite';
+import { version } from '$app/env';
+import { writeBackup, type BackupReason } from './backup-files.js';
 import { ensureDirs, paths } from './config.js';
+import { fillEndTimesFromInvoices } from './end-times.js';
 import { moveJobMoneyToInvoices } from './legacy-money.js';
 
 /** SQL, or a function for migrations that convert data. Each runs inside its own transaction. */
@@ -214,6 +217,13 @@ const MIGRATIONS: Migration[] = [
 	ALTER TABLE photos DROP COLUMN aperture;
 	ALTER TABLE photos DROP COLUMN exposure_time;
 	ALTER TABLE photos DROP COLUMN iso;
+	`,
+	// Jobs from before end times existed get one worked out from their invoices' hours.
+	fillEndTimesFromInvoices,
+	// Videos sit alongside photos, with their poster frame as the thumbnail.
+	`
+	ALTER TABLE photos ADD COLUMN kind TEXT NOT NULL DEFAULT 'photo';
+	ALTER TABLE photos ADD COLUMN duration REAL;
 	`
 ];
 
@@ -237,21 +247,65 @@ function migrate(instance: DatabaseSync) {
 	}
 }
 
+/**
+ * Opens the database and brings it up to date. A backup is saved first whenever this is a new
+ * version of the app (a deploy) or migrations are about to run, unless `backupFirst` is false.
+ */
+function open(backupFirst: boolean): DatabaseSync {
+	ensureDirs();
+	const instance = new DatabaseSync(paths.db);
+	instance.exec(`
+		PRAGMA journal_mode = WAL;
+		PRAGMA synchronous = NORMAL;
+		PRAGMA foreign_keys = ON;
+		PRAGMA busy_timeout = 5000;
+	`);
+	const { user_version: schema } = instance.prepare('PRAGMA user_version').get() as {
+		user_version: number;
+	};
+	if (backupFirst && schema > 0) {
+		const stored = instance
+			.prepare(`SELECT value FROM settings WHERE key = 'app-version'`)
+			.get() as { value: string } | undefined;
+		if (schema < MIGRATIONS.length || stored?.value !== version) writeBackup(instance, 'update');
+	}
+	migrate(instance);
+	instance
+		.prepare(
+			`INSERT INTO settings (key, value) VALUES ('app-version', ?)
+			 ON CONFLICT(key) DO UPDATE SET value = excluded.value`
+		)
+		.run(version);
+	return instance;
+}
+
 /** Opens the database lazily, so nothing touches the disk while the app is being built. */
 export function getDb(): DatabaseSync {
-	if (!db) {
-		ensureDirs();
-		const instance = new DatabaseSync(paths.db);
-		instance.exec(`
-			PRAGMA journal_mode = WAL;
-			PRAGMA synchronous = NORMAL;
-			PRAGMA foreign_keys = ON;
-			PRAGMA busy_timeout = 5000;
-		`);
-		migrate(instance);
-		db = instance;
-	}
+	if (!db) db = open(true);
 	return db;
+}
+
+/** The schema version this build of the app expects. */
+export const SCHEMA_VERSION = MIGRATIONS.length;
+
+/** Saves a copy of the database as it is now. */
+export function backupDatabase(reason: BackupReason) {
+	return writeBackup(getDb(), reason);
+}
+
+/**
+ * Closes the database so `swap` can replace the file, then opens it again, migrating it if it's from
+ * an earlier version. If `swap` fails, the database that was there is opened again.
+ */
+export function replaceDatabase(swap: () => void) {
+	statements.clear();
+	db?.close();
+	db = undefined;
+	try {
+		swap();
+	} finally {
+		db = open(false);
+	}
 }
 
 export type Param = SQLInputValue | boolean | undefined;

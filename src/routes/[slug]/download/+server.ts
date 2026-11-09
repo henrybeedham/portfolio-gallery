@@ -2,8 +2,9 @@ import { error, type RequestEvent } from '@sveltejs/kit';
 import { getAlbumBySlug } from '#lib/server/albums.js';
 import { albumAccess } from '#lib/server/access.js';
 import { recordZipDownload } from '#lib/server/analytics.js';
+import { isContinuation } from '#lib/server/files.js';
 import { photosForAlbum } from '#lib/server/photos.js';
-import { zipName, zipResponse } from '#lib/server/zip.js';
+import { photoZipFiles, zipName, zipResponse } from '#lib/server/zip.js';
 
 function parseIds(value: unknown): number[] | null {
 	if (value === null || value === undefined || value === '') return null;
@@ -23,10 +24,15 @@ async function respond(event: RequestEvent, ids: number[] | null) {
 	const rows = photosForAlbum(album.id, ids ?? undefined);
 	if (!rows.length) error(404, 'There are no photos to download');
 
-	if (!locals.isAdmin) {
+	// A resumed download is the same download, so it isn't counted again.
+	if (!locals.isAdmin && !isContinuation(event.request)) {
 		recordZipDownload(album, ids ? rows.map((row) => row.id) : null, url.origin);
 	}
-	return zipResponse(rows, zipName(album.title, ids ? ' - selection' : ''));
+	return zipResponse(
+		event.request,
+		photoZipFiles(rows),
+		zipName(album.title, ids ? ' - selection' : '')
+	);
 }
 
 /** Full album (or `?ids=1,2,3`) as a ZIP archive. */

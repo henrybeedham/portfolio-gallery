@@ -1,10 +1,12 @@
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import fsp from 'node:fs/promises';
-import path from 'node:path';
-import { Readable } from 'node:stream';
 import { createRequire } from 'node:module';
+import path from 'node:path';
+import { finished, pipeline, Readable, Transform } from 'node:stream';
 import zlib from 'node:zlib';
 import yazl from 'yazl';
+import { requestedRange } from './files.js';
 import { originalPath } from './images.js';
 import type { PhotoRow } from './photos.js';
 
@@ -22,47 +24,80 @@ export function contentDisposition(filename: string, type: 'attachment' | 'inlin
 	return `${type}; filename="${fallback}"; filename*=UTF-8''${encodeURIComponent(filename)}`;
 }
 
-function uniqueNames(rows: PhotoRow[]) {
+export interface ZipFile {
+	/** Path inside the archive. */
+	name: string;
+	/** Path on disk. */
+	file: string;
+}
+
+/** Original files named as they were uploaded, with duplicates numbered. */
+export function photoZipFiles(rows: PhotoRow[]): ZipFile[] {
 	const used = new Map<string, number>();
 	return rows.map((row) => {
 		const clean = row.original_name.replace(/[/\\]/g, '_') || `${row.key}.${row.ext}`;
 		const lower = clean.toLowerCase();
 		const count = used.get(lower) ?? 0;
 		used.set(lower, count + 1);
-		if (count === 0) return clean;
 		const ext = path.extname(clean);
-		return `${clean.slice(0, clean.length - ext.length)} (${count + 1})${ext}`;
+		const name = count
+			? `${clean.slice(0, clean.length - ext.length)} (${count + 1})${ext}`
+			: clean;
+		return { name, file: originalPath(row.key, row.ext) };
 	});
 }
 
+/** Drops the first `count` bytes of a stream. */
+function skipBytes(source: Readable, count: number): Readable {
+	let skipped = 0;
+	const skipper = new Transform({
+		transform(chunk: Buffer, _encoding, done) {
+			if (skipped >= count) return done(null, chunk);
+			const take = Math.min(count - skipped, chunk.length);
+			skipped += take;
+			done(null, take < chunk.length ? chunk.subarray(take) : undefined);
+		}
+	});
+	return pipeline(source, skipper, () => {});
+}
+
 /**
- * Streams the originals as an uncompressed ZIP (photos don't compress further),
- * which lets us send an exact Content-Length so browsers can show progress.
+ * Streams files as an uncompressed ZIP (photos and videos don't compress further), which lets us
+ * send an exact Content-Length so browsers can show progress.
+ *
+ * The same files always produce the same bytes, so an interrupted download can resume from where it
+ * stopped. Only ranges that run to the end are honoured (that's what browsers send): rebuilding the
+ * archive up to a later range costs as much as sending it. Set `resumable: false` for archives
+ * whose contents differ each time.
  */
-export async function zipResponse(rows: PhotoRow[], filename: string): Promise<Response> {
+export async function zipResponse(
+	request: Request,
+	files: ZipFile[],
+	filename: string,
+	options: { resumable?: boolean; onClose?: () => void } = {}
+): Promise<Response> {
+	const entries = (
+		await Promise.all(
+			files.map(async ({ name, file }) => {
+				try {
+					const stat = await fsp.stat(file);
+					return stat.isFile() ? { name, file, size: stat.size, mtime: stat.mtime } : null;
+				} catch {
+					return null;
+				}
+			})
+		)
+	).filter((entry) => entry !== null);
+
 	const zip = new yazl.ZipFile();
-	const names = uniqueNames(rows);
-
-	const entries = await Promise.all(
-		rows.map(async (row, index) => {
-			const file = originalPath(row.key, row.ext);
-			try {
-				const stat = await fsp.stat(file);
-				return { file, name: names[index], size: stat.size, mtime: stat.mtime };
-			} catch {
-				return null;
-			}
-		})
-	);
-
 	for (const entry of entries) {
-		if (!entry) continue;
 		zip.addReadStreamLazy(
 			entry.name,
 			{ size: entry.size, mtime: entry.mtime, compress: false },
 			(callback) => callback(null, fs.createReadStream(entry.file, { highWaterMark: 1024 * 1024 }))
 		);
 	}
+	if (options.onClose) finished(zip.outputStream, options.onClose);
 
 	// @types/yazl omits the size argument that yazl passes to this callback.
 	const end = zip.end.bind(zip) as (options: object, callback: (total: number) => void) => void;
@@ -73,10 +108,28 @@ export async function zipResponse(rows: PhotoRow[], filename: string): Promise<R
 		'content-disposition': contentDisposition(filename),
 		'cache-control': 'no-store'
 	});
-	if (size > 0) headers.set('content-length', String(size));
 
-	const body = Readable.toWeb(zip.outputStream as Readable) as ReadableStream<Uint8Array>;
-	return new Response(body, { headers });
+	let body = zip.outputStream as Readable;
+	let status = 200;
+	let length = size;
+	if (options.resumable !== false && size > 0) {
+		const etag = `"zip-${crypto
+			.createHash('sha1')
+			.update(JSON.stringify(entries.map((e) => [e.name, e.size, e.mtime.getTime()])))
+			.digest('base64url')}"`;
+		headers.set('etag', etag);
+		headers.set('accept-ranges', 'bytes');
+		const range = requestedRange(request, size, [etag]);
+		if (range && range !== 'unsatisfiable' && range.end === size - 1 && range.start > 0) {
+			body = skipBytes(body, range.start);
+			status = 206;
+			length = size - range.start;
+			headers.set('content-range', `bytes ${range.start}-${range.end}/${size}`);
+		}
+	}
+	if (size > 0) headers.set('content-length', String(length));
+
+	return new Response(Readable.toWeb(body) as ReadableStream<Uint8Array>, { status, headers });
 }
 
 export function zipName(title: string, suffix = '') {

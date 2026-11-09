@@ -65,6 +65,10 @@ export interface ImageRef {
 export interface PhotoItem extends ImageRef {
 	id: number;
 	name: string;
+	/** Set for videos, whose thumbnails come from a poster frame. */
+	kind?: 'video';
+	/** Seconds, for videos. */
+	duration?: number | null;
 }
 
 export interface AdminPhoto extends PhotoItem {

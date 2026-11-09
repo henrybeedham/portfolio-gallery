@@ -10,9 +10,23 @@
 
 	let { albumId, onuploaded, ondone }: Props = $props();
 
-	const ACCEPT = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-	const ACCEPT_EXT = /\.(jpe?g|png|webp|gif)$/i;
+	const ACCEPT = [
+		'image/jpeg',
+		'image/png',
+		'image/webp',
+		'image/gif',
+		'video/mp4',
+		'video/quicktime',
+		'video/webm'
+	];
+	const ACCEPT_EXT = /\.(jpe?g|png|webp|gif|mp4|m4v|mov|webm)$/i;
 	const CONCURRENCY = 3;
+	/**
+	 * Files go up in pieces this size, so each request stays well inside a proxy's time limit (60 s
+	 * on Traefik) and a dropped connection only costs one piece.
+	 */
+	const CHUNK = 8 * 1024 * 1024;
+	const RETRIES = 4;
 
 	let dragging = $state(false);
 	let running = $state(false);
@@ -29,41 +43,78 @@
 		totalBytes ? Math.min(100, Math.round((loadedBytes / totalBytes) * 100)) : 0
 	);
 
-	function uploadOne(file: File, onBytes: (delta: number) => void): Promise<AdminPhoto> {
+	type Reply = { photo?: AdminPhoto; received?: number };
+
+	function uploadId() {
+		// crypto.randomUUID needs HTTPS; this works over plain HTTP on a LAN too.
+		return Array.from(crypto.getRandomValues(new Uint8Array(16)), (byte) =>
+			byte.toString(16).padStart(2, '0')
+		).join('');
+	}
+
+	/** Sends one piece. Resolves with the server's reply, including 409's “carry on from here”. */
+	function sendPiece(
+		file: File,
+		id: string,
+		offset: number,
+		onBytes: (delta: number) => void
+	): Promise<Reply> {
+		const piece = file.slice(offset, Math.min(file.size, offset + CHUNK));
 		return new Promise((resolve, reject) => {
 			const xhr = new XMLHttpRequest();
 			let sent = 0;
 			xhr.open('POST', `/admin/api/albums/${albumId}/upload`);
-			xhr.setRequestHeader('content-type', file.type || 'application/octet-stream');
+			xhr.setRequestHeader('content-type', 'application/octet-stream');
 			xhr.setRequestHeader('x-filename', encodeURIComponent(file.name));
+			xhr.setRequestHeader('x-upload-id', id);
+			xhr.setRequestHeader('x-upload-offset', String(offset));
+			xhr.setRequestHeader('x-upload-size', String(file.size));
 			xhr.upload.onprogress = (event) => {
 				onBytes(event.loaded - sent);
 				sent = event.loaded;
 			};
 			xhr.onload = () => {
-				onBytes(file.size - sent);
-				if (xhr.status >= 200 && xhr.status < 300) {
-					try {
-						resolve(JSON.parse(xhr.responseText).photo);
-					} catch {
-						reject(new Error(`${file.name}: invalid server response`));
-					}
+				let reply: Reply & { message?: string } = {};
+				try {
+					reply = JSON.parse(xhr.responseText);
+				} catch {
+					// not JSON
+				}
+				if ((xhr.status >= 200 && xhr.status < 300) || xhr.status === 409) {
+					// Count only what the server kept.
+					onBytes((reply.photo ? piece.size : (reply.received ?? offset) - offset) - sent);
+					resolve(reply);
 				} else {
-					let message = `${file.name}: upload failed (${xhr.status})`;
-					try {
-						message = JSON.parse(xhr.responseText).message ?? message;
-					} catch {
-						// keep default
-					}
-					reject(new Error(message));
+					onBytes(-sent);
+					const error = new Error(reply.message ?? `${file.name}: upload failed (${xhr.status})`);
+					// Proxies and restarts answer 502–504; those are worth another try.
+					reject(Object.assign(error, { retry: xhr.status >= 500 }));
 				}
 			};
 			xhr.onerror = () => {
-				onBytes(file.size - sent);
-				reject(new Error(`${file.name}: network error`));
+				onBytes(-sent);
+				reject(Object.assign(new Error(`${file.name}: network error`), { retry: true }));
 			};
-			xhr.send(file);
+			xhr.send(piece);
 		});
+	}
+
+	async function uploadOne(file: File, onBytes: (delta: number) => void): Promise<AdminPhoto> {
+		const id = uploadId();
+		let offset = 0;
+		let failures = 0;
+		for (;;) {
+			try {
+				const reply = await sendPiece(file, id, offset, onBytes);
+				if (reply.photo) return reply.photo;
+				offset = reply.received ?? offset;
+				failures = 0;
+			} catch (error) {
+				if (!(error as { retry?: boolean }).retry || ++failures > RETRIES) throw error;
+				// Wait a little longer each time, then ask the server where to carry on from.
+				await new Promise((resolve) => setTimeout(resolve, 1000 * 2 ** failures));
+			}
+		}
 	}
 
 	async function start(files: File[]) {
@@ -71,7 +122,9 @@
 		const accepted = files.filter((f) => ACCEPT.includes(f.type) || ACCEPT_EXT.test(f.name));
 		skipped = files.length - accepted.length;
 		if (!accepted.length) {
-			errors = skipped ? ['Only JPEG, PNG, WebP and GIF images can be uploaded.'] : [];
+			errors = skipped
+				? ['Only JPEG, PNG, WebP and GIF photos, and MP4, MOV and WebM videos, can be uploaded.']
+				: [];
 			return;
 		}
 
@@ -115,7 +168,7 @@
 	class:dragging
 	class:running
 	role="region"
-	aria-label="Upload photos"
+	aria-label="Upload photos and videos"
 	ondragover={(event) => {
 		event.preventDefault();
 		dragging = true;
@@ -139,10 +192,10 @@
 	{:else}
 		<Upload size={22} strokeWidth={1.25} />
 		<p>
-			<strong>Drop photos here</strong> or
+			<strong>Drop photos or videos here</strong> or
 			<button type="button" class="browse" onclick={() => input?.click()}>browse files</button>
 		</p>
-		<p class="subtle">JPEG, PNG, WebP or GIF · multiple files supported</p>
+		<p class="subtle">JPEG, PNG, WebP, GIF, MP4, MOV or WebM · multiple files supported</p>
 		{#if total && !running}
 			<p class="summary" aria-live="polite">
 				Last upload: {completed - failed} succeeded{failed ? `, ${failed} failed` : ''}{skipped
