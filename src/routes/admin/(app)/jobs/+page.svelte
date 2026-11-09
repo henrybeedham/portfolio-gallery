@@ -140,7 +140,7 @@
 				</thead>
 				<tbody>
 					{#each shown as booking (booking.id)}
-						{@const when = formatJobDate(booking.startsAt)}
+						{@const when = formatJobDate(booking.startsAt, booking.endsAt)}
 						<tr class:ui-faded={booking.status === 'cancelled'}>
 							<td class="date">
 								{#if when.day}
@@ -165,6 +165,9 @@
 								{#if booking.invoices.length}
 									{formatMoney(booking.total)}
 									{#if booking.payment === 'draft'}<span class="ui-sub">Draft</span>{/if}
+									{#if booking.invoices.some((invoice) => invoice.sharedWith.length)}
+										<span class="ui-sub">Shared invoice</span>
+									{/if}
 								{:else}
 									<span class="none">—</span>
 								{/if}

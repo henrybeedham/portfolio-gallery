@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { all, get, run } from './db.js';
+import { all, get, run, transaction } from './db.js';
 import { billingAddressText, getBillingAddress, getInvoiceSettings } from './billing.js';
 import { getBooking, invoiceState } from './bookings.js';
 import { getTheme, hasTheme } from './themes.js';
@@ -9,13 +9,14 @@ import type {
 	InvoiceDocument,
 	InvoiceItem,
 	InvoiceSender,
-	InvoiceSummary
+	InvoiceSummary,
+	JobRef
 } from '#lib/types.js';
-import { invoiceDueDate, isIsoDay, todayIso } from '#lib/utils.js';
+import { invoiceDueDate, isIsoDay, jobHours, lastShootDay, todayIso } from '#lib/utils.js';
 
 export interface Invoice extends InvoiceDocument {
 	id: number;
-	bookingId: number | null;
+	bookingIds: number[];
 	billingAddressId: number | null;
 	/** Not sent yet: it holds the expected fee and is dated when it's issued. */
 	draft: boolean;
@@ -31,7 +32,6 @@ export type InvoiceInput = Omit<Invoice, 'id' | 'total' | 'createdAt' | 'updated
 interface InvoiceRow {
 	id: number;
 	number: string;
-	booking_id: number | null;
 	billing_address_id: number | null;
 	issue_date: string;
 	due_date: string | null;
@@ -58,11 +58,29 @@ function parseJson<T>(value: string, fallback: T): T {
 	}
 }
 
+function invoiceJobIds(invoiceId: number) {
+	return all<{ booking_id: number }>(
+		'SELECT booking_id FROM invoice_bookings WHERE invoice_id = ? ORDER BY booking_id',
+		invoiceId
+	).map((row) => row.booking_id);
+}
+
+function setInvoiceJobs(invoiceId: number, bookingIds: number[]) {
+	run('DELETE FROM invoice_bookings WHERE invoice_id = ?', invoiceId);
+	for (const bookingId of bookingIds) {
+		run(
+			'INSERT OR IGNORE INTO invoice_bookings (invoice_id, booking_id) VALUES (?, ?)',
+			invoiceId,
+			bookingId
+		);
+	}
+}
+
 function mapInvoice(row: InvoiceRow): Invoice {
 	return {
 		id: row.id,
 		number: row.number,
-		bookingId: row.booking_id,
+		bookingIds: invoiceJobIds(row.id),
 		billingAddressId: row.billing_address_id,
 		issueDate: row.issue_date,
 		dueDate: row.due_date,
@@ -101,11 +119,18 @@ export function generateInvoiceNumber(): string {
 
 export function listInvoices(): InvoiceSummary[] {
 	const today = todayIso();
+	const jobs = new Map<number, JobRef[]>();
+	for (const link of all<JobRef & { invoice_id: number }>(
+		`SELECT l.invoice_id, b.id, b.title
+		 FROM invoice_bookings l JOIN bookings b ON b.id = l.booking_id
+		 ORDER BY b.starts_at, b.id`
+	)) {
+		const job = { id: link.id, title: link.title };
+		jobs.set(link.invoice_id, [...(jobs.get(link.invoice_id) ?? []), job]);
+	}
 	return all<{
 		id: number;
 		number: string;
-		booking_id: number | null;
-		booking_title: string | null;
 		bill_to_name: string;
 		issue_date: string;
 		due_date: string | null;
@@ -115,15 +140,12 @@ export function listInvoices(): InvoiceSummary[] {
 		imported: number;
 		style: string;
 	}>(
-		`SELECT i.id, i.number, i.booking_id, b.title AS booking_title, i.bill_to_name, i.issue_date,
-			i.due_date, i.total, i.paid_at, i.draft, i.imported, i.style
-		 FROM invoices i LEFT JOIN bookings b ON b.id = i.booking_id
-		 ORDER BY i.draft DESC, i.issue_date DESC, i.id DESC`
+		`SELECT id, number, bill_to_name, issue_date, due_date, total, paid_at, draft, imported, style
+		 FROM invoices ORDER BY draft DESC, issue_date DESC, id DESC`
 	).map((row) => ({
 		id: row.id,
 		number: row.number,
-		bookingId: row.booking_id,
-		bookingTitle: row.booking_title,
+		jobs: jobs.get(row.id) ?? [],
 		billToName: row.bill_to_name,
 		issueDate: row.issue_date,
 		dueDate: row.due_date,
@@ -141,27 +163,30 @@ export function getInvoice(id: number): Invoice | undefined {
 }
 
 export function createInvoice(input: InvoiceInput): number {
-	return run(
-		`INSERT INTO invoices (number, booking_id, billing_address_id, issue_date, due_date, bill_to_name,
-			bill_to_address, sender, payment_details, notes, items, total, style, paid_at, draft, imported)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		input.number,
-		input.bookingId,
-		input.billingAddressId,
-		input.issueDate,
-		input.dueDate,
-		input.billToName,
-		input.billToAddress,
-		JSON.stringify(input.sender),
-		input.paymentDetails,
-		input.notes,
-		JSON.stringify(input.items),
-		itemsTotal(input.items),
-		input.style,
-		input.draft ? null : input.paidAt,
-		input.draft,
-		input.imported
-	).lastInsertRowid;
+	return transaction(() => {
+		const id = run(
+			`INSERT INTO invoices (number, billing_address_id, issue_date, due_date, bill_to_name,
+				bill_to_address, sender, payment_details, notes, items, total, style, paid_at, draft, imported)
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			input.number,
+			input.billingAddressId,
+			input.issueDate,
+			input.dueDate,
+			input.billToName,
+			input.billToAddress,
+			JSON.stringify(input.sender),
+			input.paymentDetails,
+			input.notes,
+			JSON.stringify(input.items),
+			itemsTotal(input.items),
+			input.style,
+			input.draft ? null : input.paidAt,
+			input.draft,
+			input.imported
+		).lastInsertRowid;
+		setInvoiceJobs(id, input.bookingIds);
+		return id;
+	});
 }
 
 /**
@@ -169,27 +194,33 @@ export function createInvoice(input: InvoiceInput): number {
  * A draft can't be paid until it's issued.
  */
 export function updateInvoice(id: number, input: InvoiceInput) {
-	run(
-		`UPDATE invoices SET booking_id = ?, billing_address_id = ?, issue_date = ?, due_date = ?, bill_to_name = ?,
-			bill_to_address = ?, sender = ?, payment_details = ?, notes = ?, items = ?, total = ?, style = ?,
-			paid_at = CASE WHEN draft = 1 THEN NULL ELSE ? END,
-			updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
-		 WHERE id = ?`,
-		input.bookingId,
-		input.billingAddressId,
-		input.issueDate,
-		input.dueDate,
-		input.billToName,
-		input.billToAddress,
-		JSON.stringify(input.sender),
-		input.paymentDetails,
-		input.notes,
-		JSON.stringify(input.items),
-		itemsTotal(input.items),
-		input.style,
-		input.paidAt,
-		id
-	);
+	transaction(() => {
+		run(
+			`UPDATE invoices SET billing_address_id = ?, issue_date = ?, due_date = ?, bill_to_name = ?,
+				bill_to_address = ?, sender = ?, payment_details = ?, notes = ?, items = ?, total = ?, style = ?,
+				paid_at = CASE WHEN draft = 1 THEN NULL ELSE ? END,
+				updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+			 WHERE id = ?`,
+			input.billingAddressId,
+			input.issueDate,
+			input.dueDate,
+			input.billToName,
+			input.billToAddress,
+			JSON.stringify(input.sender),
+			input.paymentDetails,
+			input.notes,
+			JSON.stringify(input.items),
+			itemsTotal(input.items),
+			input.style,
+			input.paidAt,
+			id
+		);
+		setInvoiceJobs(id, input.bookingIds);
+	});
+}
+
+function invoiceBookings(ids: number[]): Booking[] {
+	return ids.map(getBooking).filter((booking) => !!booking);
 }
 
 /**
@@ -198,10 +229,11 @@ export function updateInvoice(id: number, input: InvoiceInput) {
  */
 export function issueInvoice(invoice: Invoice): { issueDate: string; dueDate: string } {
 	const issueDate = todayIso();
-	const shootDay = invoice.bookingId
-		? getBooking(invoice.bookingId)?.startsAt?.slice(0, 10)
-		: undefined;
-	const dueDate = invoiceDueDate(issueDate, shootDay, getInvoiceSettings());
+	const dueDate = invoiceDueDate(
+		issueDate,
+		lastShootDay(invoiceBookings(invoice.bookingIds)),
+		getInvoiceSettings()
+	);
 	run(
 		`UPDATE invoices SET draft = 0, issue_date = ?, due_date = ?,
 			updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
@@ -266,7 +298,7 @@ export function recordExternalInvoice(
 	const address = getBillingAddress(booking.billingAddressId);
 	createInvoice({
 		number,
-		bookingId: booking.id,
+		bookingIds: [booking.id],
 		billingAddressId: address?.id ?? null,
 		issueDate,
 		dueDate: null,
@@ -284,16 +316,18 @@ export function recordExternalInvoice(
 	return null;
 }
 
-/** A new invoice filled in from your invoice settings and, optionally, a job. */
-export function newInvoice(booking?: Booking): InvoiceInput {
+/** A new invoice filled in from your invoice settings and, optionally, its jobs. */
+export function newInvoice(bookings: Booking[] = []): InvoiceInput {
 	const settings = getInvoiceSettings();
 	const issueDate = todayIso();
-	const dueDate = invoiceDueDate(issueDate, booking?.startsAt?.slice(0, 10), settings);
+	const dueDate = invoiceDueDate(issueDate, lastShootDay(bookings), settings);
+	const booking = bookings[0];
 	const address = getBillingAddress(booking?.billingAddressId);
+	const hours = bookings.reduce((sum, job) => sum + (jobHours(job.startsAt, job.endsAt) ?? 0), 0);
 
 	return {
 		number: generateInvoiceNumber(),
-		bookingId: booking?.id ?? null,
+		bookingIds: bookings.map((job) => job.id),
 		billingAddressId: address?.id ?? null,
 		issueDate,
 		dueDate,
@@ -302,7 +336,13 @@ export function newInvoice(booking?: Booking): InvoiceInput {
 		sender: { ...settings.sender },
 		paymentDetails: settings.paymentDetails,
 		notes: settings.notes,
-		items: [{ description: settings.itemDescription, quantity: 1, rate: settings.hourlyRate }],
+		items: [
+			{
+				description: settings.itemDescription,
+				quantity: Math.round(hours * 100) / 100 || 1,
+				rate: settings.hourlyRate
+			}
+		],
 		style: getTheme(settings.style).id,
 		paidAt: null,
 		draft: false,
@@ -365,7 +405,9 @@ export function parseInvoice(raw: unknown): InvoiceParseResult {
 		email: text(senderRaw.email, 200)
 	};
 
-	const bookingId = id(body.bookingId);
+	const bookingIds = (Array.isArray(body.bookingIds) ? body.bookingIds.slice(0, 50) : [])
+		.map(id)
+		.filter((value) => value !== null && !!getBooking(value)) as number[];
 	const billingAddressId = id(body.billingAddressId);
 	const style = text(body.style, 40);
 
@@ -373,7 +415,7 @@ export function parseInvoice(raw: unknown): InvoiceParseResult {
 		ok: true,
 		input: {
 			number: text(body.number, 20),
-			bookingId: bookingId && getBooking(bookingId) ? bookingId : null,
+			bookingIds: [...new Set(bookingIds)].sort((a, b) => a - b),
 			billingAddressId:
 				billingAddressId && getBillingAddress(billingAddressId) ? billingAddressId : null,
 			issueDate,

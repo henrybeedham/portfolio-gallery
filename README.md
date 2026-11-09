@@ -24,10 +24,11 @@ A self-hosted photography portfolio and client-delivery platform. It combines a 
 
 **Jobs, invoices and analytics**
 
-- **Jobs** (`/admin/jobs`): each shoot with its date, client and location, plus whether it's
+- **Jobs** (`/admin/jobs`): each shoot with its date, start and end time, client and location, plus whether it's
   confirmed, tentative or cancelled. Tick off shot and delivered straight from the list, and link one
   or more albums. Albums never need a job or an invoice. Jobs hold no money: a job's fee and whether
-  it's paid come from its invoices. Sent an invoice from another platform? Use “Invoiced Elsewhere”
+  it's paid come from its invoices. One invoice can cover several jobs, with its amount split evenly
+  between them, and a job can have several invoices. Sent an invoice from another platform? Use “Invoiced Elsewhere”
   on the job to record it.
 - **Calendar** (`/admin/jobs/calendar`): a private link that puts your jobs in Apple Calendar and
   keeps them up to date.

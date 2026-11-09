@@ -8,6 +8,7 @@ import {
 	updateBooking
 } from '#lib/server/bookings.js';
 import { requireAdmin } from '#lib/server/guard.js';
+import { listInvoices } from '#lib/server/invoices.js';
 import type { Actions, PageServerLoad } from './$types';
 
 function requireBooking(id: string) {
@@ -25,6 +26,12 @@ export const load: PageServerLoad = ({ params, locals, depends }) => {
 		addresses: listBillingAddresses(),
 		clients: clientSuggestions(),
 		albums: albumOptions(),
+		invoices: listInvoices().map(({ id, number, billToName, total }) => ({
+			id,
+			number,
+			billToName,
+			total
+		})),
 		initial: {
 			title: booking.title,
 			client: booking.client,
@@ -32,6 +39,7 @@ export const load: PageServerLoad = ({ params, locals, depends }) => {
 			location: booking.location,
 			date: booking.startsAt?.slice(0, 10) ?? '',
 			time: booking.startsAt?.slice(11, 16) ?? '',
+			endTime: booking.endsAt?.slice(11, 16) ?? '',
 			status: booking.status,
 			shot: booking.shot,
 			delivered: booking.delivered,
