@@ -221,10 +221,20 @@ export interface InvoiceDocument {
 	paidAt: string | null;
 }
 
+export interface JobRef {
+	id: number;
+	title: string;
+}
+
+/** An invoice as seen from one of its jobs. */
 export interface InvoiceRef {
 	id: number;
 	number: string;
 	total: number;
+	/** How much of the total counts towards this job; all of it unless the invoice is shared. */
+	share: number;
+	/** The invoice's other jobs. */
+	sharedWith: JobRef[];
 	paidAt: string | null;
 	dueDate: string | null;
 	state: InvoiceState;
@@ -249,11 +259,13 @@ export interface Booking {
 	location: string;
 	/** Naive local date and time, YYYY-MM-DDTHH:mm (or just the date). */
 	startsAt: string | null;
+	/** Naive local date and time, set only when the start has a time too. */
+	endsAt: string | null;
 	status: BookingStatus;
 	shot: boolean;
 	delivered: boolean;
 	notes: string;
-	/** Money lives on invoices only; this is the sum of the job's invoices, drafts included. */
+	/** Money lives on invoices only; this is the job's share of its invoices, drafts included. */
 	total: number;
 	invoices: InvoiceRef[];
 	albums: AlbumRef[];
@@ -264,8 +276,7 @@ export interface Booking {
 export interface InvoiceSummary {
 	id: number;
 	number: string;
-	bookingId: number | null;
-	bookingTitle: string | null;
+	jobs: JobRef[];
 	billToName: string;
 	issueDate: string;
 	dueDate: string | null;

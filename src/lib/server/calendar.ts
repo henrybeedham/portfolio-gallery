@@ -69,21 +69,22 @@ function fold(line: string) {
 
 const compactDay = (day: string) => day.replaceAll('-', '');
 
+const floatingTime = (value: string) =>
+	`${compactDay(value.slice(0, 10))}T${value.slice(11, 16).replace(':', '')}00`;
+
 /**
  * Jobs store a naive local time, so events use iCalendar “floating” times: 18:15 shows as 18:15.
- * Jobs have no end time, so a timed job is given a nominal hour. Like the jobs list, midnight
+ * A timed job with no end is given a nominal hour. Like the jobs list, a lone midnight start
  * counts as no time at all.
  */
-function eventDates(startsAt: string) {
+function eventDates(startsAt: string, endsAt: string | null) {
+	if (endsAt) return [`DTSTART:${floatingTime(startsAt)}`, `DTEND:${floatingTime(endsAt)}`];
+	if (formatJobDate(startsAt).time) return [`DTSTART:${floatingTime(startsAt)}`, 'DURATION:PT1H'];
 	const day = startsAt.slice(0, 10);
-	const { time } = formatJobDate(startsAt);
-	if (!time) {
-		return [
-			`DTSTART;VALUE=DATE:${compactDay(day)}`,
-			`DTEND;VALUE=DATE:${compactDay(addDays(day, 1))}`
-		];
-	}
-	return [`DTSTART:${compactDay(day)}T${time.replace(':', '')}00`, 'DURATION:PT1H'];
+	return [
+		`DTSTART;VALUE=DATE:${compactDay(day)}`,
+		`DTEND;VALUE=DATE:${compactDay(addDays(day, 1))}`
+	];
 }
 
 function eventLines(booking: Booking, startsAt: string, origin: string, stamp: string) {
@@ -96,7 +97,7 @@ function eventLines(booking: Booking, startsAt: string, origin: string, stamp: s
 		'BEGIN:VEVENT',
 		`UID:job-${booking.id}@${new URL(origin).host}`,
 		`DTSTAMP:${stamp}`,
-		...eventDates(startsAt),
+		...eventDates(startsAt, booking.endsAt),
 		`SUMMARY:${escapeText(tentative ? `${booking.title} (tentative)` : booking.title)}`,
 		`STATUS:${tentative ? 'TENTATIVE' : 'CONFIRMED'}`,
 		...(booking.location ? [`LOCATION:${escapeText(booking.location)}`] : []),

@@ -163,11 +163,18 @@ background maintenance tasks (`jobs.ts`, `/admin/api/jobs`). The page route is s
 
 - **Units.**
   - Money is always stored as integer pence (`money.ts`: `formatMoney`, `parseMoney`).
-  - A job's `starts_at` is a naive local `YYYY-MM-DDTHH:mm`, or just a date.
+  - A job's `starts_at` is a naive local `YYYY-MM-DDTHH:mm`, or just a date; `ends_at` is optional.
   - Days are `YYYY-MM-DD` strings; use `todayIso` and `addDays` from `utils.ts`.
 - **Jobs hold no money.** A job's fee, payment state and analytics all come from its invoices
   (`paymentState` and `invoiceState` in `bookings.ts`). Don't add money fields to `bookings`. Status
   is `confirmed | tentative | cancelled`.
+- **Invoices and jobs are many-to-many**, through `invoice_bookings`. Linking is optional on both
+  sides. A shared invoice is split evenly between its non-cancelled jobs (`invoiceShares` in
+  `bookings.ts`), and `InvoiceRef.share` is what a job's fee and the analytics use, so nothing is
+  counted twice. Totals such as outstanding and paid read the invoices directly.
+- **End times.** `ends_at` is a naive local `YYYY-MM-DDTHH:mm`, set only when the start has a time.
+  An end earlier than the start means the next day. It drives the calendar event's length and the
+  hours prefilled on a new invoice (`jobHours`).
 - **Invoice states.**
   - A **draft** (`draft = 1`) hasn't been sent. It holds the expected fee, counts as booked (or
     tentative, for a tentative job) in analytics, can't be marked paid, and isn't outstanding.

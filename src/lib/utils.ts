@@ -149,8 +149,30 @@ export function formatShortDay(day: string | null | undefined): string {
 	});
 }
 
-/** “Tue 8 Dec 2026” and “18:15” from a naive local YYYY-MM-DDTHH:mm. */
-export function formatJobDate(startsAt: string | null | undefined): { day: string; time: string } {
+/** A job's length in hours, from its naive local start and end. */
+export function jobHours(
+	startsAt: string | null | undefined,
+	endsAt: string | null | undefined
+): number | null {
+	if (!startsAt || !endsAt) return null;
+	const ms = Date.parse(`${endsAt}Z`) - Date.parse(`${startsAt}Z`);
+	return ms > 0 ? Math.round((ms / 36e5) * 100) / 100 : null;
+}
+
+/** The latest shoot date among an invoice's jobs, which its due date follows. */
+export function lastShootDay(jobs: { startsAt: string | null }[]): string | undefined {
+	return jobs
+		.map((job) => job.startsAt?.slice(0, 10))
+		.filter((day): day is string => !!day)
+		.sort()
+		.at(-1);
+}
+
+/** “Tue 8 Dec 2026” and “18:15” (or “18:15–23:00”) from naive local YYYY-MM-DDTHH:mm values. */
+export function formatJobDate(
+	startsAt: string | null | undefined,
+	endsAt?: string | null
+): { day: string; time: string } {
 	if (!startsAt) return { day: '', time: '' };
 	const [y, m, d] = startsAt.slice(0, 10).split('-').map(Number);
 	if (!y || !m || !d) return { day: startsAt, time: '' };
@@ -162,5 +184,6 @@ export function formatJobDate(startsAt: string | null | undefined): { day: strin
 		timeZone: 'UTC'
 	});
 	const time = /T(\d{2}:\d{2})/.exec(startsAt)?.[1] ?? '';
+	if (time && endsAt) return { day, time: `${time}–${endsAt.slice(11, 16)}` };
 	return { day, time: time === '00:00' ? '' : time };
 }

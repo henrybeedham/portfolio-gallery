@@ -10,6 +10,7 @@ import type {
 	BookingStatus,
 	InvoiceRef,
 	InvoiceState,
+	JobRef,
 	PaymentState
 } from '#lib/types.js';
 import { todayIso } from '#lib/utils.js';
@@ -22,6 +23,7 @@ interface BookingRow {
 	billing_label: string | null;
 	location: string;
 	starts_at: string | null;
+	ends_at: string | null;
 	status: string;
 	shot: number;
 	delivered: number;
@@ -62,16 +64,28 @@ function nowLocal() {
 	return new Date(now.getTime() - now.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
 }
 
+/**
+ * Splits an invoice evenly between its jobs, to the penny, so a shared invoice only counts once.
+ * A cancelled job takes no share unless all of the invoice's jobs are cancelled.
+ */
+function invoiceShares(total: number, jobs: { id: number; status: string }[]) {
+	const active = jobs.filter((job) => job.status !== 'cancelled');
+	const sharers = active.length ? active : jobs;
+	const base = Math.trunc(total / sharers.length);
+	const remainder = total - base * sharers.length;
+	return new Map(
+		sharers.map((job, i) => [job.id, base + (i < Math.abs(remainder) ? Math.sign(remainder) : 0)])
+	);
+}
+
 function hydrate(rows: BookingRow[]): Booking[] {
 	if (!rows.length) return [];
 	const ids = rows.map((row) => row.id);
 	const today = todayIso();
 	const now = nowLocal();
 
-	const invoices = new Map<number, InvoiceRef[]>();
-	for (const invoice of all<{
+	const invoiceRows = all<{
 		id: number;
-		booking_id: number;
 		number: string;
 		total: number;
 		paid_at: string | null;
@@ -79,11 +93,31 @@ function hydrate(rows: BookingRow[]): Booking[] {
 		draft: number;
 		imported: number;
 	}>(
-		`SELECT id, booking_id, number, total, paid_at, due_date, draft, imported FROM invoices
-		 WHERE booking_id IN (${placeholders(ids.length)}) ORDER BY draft, issue_date, id`,
+		`SELECT id, number, total, paid_at, due_date, draft, imported FROM invoices
+		 WHERE id IN (SELECT invoice_id FROM invoice_bookings WHERE booking_id IN (${placeholders(ids.length)}))
+		 ORDER BY draft, issue_date, id`,
 		...ids
+	);
+
+	// Every job on those invoices, including ones outside `rows`, so shares don't depend on the query.
+	const links = new Map<number, (JobRef & { status: string })[]>();
+	for (const link of all<JobRef & { invoice_id: number; status: string }>(
+		`SELECT l.invoice_id, b.id, b.title, b.status
+		 FROM invoice_bookings l JOIN bookings b ON b.id = l.booking_id
+		 WHERE l.invoice_id IN (${placeholders(invoiceRows.length)})
+		 ORDER BY b.starts_at, b.id`,
+		...invoiceRows.map((invoice) => invoice.id)
 	)) {
-		const ref: InvoiceRef = {
+		const job = { id: link.id, title: link.title, status: link.status };
+		links.set(link.invoice_id, [...(links.get(link.invoice_id) ?? []), job]);
+	}
+
+	const wanted = new Set(ids);
+	const invoices = new Map<number, InvoiceRef[]>();
+	for (const invoice of invoiceRows) {
+		const jobs = links.get(invoice.id) ?? [];
+		const shares = invoiceShares(invoice.total, jobs);
+		const ref = {
 			id: invoice.id,
 			number: invoice.number,
 			total: invoice.total,
@@ -95,7 +129,14 @@ function hydrate(rows: BookingRow[]): Booking[] {
 			),
 			imported: !!invoice.imported
 		};
-		invoices.set(invoice.booking_id, [...(invoices.get(invoice.booking_id) ?? []), ref]);
+		for (const job of jobs) {
+			if (!wanted.has(job.id)) continue;
+			const sharedWith = jobs
+				.filter((other) => other.id !== job.id)
+				.map(({ id, title }) => ({ id, title }));
+			const own = { ...ref, share: shares.get(job.id) ?? 0, sharedWith };
+			invoices.set(job.id, [...(invoices.get(job.id) ?? []), own]);
+		}
 	}
 
 	const albums = new Map<number, AlbumRef[]>();
@@ -124,11 +165,12 @@ function hydrate(rows: BookingRow[]): Booking[] {
 			billingLabel: row.billing_label,
 			location: row.location,
 			startsAt: row.starts_at,
+			endsAt: row.ends_at,
 			status,
 			shot: !!row.shot,
 			delivered: !!row.delivered,
 			notes: row.notes,
-			total: own.reduce((sum, invoice) => sum + invoice.total, 0),
+			total: own.reduce((sum, invoice) => sum + invoice.share, 0),
 			invoices: own,
 			albums: albums.get(row.id) ?? [],
 			payment: paymentState(own),
@@ -168,6 +210,7 @@ export interface BookingInput {
 	billingAddressId: number | null;
 	location: string;
 	startsAt: string | null;
+	endsAt: string | null;
 	status: BookingStatus;
 	shot: boolean;
 	delivered: boolean;
@@ -176,14 +219,15 @@ export interface BookingInput {
 
 export function createBooking(input: BookingInput): number {
 	return run(
-		`INSERT INTO bookings (title, client, billing_address_id, location, starts_at, status, shot,
-			delivered, notes)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		`INSERT INTO bookings (title, client, billing_address_id, location, starts_at, ends_at, status,
+			shot, delivered, notes)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		input.title,
 		input.client,
 		input.billingAddressId,
 		input.location,
 		input.startsAt,
+		input.endsAt,
 		input.status,
 		input.shot,
 		input.delivered,
@@ -194,13 +238,15 @@ export function createBooking(input: BookingInput): number {
 export function updateBooking(id: number, input: BookingInput) {
 	run(
 		`UPDATE bookings SET title = ?, client = ?, billing_address_id = ?, location = ?, starts_at = ?,
-			status = ?, shot = ?, delivered = ?, notes = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+			ends_at = ?, status = ?, shot = ?, delivered = ?, notes = ?,
+			updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
 		 WHERE id = ?`,
 		input.title,
 		input.client,
 		input.billingAddressId,
 		input.location,
 		input.startsAt,
+		input.endsAt,
 		input.status,
 		input.shot,
 		input.delivered,
@@ -245,6 +291,18 @@ export function unlinkAlbum(bookingId: number, albumId: number) {
 	run('DELETE FROM booking_albums WHERE booking_id = ? AND album_id = ?', bookingId, albumId);
 }
 
+export function linkInvoice(bookingId: number, invoiceId: number) {
+	run(
+		'INSERT OR IGNORE INTO invoice_bookings (invoice_id, booking_id) VALUES (?, ?)',
+		invoiceId,
+		bookingId
+	);
+}
+
+export function unlinkInvoice(bookingId: number, invoiceId: number) {
+	run('DELETE FROM invoice_bookings WHERE invoice_id = ? AND booking_id = ?', invoiceId, bookingId);
+}
+
 /** Every album, newest first, for the “link an album” pickers. */
 export function albumOptions(): AlbumRef[] {
 	return all<AlbumRef>('SELECT id, title, slug FROM albums ORDER BY created_at DESC, id DESC');
@@ -258,6 +316,7 @@ export function bookingOptions() {
 		client: booking.client,
 		billingAddressId: booking.billingAddressId,
 		startsAt: booking.startsAt,
+		endsAt: booking.endsAt,
 		status: booking.status
 	}));
 }

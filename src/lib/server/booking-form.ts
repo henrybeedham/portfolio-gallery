@@ -1,7 +1,7 @@
 import { getBillingAddress } from './billing.js';
 import type { BookingInput } from './bookings.js';
 import { BOOKING_STATUSES, type BookingStatus } from '#lib/types.js';
-import { isIsoDay } from '#lib/utils.js';
+import { addDays, isIsoDay } from '#lib/utils.js';
 
 export type BookingFormResult =
 	{ ok: true; input: BookingInput } | { ok: false; error: string; field?: string };
@@ -15,6 +15,12 @@ function checkbox(data: FormData, name: string) {
 export function startsAt(date: string, time: string): string | null {
 	if (!isIsoDay(date)) return null;
 	return /^\d{2}:\d{2}$/.test(time) ? `${date}T${time}` : date;
+}
+
+/** The end on the same day, or the next day when it's earlier than the start. */
+function endsAt(date: string, time: string, endTime: string): string | null {
+	if (!isIsoDay(date) || !/^\d{2}:\d{2}$/.test(time) || !/^\d{2}:\d{2}$/.test(endTime)) return null;
+	return `${endTime < time ? addDays(date, 1) : date}T${endTime}`;
 }
 
 export function cleanBookingInput(input: BookingInput): BookingInput {
@@ -41,6 +47,18 @@ export function parseBookingForm(data: FormData): BookingFormResult {
 	const date = str('date');
 	if (date && !isIsoDay(date)) return { ok: false, error: 'Check the date.', field: 'date' };
 
+	const time = str('time');
+	const endTime = str('end_time');
+	if (endTime && !date) {
+		return { ok: false, error: 'Add a date to go with the end time.', field: 'date' };
+	}
+	if (endTime && !time) {
+		return { ok: false, error: 'Add a start time to go with the end time.', field: 'time' };
+	}
+	if (endTime && endTime === time) {
+		return { ok: false, error: 'The end time matches the start time.', field: 'end_time' };
+	}
+
 	const billing = Number(str('billing_address_id'));
 	return {
 		ok: true,
@@ -49,7 +67,8 @@ export function parseBookingForm(data: FormData): BookingFormResult {
 			client: str('client'),
 			billingAddressId: Number.isInteger(billing) && billing > 0 ? billing : null,
 			location: str('location'),
-			startsAt: startsAt(date, str('time')),
+			startsAt: startsAt(date, time),
+			endsAt: endsAt(date, time, endTime),
 			status: str('status') as BookingStatus,
 			shot: checkbox(data, 'shot'),
 			delivered: checkbox(data, 'delivered'),

@@ -30,6 +30,7 @@
 {#key data.initial.number}
 	<InvoiceEditor
 		mode="create"
+		fillHours={!data.duplicate}
 		initial={data.initial}
 		addresses={data.addresses}
 		jobs={data.jobs}

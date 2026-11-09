@@ -11,11 +11,14 @@ export const load: PageServerLoad = ({ params, locals, depends }) => {
 	depends('admin:invoice');
 	const invoice = getInvoice(Number(params.id));
 	if (!invoice) error(404, 'Invoice not found');
-	const booking = invoice.bookingId ? getBooking(invoice.bookingId) : undefined;
+	const linked = invoice.bookingIds
+		.map(getBooking)
+		.filter((job) => !!job)
+		.map(({ id, title, startsAt }) => ({ id, title, startsAt }));
 	return {
 		invoice,
 		state: invoiceState(invoice),
-		booking: booking ? { id: booking.id, title: booking.title, startsAt: booking.startsAt } : null,
+		linked,
 		...editorOptions()
 	};
 };

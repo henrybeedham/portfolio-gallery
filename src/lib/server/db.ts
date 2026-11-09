@@ -156,7 +156,50 @@ const MIGRATIONS: Migration[] = [
 	`,
 	// Money lives on invoices only. Jobs lose hours, rate, paid and earlier invoice numbers, which
 	// become imported records or drafts; invoices gain draft and imported flags.
-	moveJobMoneyToInvoices
+	moveJobMoneyToInvoices,
+	// Jobs can have an end time: a naive local YYYY-MM-DDTHH:mm, the day after for overnight jobs.
+	`ALTER TABLE bookings ADD COLUMN ends_at TEXT;`,
+	// An invoice can cover several jobs and a job can have several invoices, so the link moves from
+	// invoices.booking_id to a table of its own. SQLite can't drop a foreign key column in place.
+	`
+	CREATE TABLE invoices_new (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		number TEXT NOT NULL DEFAULT '',
+		billing_address_id INTEGER REFERENCES billing_addresses(id) ON DELETE SET NULL,
+		issue_date TEXT NOT NULL,
+		due_date TEXT,
+		bill_to_name TEXT NOT NULL DEFAULT '',
+		bill_to_address TEXT NOT NULL DEFAULT '',
+		sender TEXT NOT NULL DEFAULT '{}',
+		payment_details TEXT NOT NULL DEFAULT '',
+		notes TEXT NOT NULL DEFAULT '',
+		items TEXT NOT NULL DEFAULT '[]',
+		total INTEGER NOT NULL DEFAULT 0,
+		style TEXT NOT NULL DEFAULT 'light',
+		paid_at TEXT,
+		draft INTEGER NOT NULL DEFAULT 0,
+		imported INTEGER NOT NULL DEFAULT 0,
+		created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+		updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+	);
+	INSERT INTO invoices_new (id, number, billing_address_id, issue_date, due_date, bill_to_name,
+		bill_to_address, sender, payment_details, notes, items, total, style, paid_at, draft, imported,
+		created_at, updated_at)
+	SELECT id, number, billing_address_id, issue_date, due_date, bill_to_name, bill_to_address, sender,
+		payment_details, notes, items, total, style, paid_at, draft, imported, created_at, updated_at
+	FROM invoices;
+	CREATE TABLE invoice_bookings (
+		invoice_id INTEGER NOT NULL REFERENCES invoices_new(id) ON DELETE CASCADE,
+		booking_id INTEGER NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+		PRIMARY KEY (invoice_id, booking_id)
+	);
+	INSERT INTO invoice_bookings (invoice_id, booking_id)
+	SELECT id, booking_id FROM invoices WHERE booking_id IS NOT NULL;
+	DROP TABLE invoices;
+	ALTER TABLE invoices_new RENAME TO invoices;
+	CREATE UNIQUE INDEX invoices_number ON invoices(number) WHERE imported = 0;
+	CREATE INDEX invoice_bookings_booking ON invoice_bookings(booking_id);
+	`
 ];
 
 let db: DatabaseSync | undefined;

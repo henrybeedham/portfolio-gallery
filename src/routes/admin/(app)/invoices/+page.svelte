@@ -154,11 +154,9 @@
 							</td>
 							<td>
 								{invoice.billToName || '—'}
-								{#if invoice.bookingTitle}
-									<a class="ui-sub job" href="/admin/jobs/{invoice.bookingId}"
-										>{invoice.bookingTitle}</a
-									>
-								{/if}
+								{#each invoice.jobs as job (job.id)}
+									<a class="ui-sub job" href="/admin/jobs/{job.id}">{job.title}</a>
+								{/each}
 							</td>
 							<td class="nowrap">
 								{invoice.state === 'draft' ? '—' : formatShortDay(invoice.issueDate)}

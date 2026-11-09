@@ -7,11 +7,12 @@
 		client: string;
 		billingAddressId: number | null;
 		startsAt: string | null;
+		endsAt: string | null;
 		status: BookingStatus;
 	}
 
 	export interface EditorInvoice extends InvoiceDocument {
-		bookingId: number | null;
+		bookingIds: number[];
 		billingAddressId: number | null;
 		/** Not sent yet; the page issues it. */
 		draft: boolean;
@@ -31,10 +32,12 @@
 	import { api, feedback } from './feedback.svelte.js';
 	import { formatMoney, itemsTotal, lineAmount, moneyInput, parseMoney } from '#lib/money.js';
 	import type { BillingAddress, InvoiceSettings, ThemeSummary } from '#lib/types.js';
-	import { formatJobDate, todayIso } from '#lib/utils.js';
+	import { formatJobDate, jobHours, lastShootDay, todayIso } from '#lib/utils.js';
 
 	interface Props {
 		mode: 'create' | 'edit';
+		/** Keep the first line's quantity in step with the hours of the invoice's jobs. */
+		fillHours?: boolean;
 		invoiceId?: number;
 		initial: EditorInvoice;
 		addresses: BillingAddress[];
@@ -46,15 +49,26 @@
 		onsaved?: () => void;
 	}
 
-	let { mode, invoiceId, initial, addresses, jobs, clients, themes, settings, onsaved }: Props =
-		$props();
+	let {
+		mode,
+		fillHours = false,
+		invoiceId,
+		initial,
+		addresses,
+		jobs,
+		clients,
+		themes,
+		settings,
+		onsaved
+	}: Props = $props();
 
 	const start = untrack(() => initial);
 	const imported = start.imported;
 	const draft = start.draft;
 	let key = 0;
 
-	let bookingId = $state(start.bookingId ? String(start.bookingId) : '');
+	let bookingIds = $state([...start.bookingIds]);
+	let hoursTouched = $state(false);
 	let billingAddressId = $state<number | null>(start.billingAddressId);
 	let addressTouched = $state(untrack(() => mode === 'edit'));
 	let issueDate = $state(start.issueDate);
@@ -79,7 +93,7 @@
 
 	const payload = $derived({
 		number: start.number,
-		bookingId: bookingId ? Number(bookingId) : null,
+		bookingIds: [...bookingIds].sort((a, b) => a - b),
 		billingAddressId,
 		issueDate,
 		dueDate: dueDate || null,
@@ -119,14 +133,47 @@
 		if (known?.billingAddressId) applyAddress(known.billingAddressId);
 	}
 
-	/** Filling a new invoice from a job; existing invoices are only re-linked. */
-	function onjob() {
-		const job = jobs.find((j) => String(j.id) === bookingId);
-		if (!job || mode === 'edit') return;
-		billToName = job.client || job.title;
-		if (job.billingAddressId) applyAddress(job.billingAddressId);
-		const shootDay = job.startsAt?.slice(0, 10);
+	// ---- jobs --------------------------------------------------------------
+
+	const linkedJobs = $derived(
+		bookingIds.map((id) => jobs.find((job) => job.id === id)).filter((job) => !!job)
+	);
+	const availableJobs = $derived(
+		jobs.filter((job) => job.status !== 'cancelled' && !bookingIds.includes(job.id))
+	);
+	const totalHours = $derived(
+		Math.round(
+			linkedJobs.reduce((sum, job) => sum + (jobHours(job.startsAt, job.endsAt) ?? 0), 0) * 100
+		) / 100
+	);
+	const hoursFromJobs = $derived(
+		fillHours && !hoursTouched && items.length === 1 && totalHours > 0
+	);
+
+	/** Filling a new invoice from its jobs; existing invoices are only re-linked. */
+	function fillFromJobs() {
+		if (mode === 'edit') return;
+		const [first] = linkedJobs;
+		if (first && linkedJobs.length === 1) {
+			billToName = first.client || first.title;
+			if (first.billingAddressId) applyAddress(first.billingAddressId);
+		}
+		const shootDay = lastShootDay(linkedJobs);
 		if (settings.dueOnShootDate && shootDay && shootDay >= issueDate) dueDate = shootDay;
+		if (hoursFromJobs) items[0].quantity = String(totalHours);
+	}
+
+	function addJob(event: Event & { currentTarget: HTMLSelectElement }) {
+		const id = Number(event.currentTarget.value);
+		event.currentTarget.value = '';
+		if (!id) return;
+		bookingIds.push(id);
+		fillFromJobs();
+	}
+
+	function removeJob(id: number) {
+		bookingIds = bookingIds.filter((other) => other !== id);
+		fillFromJobs();
 	}
 
 	// ---- items -------------------------------------------------------------
@@ -247,17 +294,37 @@
 				<h2>Bill to</h2>
 			</div>
 			<div class="field">
-				<label for="job">Job <span class="ui-optional">optional</span></label>
-				<select id="job" class="select" bind:value={bookingId} onchange={onjob}>
-					<option value="">Not linked to a job</option>
-					{#each jobs.filter((j) => j.status !== 'cancelled' || String(j.id) === bookingId) as job (job.id)}
+				<label for="job">Jobs <span class="ui-optional">optional</span></label>
+				{#if linkedJobs.length}
+					<ul class="linked">
+						{#each linkedJobs as job (job.id)}
+							{@const when = formatJobDate(job.startsAt)}
+							<li>
+								<span>{job.title}{when.day ? ` — ${when.day}` : ''}</span>
+								<button
+									type="button"
+									class="ui-icon-btn danger"
+									onclick={() => removeJob(job.id)}
+									aria-label="Remove {job.title}"
+									title="Remove"
+								>
+									<X size={15} strokeWidth={1.5} />
+								</button>
+							</li>
+						{/each}
+					</ul>
+				{/if}
+				<select id="job" class="select" value="" onchange={addJob}>
+					<option value="">{linkedJobs.length ? 'Add another job…' : 'Not linked to a job'}</option>
+					{#each availableJobs as job (job.id)}
 						{@const when = formatJobDate(job.startsAt)}
 						<option value={String(job.id)}>{job.title}{when.day ? ` — ${when.day}` : ''}</option>
 					{/each}
 				</select>
-				{#if mode === 'create'}<p class="hint">
-						Choosing a job fills in the client, address and due date.
-					</p>{/if}
+				<p class="hint">
+					{#if mode === 'create'}Choosing a job fills in the client, address, due date and hours.{/if}
+					With more than one job, the amount is split evenly between them.
+				</p>
 			</div>
 			<div class="field">
 				<label for="bill-name">Client</label>
@@ -351,6 +418,7 @@
 							<input
 								class="input"
 								bind:value={item.quantity}
+								oninput={() => (hoursTouched = true)}
 								inputmode="decimal"
 								aria-label="Item {i + 1} quantity"
 							/>
@@ -383,6 +451,9 @@
 						</div>
 					{/each}
 				</div>
+				{#if hoursFromJobs}
+					<p class="hint">Hours are worked out from the start and end times of the jobs.</p>
+				{/if}
 				<div class="items-foot">
 					<button type="button" class="link" onclick={addItem}><Plus size={13} /> Add item</button>
 					<p class="total"><span class="label">Total</span> {formatMoney(total)}</p>
@@ -542,6 +613,31 @@
 		display: grid;
 		gap: 1.5rem;
 		min-width: 0;
+	}
+
+	.linked {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		border: 1px solid var(--border);
+	}
+
+	.linked li {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.75rem;
+		padding: 0.35rem 0.35rem 0.35rem 0.85rem;
+		font-size: 0.95rem;
+	}
+
+	.linked li + li {
+		border-top: 1px solid var(--border);
+	}
+
+	.linked span {
+		min-width: 0;
+		overflow-wrap: anywhere;
 	}
 
 	.head-row {

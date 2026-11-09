@@ -11,8 +11,11 @@ export const load: PageServerLoad = ({ locals, url }) => {
 	// none of your details on them, so they aren't copied.
 	const found = getInvoice(Number(url.searchParams.get('from')) || 0);
 	const source = found && !found.imported ? found : undefined;
-	const jobId = Number(url.searchParams.get('job')) || source?.bookingId || 0;
-	const fresh = newInvoice(jobId ? getBooking(jobId) : undefined);
+	const jobId = Number(url.searchParams.get('job'));
+	const jobs = (jobId ? [jobId] : (source?.bookingIds ?? []))
+		.map(getBooking)
+		.filter((job) => !!job);
+	const fresh = newInvoice(jobs);
 
 	let initial: InvoiceInput = fresh;
 	if (source) {
@@ -26,5 +29,5 @@ export const load: PageServerLoad = ({ locals, url }) => {
 			draft: false
 		};
 	}
-	return { initial, ...editorOptions() };
+	return { initial, duplicate: !!source, ...editorOptions() };
 };

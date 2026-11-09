@@ -18,20 +18,36 @@
 	let { data, form }: PageProps = $props();
 
 	const booking = $derived(data.booking);
-	const when = $derived(formatJobDate(booking.startsAt));
+	const when = $derived(formatJobDate(booking.startsAt, booking.endsAt));
 	const unlinked = $derived(
 		data.albums.filter((album) => !booking.albums.some((linked) => linked.id === album.id))
 	);
+	const unlinkedInvoices = $derived(
+		data.invoices.filter((option) => !booking.invoices.some((linked) => linked.id === option.id))
+	);
 	let albumToLink = $state('');
+	let invoiceToLink = $state('');
 	let busy = $state(false);
 
-	async function album(action: 'link-album' | 'unlink-album', albumId: number) {
+	function album(action: 'link-album' | 'unlink-album', albumId: number) {
+		return update({ action, albumId }, action === 'link-album' ? 'Album linked' : 'Album unlinked');
+	}
+
+	function linkedInvoice(action: 'link-invoice' | 'unlink-invoice', invoiceId: number) {
+		return update(
+			{ action, invoiceId },
+			action === 'link-invoice' ? 'Invoice linked' : 'Invoice unlinked'
+		);
+	}
+
+	async function update(body: Record<string, unknown>, message: string) {
 		busy = true;
 		try {
-			await api(`/admin/api/bookings/${booking.id}`, { action, albumId });
+			await api(`/admin/api/bookings/${booking.id}`, body);
 			await invalidate('admin:booking');
 			albumToLink = '';
-			feedback.toast(action === 'link-album' ? 'Album linked' : 'Album unlinked');
+			invoiceToLink = '';
+			feedback.toast(message);
 		} catch (error) {
 			feedback.toast((error as Error).message, 'error');
 		} finally {
@@ -174,6 +190,15 @@
 										{/if}
 										{#if invoice.imported}· imported{/if}
 									</span>
+									{#if invoice.sharedWith.length}
+										<span class="ui-sub">
+											{formatMoney(invoice.share)} counts here · shared with
+											{#each invoice.sharedWith as other, i (other.id)}{i ? ', ' : ''}<a
+													class="shared"
+													href="/admin/jobs/{other.id}">{other.title}</a
+												>{/each}
+										</span>
+									{/if}
 								</div>
 								<div class="ui-row-actions">
 									<StateBadge state={invoice.state} />
@@ -188,6 +213,15 @@
 											<Download size={15} strokeWidth={1.5} />
 										</a>
 									{/if}
+									<button
+										class="ui-icon-btn danger"
+										onclick={() => linkedInvoice('unlink-invoice', invoice.id)}
+										disabled={busy}
+										title="Unlink invoice"
+										aria-label="Unlink invoice {invoiceLabel(invoice.number)}"
+									>
+										<X size={15} strokeWidth={1.5} />
+									</button>
 								</div>
 							</li>
 						{/each}
@@ -197,6 +231,25 @@
 						No invoices yet. The fee lives on an invoice: start one and save it as a draft until you
 						send it.
 					</p>
+				{/if}
+				{#if unlinkedInvoices.length}
+					<div class="link-row">
+						<select class="select" bind:value={invoiceToLink} aria-label="Invoice to link">
+							<option value="">Link an existing invoice…</option>
+							{#each unlinkedInvoices as option (option.id)}
+								<option value={String(option.id)}>
+									{invoiceLabel(option.number)} — {option.billToName || 'No client'} — {formatMoney(
+										option.total
+									)}
+								</option>
+							{/each}
+						</select>
+						<button
+							class="btn btn-sm btn-quiet"
+							disabled={!invoiceToLink || busy}
+							onclick={() => linkedInvoice('link-invoice', Number(invoiceToLink))}>Link</button
+						>
+					</div>
 				{/if}
 				<div class="elsewhere">
 					{#if external}
@@ -289,7 +342,7 @@
 					</p>
 				{/if}
 				{#if unlinked.length}
-					<div class="link-album">
+					<div class="link-row">
 						<select class="select" bind:value={albumToLink} aria-label="Album to link">
 							<option value="">Link an existing album…</option>
 							{#each unlinked as option (option.id)}
@@ -385,14 +438,19 @@
 		gap: 1rem;
 	}
 
-	.link-album {
+	.shared {
+		color: inherit;
+		text-underline-offset: 3px;
+	}
+
+	.link-row {
 		display: flex;
 		gap: 0.5rem;
 		padding: 1rem 1.5rem 1.25rem;
 		border-top: 1px solid var(--border);
 	}
 
-	.link-album .select {
+	.link-row .select {
 		min-height: 36px;
 		padding-block: 0.4rem;
 		font-size: 0.88rem;
