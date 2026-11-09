@@ -123,7 +123,7 @@
 		<Camera size={18} strokeWidth={1.4} />
 		<div>
 			<h4>Re-extract metadata</h4>
-			<p>Read dimensions, file size, capture date, camera, lens and exposure settings again.</p>
+			<p>Read dimensions, file size, capture date and keywords again.</p>
 		</div>
 		<button
 			class="btn btn-sm btn-quiet"

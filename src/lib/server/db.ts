@@ -1,5 +1,8 @@
 import { DatabaseSync, type StatementSync, type SQLInputValue } from 'node:sqlite';
+import { version } from '$app/env';
+import { writeBackup, type BackupReason } from './backup-files.js';
 import { ensureDirs, paths } from './config.js';
+import { fillEndTimesFromInvoices } from './end-times.js';
 import { moveJobMoneyToInvoices } from './legacy-money.js';
 
 /** SQL, or a function for migrations that convert data. Each runs inside its own transaction. */
@@ -156,7 +159,72 @@ const MIGRATIONS: Migration[] = [
 	`,
 	// Money lives on invoices only. Jobs lose hours, rate, paid and earlier invoice numbers, which
 	// become imported records or drafts; invoices gain draft and imported flags.
-	moveJobMoneyToInvoices
+	moveJobMoneyToInvoices,
+	// Jobs can have an end time: a naive local YYYY-MM-DDTHH:mm, the day after for overnight jobs.
+	`ALTER TABLE bookings ADD COLUMN ends_at TEXT;`,
+	// An invoice can cover several jobs and a job can have several invoices, so the link moves from
+	// invoices.booking_id to a table of its own. SQLite can't drop a foreign key column in place.
+	`
+	CREATE TABLE invoices_new (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		number TEXT NOT NULL DEFAULT '',
+		billing_address_id INTEGER REFERENCES billing_addresses(id) ON DELETE SET NULL,
+		issue_date TEXT NOT NULL,
+		due_date TEXT,
+		bill_to_name TEXT NOT NULL DEFAULT '',
+		bill_to_address TEXT NOT NULL DEFAULT '',
+		sender TEXT NOT NULL DEFAULT '{}',
+		payment_details TEXT NOT NULL DEFAULT '',
+		notes TEXT NOT NULL DEFAULT '',
+		items TEXT NOT NULL DEFAULT '[]',
+		total INTEGER NOT NULL DEFAULT 0,
+		style TEXT NOT NULL DEFAULT 'light',
+		paid_at TEXT,
+		draft INTEGER NOT NULL DEFAULT 0,
+		imported INTEGER NOT NULL DEFAULT 0,
+		created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+		updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+	);
+	INSERT INTO invoices_new (id, number, billing_address_id, issue_date, due_date, bill_to_name,
+		bill_to_address, sender, payment_details, notes, items, total, style, paid_at, draft, imported,
+		created_at, updated_at)
+	SELECT id, number, billing_address_id, issue_date, due_date, bill_to_name, bill_to_address, sender,
+		payment_details, notes, items, total, style, paid_at, draft, imported, created_at, updated_at
+	FROM invoices;
+	CREATE TABLE invoice_bookings (
+		invoice_id INTEGER NOT NULL REFERENCES invoices_new(id) ON DELETE CASCADE,
+		booking_id INTEGER NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+		PRIMARY KEY (invoice_id, booking_id)
+	);
+	INSERT INTO invoice_bookings (invoice_id, booking_id)
+	SELECT id, booking_id FROM invoices WHERE booking_id IS NOT NULL;
+	DROP TABLE invoices;
+	ALTER TABLE invoices_new RENAME TO invoices;
+	CREATE UNIQUE INDEX invoices_number ON invoices(number) WHERE imported = 0;
+	CREATE INDEX invoice_bookings_booking ON invoice_bookings(booking_id);
+	`,
+	// Album pages and covers read photos in capture order, which this index returns already sorted.
+	// It also serves every lookup by album, so it replaces the plain index.
+	`
+	CREATE INDEX photos_album_chrono ON photos(album_id, COALESCE(taken_at, created_at));
+	DROP INDEX photos_album;
+	`,
+	// Camera settings are no longer shown anywhere. The capture date stays.
+	`
+	ALTER TABLE photos DROP COLUMN camera;
+	ALTER TABLE photos DROP COLUMN lens;
+	ALTER TABLE photos DROP COLUMN focal_length;
+	ALTER TABLE photos DROP COLUMN aperture;
+	ALTER TABLE photos DROP COLUMN exposure_time;
+	ALTER TABLE photos DROP COLUMN iso;
+	`,
+	// Jobs from before end times existed get one worked out from their invoices' hours.
+	fillEndTimesFromInvoices,
+	// Videos sit alongside photos, with their poster frame as the thumbnail.
+	`
+	ALTER TABLE photos ADD COLUMN kind TEXT NOT NULL DEFAULT 'photo';
+	ALTER TABLE photos ADD COLUMN duration REAL;
+	`
 ];
 
 let db: DatabaseSync | undefined;
@@ -179,21 +247,65 @@ function migrate(instance: DatabaseSync) {
 	}
 }
 
+/**
+ * Opens the database and brings it up to date. A backup is saved first whenever this is a new
+ * version of the app (a deploy) or migrations are about to run, unless `backupFirst` is false.
+ */
+function open(backupFirst: boolean): DatabaseSync {
+	ensureDirs();
+	const instance = new DatabaseSync(paths.db);
+	instance.exec(`
+		PRAGMA journal_mode = WAL;
+		PRAGMA synchronous = NORMAL;
+		PRAGMA foreign_keys = ON;
+		PRAGMA busy_timeout = 5000;
+	`);
+	const { user_version: schema } = instance.prepare('PRAGMA user_version').get() as {
+		user_version: number;
+	};
+	if (backupFirst && schema > 0) {
+		const stored = instance
+			.prepare(`SELECT value FROM settings WHERE key = 'app-version'`)
+			.get() as { value: string } | undefined;
+		if (schema < MIGRATIONS.length || stored?.value !== version) writeBackup(instance, 'update');
+	}
+	migrate(instance);
+	instance
+		.prepare(
+			`INSERT INTO settings (key, value) VALUES ('app-version', ?)
+			 ON CONFLICT(key) DO UPDATE SET value = excluded.value`
+		)
+		.run(version);
+	return instance;
+}
+
 /** Opens the database lazily, so nothing touches the disk while the app is being built. */
 export function getDb(): DatabaseSync {
-	if (!db) {
-		ensureDirs();
-		const instance = new DatabaseSync(paths.db);
-		instance.exec(`
-			PRAGMA journal_mode = WAL;
-			PRAGMA synchronous = NORMAL;
-			PRAGMA foreign_keys = ON;
-			PRAGMA busy_timeout = 5000;
-		`);
-		migrate(instance);
-		db = instance;
-	}
+	if (!db) db = open(true);
 	return db;
+}
+
+/** The schema version this build of the app expects. */
+export const SCHEMA_VERSION = MIGRATIONS.length;
+
+/** Saves a copy of the database as it is now. */
+export function backupDatabase(reason: BackupReason) {
+	return writeBackup(getDb(), reason);
+}
+
+/**
+ * Closes the database so `swap` can replace the file, then opens it again, migrating it if it's from
+ * an earlier version. If `swap` fails, the database that was there is opened again.
+ */
+export function replaceDatabase(swap: () => void) {
+	statements.clear();
+	db?.close();
+	db = undefined;
+	try {
+		swap();
+	} finally {
+		db = open(false);
+	}
 }
 
 export type Param = SQLInputValue | boolean | undefined;

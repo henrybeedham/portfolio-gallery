@@ -17,6 +17,7 @@ export const load: PageServerLoad = ({ locals }) => {
 			location: '',
 			date: '',
 			time: '',
+			endTime: '',
 			status: 'confirmed' as const,
 			shot: false,
 			delivered: false,

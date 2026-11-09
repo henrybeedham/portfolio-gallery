@@ -45,7 +45,7 @@ interface Entry {
 
 /**
  * Every amount of money, all of it from invoices. Dated by the job's shoot, or the invoice date for
- * invoices without a job.
+ * invoices without a job. An invoice shared between jobs is counted as each job's share of it.
  */
 function entries(): Entry[] {
 	const out: Entry[] = [];
@@ -67,7 +67,7 @@ function entries(): Entry[] {
 					: invoice.paidAt
 						? 'paid'
 						: 'invoiced';
-			out.push({ ...base, stage, amount: invoice.total });
+			out.push({ ...base, stage, amount: invoice.share });
 		}
 	}
 	for (const invoice of all<{
@@ -80,7 +80,7 @@ function entries(): Entry[] {
 	}>(
 		`SELECT i.issue_date, i.total, i.paid_at, i.draft, i.bill_to_name, ba.label
 		 FROM invoices i LEFT JOIN billing_addresses ba ON ba.id = i.billing_address_id
-		 WHERE i.booking_id IS NULL`
+		 WHERE NOT EXISTS (SELECT 1 FROM invoice_bookings l WHERE l.invoice_id = i.id)`
 	)) {
 		out.push({
 			day: invoice.issue_date,

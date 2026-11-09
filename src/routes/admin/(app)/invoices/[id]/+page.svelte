@@ -11,7 +11,13 @@
 	import StateBadge from '#lib/components/admin/StateBadge.svelte';
 	import { api, feedback } from '#lib/components/admin/feedback.svelte.js';
 	import { formatMoney } from '#lib/money.js';
-	import { formatShortDay, invoiceDueDate, invoiceLabel, todayIso } from '#lib/utils.js';
+	import {
+		formatShortDay,
+		invoiceDueDate,
+		invoiceLabel,
+		lastShootDay,
+		todayIso
+	} from '#lib/utils.js';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -26,7 +32,7 @@
 	async function issue() {
 		if (editor?.isDirty() && !(await editor.save())) return;
 		const today = todayIso();
-		const due = invoiceDueDate(today, data.booking?.startsAt?.slice(0, 10), data.invoiceSettings);
+		const due = invoiceDueDate(today, lastShootDay(data.linked), data.invoiceSettings);
 		const ok = await feedback.confirm({
 			title: `Issue invoice ${label}?`,
 			message: `It’ll be dated today and due ${formatShortDay(due)}. You can still change the dates afterwards.`,
@@ -93,9 +99,9 @@
 				{formatMoney(invoice.total)}
 				{#if !invoice.draft}· {invoice.imported ? 'dated' : 'issued'}
 					{formatShortDay(invoice.issueDate)}{/if}
-				{#if data.booking}
-					· <a href="/admin/jobs/{data.booking.id}">{data.booking.title}</a>
-				{/if}
+				{#each data.linked as job (job.id)}
+					· <a href="/admin/jobs/{job.id}">{job.title}</a>
+				{/each}
 			</span>
 		</div>
 	</div>
@@ -121,8 +127,8 @@
 
 {#if invoice.imported}
 	<p class="alert notice">
-		Converted from the job’s old fee, paid tick or earlier invoice numbers when money moved onto
-		invoices. There’s no PDF, because it wasn’t made here.
+		An invoice sent from another platform, or converted from a job’s old fee, paid tick or earlier
+		invoice numbers. There’s no PDF, because it wasn’t made here.
 	</p>
 {/if}
 

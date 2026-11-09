@@ -60,6 +60,7 @@ Prettier-formatted, so `bun run lint` reports it; leave it alone unless asked.
   - Sets `locals.isAdmin`.
   - Fills the `%gallery.theme%`, `%gallery.themesVersion%` and `%gallery.themes%` placeholders in
     `src/app.html`.
+  - Gzips HTML and JSON responses.
 
 ## Layout
 
@@ -81,12 +82,15 @@ Prettier-formatted, so `bun run lint` reports it; leave it alone unless asked.
 **Public**
 
 - **Pages:** `/` (home), `/galleries`, and `/[slug]` (an album, with a password `unlock` action).
-- **Lightbox:** uses shallow routing (`PageState.lightbox`). Each photo also has its own page at
-  `/[slug]/photo/[id]`.
+- **Photo viewer:** `Lightbox.svelte` is the only one. The album and home pages open it with shallow
+  routing (`PageState.lightbox`). Each photo also has its own URL at `/[slug]/photo/[id]`, for
+  reloads and shared links, which renders the same viewer.
 - **Album endpoints:** `/[slug]/photos` returns JSON pages for infinite scroll; `/[slug]/download`
-  streams a ZIP.
+  streams a ZIP (resumable: `zip.ts`); `/[slug]/view` counts a view. The album page posts to it once
+  it's shown, so hover-preloading a link doesn't count; don't count views in a `load`.
 - **Images:** `/media/[key]/[variant]` (`thumb|medium|original`) and `/site/hero/[size]`.
-- **Other:** `/site/themes.css`, `/album/[...path]` (legacy redirects) and `/healthz`.
+- **Other:** `/site/themes.css`, `/site/calendar/[token].ics` (the jobs feed), `/album/[...path]`
+  (legacy redirects) and `/healthz`.
 - **Album slugs live at the root.** Any new top-level route must be added to `RESERVED_SLUGS` in
   `src/lib/server/albums.ts`.
 
@@ -125,7 +129,8 @@ Prettier-formatted, so `bun run lint` reports it; leave it alone unless asked.
   - `photos/{originals,thumbs,medium}/<first two chars of key>/…`
   - `site/` (the hero image)
   - `themes/` (uploaded themes)
-  - `tmp/`
+  - `tmp/` (including unfinished uploads, `upload-<id>.part`, removed after a day)
+  - `backups/` (database backups)
   - the generated `.session-secret` and `.admin-password`
 - **Database.** It uses `node:sqlite`, which is synchronous. Use the helpers in `db.ts`: `run`,
   `get`, `all`, `transaction` (nested calls join the outer one) and `placeholders(n)`.
@@ -135,6 +140,11 @@ Prettier-formatted, so `bun run lint` reports it; leave it alone unless asked.
   `PRAGMA user_version`, each in its own transaction. Add a new entry at the end; never edit or
   reorder existing ones. An entry is SQL, or a function given the raw `DatabaseSync` for data
   conversions (it can't use the `db.ts` helpers, which open the database themselves).
+- **Backups** (`backups.ts`, `backup-files.ts`). `db.ts` saves a `VACUUM INTO` copy to `backups/`
+  before migrating, and whenever the app version (`$app/env`) differs from the `'app-version'`
+  settings row, i.e. after every deploy. Ten automatic backups are kept; ones made by hand stay until
+  deleted. A restore backs up first, swaps the file through `replaceDatabase` and resets the settings
+  caches. Photos are only in the streamed **Download Everything** ZIP, which is never stored.
 - **Site settings.**
   - They're stored as one JSON row (`settings.key = 'site'`) and cached in `settings.ts`.
   - Unknown keys are dropped when read, so a new setting needs adding to both `defaultSettings`
@@ -145,6 +155,20 @@ Prettier-formatted, so `bun run lint` reports it; leave it alone unless asked.
   - Each photo has a random `key`. Its `version` changes when the thumbnails are regenerated and
     is used for cache-busting (`?v=`).
   - `sharp` work goes through the `processing` limiter in `images.ts`.
+  - Client downloads go through the browser's own download manager (`download.ts`), so a large ZIP
+    never sits in the page's memory. `serveFile` honours single byte ranges with If-Range, so
+    downloads resume and videos seek. A continued range isn't counted as a new download
+    (`isContinuation`).
+  - Uploads arrive in 8 MB pieces (`Uploader.svelte` and the upload endpoint), each with an upload id
+    and offset, so every request stays inside Traefik's 60-second limit and a dropped piece resumes.
+- **Videos** (`video.ts`) are rows in `photos` with `kind = 'video'` and a `duration`. ffprobe reads
+  their size (after rotation), length and date; ffmpeg's poster frame goes through
+  `generateVariants`, so thumbnails, covers and the grid work unchanged. Use `detectMedia` and
+  `regenerateVariants` from `photos.ts` rather than the photo-only `detectType` and
+  `generateVariants`. ffmpeg comes from the `mwader/static-ffmpeg` image; without it, videos get a
+  plain poster. The lightbox plays the original.
+  - The Dockerfile and `bun run start` set `UV_THREADPOOL_SIZE=16`, so bulk image processing doesn't
+    delay file requests, which share libuv's thread pool.
   - Embedded keywords (XMP `dc:subject`, falling back to IPTC) become album tags on upload, folder
     import and “Re-extract metadata”. This only ever adds tags, so hand-applied ones survive.
 - **Maintenance tasks** (regenerating thumbnails, refreshing metadata, importing from a folder) run
@@ -161,18 +185,27 @@ background maintenance tasks (`jobs.ts`, `/admin/api/jobs`). The page route is s
 
 - **Units.**
   - Money is always stored as integer pence (`money.ts`: `formatMoney`, `parseMoney`).
-  - A job's `starts_at` is a naive local `YYYY-MM-DDTHH:mm`, or just a date.
+  - A job's `starts_at` is a naive local `YYYY-MM-DDTHH:mm`, or just a date; `ends_at` is optional.
   - Days are `YYYY-MM-DD` strings; use `todayIso` and `addDays` from `utils.ts`.
 - **Jobs hold no money.** A job's fee, payment state and analytics all come from its invoices
   (`paymentState` and `invoiceState` in `bookings.ts`). Don't add money fields to `bookings`. Status
   is `confirmed | tentative | cancelled`.
+- **Invoices and jobs are many-to-many**, through `invoice_bookings`. Linking is optional on both
+  sides. A shared invoice is split evenly between its non-cancelled jobs (`invoiceShares` in
+  `bookings.ts`), and `InvoiceRef.share` is what a job's fee and the analytics use, so nothing is
+  counted twice. Totals such as outstanding and paid read the invoices directly.
+- **End times.** `ends_at` is a naive local `YYYY-MM-DDTHH:mm`, set only when the start has a time.
+  An end earlier than the start means the next day. It drives the calendar event's length and the
+  hours prefilled on a new invoice (`jobHours`).
 - **Invoice states.**
   - A **draft** (`draft = 1`) hasn't been sent. It holds the expected fee, counts as booked (or
     tentative, for a tentative job) in analytics, can't be marked paid, and isn't outstanding.
     Issuing it (`issueInvoice`) dates it today and recomputes the due date with `invoiceDueDate`.
   - An **imported** record (`imported = 1`) was converted from the money jobs used to hold
     (`legacy-money.ts`). It has no PDF, its number may be empty or list several earlier numbers, and
-    it's left out of “time to get paid”. The spreadsheet import makes the same conversion.
+    it's left out of “time to get paid”. The spreadsheet import makes the same conversion, and
+    “Invoiced Elsewhere” on a job (`recordExternalInvoice`) creates one by hand, replacing a draft
+    if the job has one.
 - **Invoices are snapshots.**
   - The sender, bill-to, payment details, line items (JSON) and style are copied onto the invoice
     row, so changing defaults never alters an issued invoice.
@@ -190,6 +223,12 @@ background maintenance tasks (`jobs.ts`, `/admin/api/jobs`). The page route is s
   and a job picks one by id.
 - **Spreadsheet import** (`booking-import.ts`) parses pasted TSV/CSV by header name. The "Mine"
   column maps yes → confirmed, maybe → tentative, no → cancelled.
+- **Calendar feed** (`calendar.ts`): a private iCalendar feed of dated, non-cancelled jobs. Calendar
+  apps can't sign in, so a random token in the URL is the access; it's a separate settings row
+  (`'calendar-token'`), reset from `/admin/jobs/calendar`. Times are floating, matching `starts_at`.
+- **Tax year export** (`tax-year.ts`): UK tax years (6 April to 5 April, named by the starting
+  year) as CSV, by `paid_at` (cash basis) or `issue_date`. Drafts are left out, and text cells that
+  look like formulas are prefixed so spreadsheets don't run them.
 - **Analytics** (`insights.ts`):
   - Academic years start in September.
   - Gallery charts read `album_daily_stats`, updated in `analytics.ts`.

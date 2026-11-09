@@ -1,9 +1,10 @@
 <script lang="ts">
 	import Check from '@lucide/svelte/icons/check';
+	import Play from '@lucide/svelte/icons/play';
 	import Img from './Img.svelte';
 	import Masonry from './Masonry.svelte';
 	import type { Layout, PhotoItem } from '#lib/types.js';
-	import { mediaUrl } from '#lib/utils.js';
+	import { formatDuration, mediaUrl } from '#lib/utils.js';
 
 	interface Props {
 		photos: PhotoItem[];
@@ -53,8 +54,9 @@
 		onclick={(event) => handleClick(event, photo, index)}
 		aria-label={selecting
 			? `${photo.name}${isSelected ? ' (selected)' : ''} — click to ${isSelected ? 'deselect' : 'select'}`
-			: photo.name}
+			: `${photo.name}${photo.kind === 'video' ? ' (video)' : ''}`}
 		data-sveltekit-noscroll
+		data-sveltekit-preload-data="off"
 		style:aspect-ratio={layout === 'masonry' ? `${photo.w || 3} / ${photo.h || 2}` : undefined}
 	>
 		<Img
@@ -64,6 +66,12 @@
 			height={photo.h || undefined}
 			eager={index < eagerCount}
 		/>
+		{#if photo.kind === 'video'}
+			<span class="video" aria-hidden="true">
+				<Play size={11} strokeWidth={2} />
+				{formatDuration(photo.duration)}
+			</span>
+		{/if}
 		{#if selecting}
 			<span class="check" aria-hidden="true">
 				{#if isSelected}<Check size={14} strokeWidth={2.5} />{/if}
@@ -148,6 +156,22 @@
 
 	.tile.selected :global(img) {
 		transform: scale(0.97);
+	}
+
+	.video {
+		position: absolute;
+		left: 10px;
+		bottom: 10px;
+		display: inline-flex;
+		align-items: center;
+		gap: 0.3rem;
+		padding: 0.2rem 0.45rem;
+		background: rgba(0, 0, 0, 0.5);
+		color: #fff;
+		font-size: 0.7rem;
+		font-variant-numeric: tabular-nums;
+		letter-spacing: 0.04em;
+		pointer-events: none;
 	}
 
 	.check {

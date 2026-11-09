@@ -8,6 +8,7 @@
 	import Trash2 from '@lucide/svelte/icons/trash-2';
 	import Settings from '@lucide/svelte/icons/settings';
 	import Receipt from '@lucide/svelte/icons/receipt';
+	import FileSpreadsheet from '@lucide/svelte/icons/file-spreadsheet';
 	import FlagCheck from '#lib/components/admin/FlagCheck.svelte';
 	import StateBadge from '#lib/components/admin/StateBadge.svelte';
 	import { api, feedback } from '#lib/components/admin/feedback.svelte.js';
@@ -82,6 +83,9 @@
 		<h1>Invoices</h1>
 	</div>
 	<div class="ui-actions">
+		<a class="btn btn-quiet" href="/admin/invoices/tax-year"
+			><FileSpreadsheet size={14} /> Tax Year</a
+		>
 		<a class="btn btn-quiet" href="/admin/invoices/settings"><Settings size={14} /> Settings</a>
 		<a class="btn btn-solid" href="/admin/invoices/new"><Plus size={14} /> New Invoice</a>
 	</div>
@@ -154,11 +158,9 @@
 							</td>
 							<td>
 								{invoice.billToName || '—'}
-								{#if invoice.bookingTitle}
-									<a class="ui-sub job" href="/admin/jobs/{invoice.bookingId}"
-										>{invoice.bookingTitle}</a
-									>
-								{/if}
+								{#each invoice.jobs as job (job.id)}
+									<a class="ui-sub job" href="/admin/jobs/{job.id}">{job.title}</a>
+								{/each}
 							</td>
 							<td class="nowrap">
 								{invoice.state === 'draft' ? '—' : formatShortDay(invoice.issueDate)}

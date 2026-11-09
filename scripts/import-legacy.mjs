@@ -275,32 +275,6 @@ function takenAt(value) {
 	return `${y}-${m}-${d}T${hh}:${mm}:${ss}`;
 }
 
-/** "1/250", "1/250s", "2s", "0.5" → seconds. */
-function shutterToSeconds(value) {
-	if (value === null || value === undefined || value === '') return null;
-	if (typeof value === 'number') return value > 0 ? value : null;
-	const text = String(value)
-		.trim()
-		.replace(/s(ec)?$/i, '');
-	const fraction = /^(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)$/.exec(text);
-	if (fraction) return Number(fraction[1]) / Number(fraction[2]) || null;
-	const num = Number(text);
-	return isFinite(num) && num > 0 ? num : null;
-}
-
-const positive = (value) => {
-	const num = Number(value);
-	return isFinite(num) && num > 0 ? num : null;
-};
-
-function cameraName(make, model) {
-	const mk = make ? String(make).trim() : '';
-	const md = model ? String(model).trim() : '';
-	if (mk && md && !md.toLowerCase().startsWith(mk.split(' ')[0].toLowerCase()))
-		return `${mk} ${md}`;
-	return md || mk || null;
-}
-
 function hashPassword(password) {
 	// Same format as src/lib/server/auth.ts
 	const salt = crypto.randomBytes(16);
@@ -1005,9 +979,8 @@ async function main() {
 				created_at, updated_at)
 			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
 		const insertPhoto = db.prepare(`
-			INSERT INTO photos (album_id, key, ext, original_name, mime, size, width, height, taken_at, camera, lens,
-				focal_length, aperture, exposure_time, iso, downloads, created_at)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+			INSERT INTO photos (album_id, key, ext, original_name, mime, size, width, height, taken_at, downloads, created_at)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
 		const insertMap = db.prepare(
 			`INSERT OR REPLACE INTO legacy_import_map (kind, old_id, new_id, old_slug) VALUES (?, ?, ?, ?)`
 		);
@@ -1098,15 +1071,6 @@ async function main() {
 								image.height || Number(photo.height) || 0,
 								takenAt(photo.date_taken) ??
 									takenAt(text(exif.DateTimeOriginal) ?? text(exif.CreateDate)),
-								cameraName(
-									text(exif.Make) ?? photo.camera_make,
-									text(exif.Model) ?? photo.camera_model
-								),
-								text(exif.LensModel) ?? text(exif.Lens) ?? (photo.lens_model || null),
-								positive(exif.FocalLength) ?? positive(photo.focal_length),
-								positive(exif.FNumber) ?? positive(photo.aperture),
-								positive(exif.ExposureTime) ?? shutterToSeconds(photo.shutter_speed),
-								positive(exif.ISO) ?? positive(exif.ISOSpeedRatings) ?? positive(photo.iso),
 								importAnalytics ? (legacy.photoDownloads.get(photo.id) ?? 0) : 0,
 								sqliteTimeToIso(photo.created_at)
 							);

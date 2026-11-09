@@ -5,9 +5,13 @@ services:
     # Not "client-gallery": that name is used by the previous version of the app.
     container_name: gallery
     restart: unless-stopped
-    ports:
-      # Set GALLERY_BIND=127.0.0.1 when a reverse proxy on this host is the only way in.
-      - '${GALLERY_BIND:-0.0.0.0}:${GALLERY_PORT:-3000}:3000'
+    # No port is published: Coolify's proxy (or another reverse proxy on the same Docker network)
+    # routes to port 3000, so visitors can only come in through it. To reach the app directly,
+    # on your LAN for example, add:
+    #   ports:
+    #     - '3000:3000'
+    expose:
+      - '3000'
     env_file:
       - path: .env
         required: false

@@ -64,7 +64,7 @@ export function convertLegacyMoney(
 	const shootDay = job.startsAt?.slice(0, 10) ?? null;
 	const { settings } = ctx;
 	const common = {
-		bookingId: job.bookingId,
+		bookingIds: [job.bookingId],
 		billingAddressId: job.billingAddressId,
 		billToName: job.client || job.title,
 		billToAddress: job.billToAddress,
@@ -242,7 +242,7 @@ export function moveJobMoneyToInvoices(db: DatabaseSync) {
 		const invoice = result.invoice;
 		insert.run(
 			invoice.number,
-			invoice.bookingId,
+			invoice.bookingIds[0],
 			invoice.billingAddressId,
 			invoice.issueDate,
 			invoice.dueDate,

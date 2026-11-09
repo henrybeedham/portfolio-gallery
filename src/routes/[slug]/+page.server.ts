@@ -1,14 +1,13 @@
 import { error, fail, redirect } from '@sveltejs/kit';
 import {
 	albumIsExpired,
-	albumPhotoStats,
+	albumPhotoCount,
 	getAlbumById,
 	getAlbumBySlug,
 	type Album
 } from '#lib/server/albums.js';
 import { albumAccess } from '#lib/server/access.js';
 import { unlockAlbum, verifyPassword } from '#lib/server/auth.js';
-import { recordView } from '#lib/server/analytics.js';
 import { renderMarkdown } from '#lib/server/markdown.js';
 import { albumTags, getPhoto, orderedPhotoIds, PAGE_SIZE, photoItems } from '#lib/server/photos.js';
 import { clientIp, rateLimit } from '#lib/server/ratelimit.js';
@@ -37,7 +36,7 @@ function contact() {
 }
 
 export const load: PageServerLoad = (event) => {
-	const { params, url, cookies, locals, request } = event;
+	const { params, url, cookies, locals } = event;
 	const album = getAlbumBySlug(params.slug);
 	if (!album) error(404, 'Gallery not found');
 
@@ -61,12 +60,9 @@ export const load: PageServerLoad = (event) => {
 		return { ...base, status: 'locked' as const };
 	}
 
-	if (!locals.isAdmin) recordView(album, clientIp(event), request.headers.get('user-agent'));
-
 	const tags = albumTags(album.id);
 	const view = parseView(url, album, tags);
 	const ids = orderedPhotoIds(album.id, view);
-	const stats = albumPhotoStats(album.id);
 	const background = album.backgroundPhotoId ? getPhoto(album.backgroundPhotoId) : undefined;
 
 	return {
@@ -77,8 +73,7 @@ export const load: PageServerLoad = (event) => {
 		view,
 		photos: photoItems(ids.slice(0, PAGE_SIZE)),
 		total: ids.length,
-		albumCount: stats.count,
-		albumBytes: stats.bytes,
+		albumCount: albumPhotoCount(album.id),
 		background:
 			background && background.album_id === album.id
 				? { key: background.key, v: background.version, w: background.width, h: background.height }

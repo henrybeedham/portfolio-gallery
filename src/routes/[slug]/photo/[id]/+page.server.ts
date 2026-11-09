@@ -1,7 +1,7 @@
 import { error, redirect } from '@sveltejs/kit';
 import { getAlbumBySlug } from '#lib/server/albums.js';
 import { albumAccess } from '#lib/server/access.js';
-import { albumTags, getPhoto, orderedPhotoIds, photoDetail } from '#lib/server/photos.js';
+import { albumTags, getPhoto, orderedPhotoIds, photoItems } from '#lib/server/photos.js';
 import { albumPageTheme } from '#lib/server/themes.js';
 import { parseView } from '#lib/server/view.js';
 import type { PageServerLoad } from './$types';
@@ -27,6 +27,9 @@ export const load: PageServerLoad = ({ params, url, cookies, locals }) => {
 		index = ids.indexOf(photo.id);
 	}
 
+	// The photo and its neighbours, so the viewer can warm up and step to them.
+	const offset = Math.max(0, index - 1);
+
 	return {
 		theme: albumPageTheme(locals, album),
 		album: {
@@ -37,11 +40,10 @@ export const load: PageServerLoad = ({ params, url, cookies, locals }) => {
 			hasPassword: !!album.passwordHash,
 			isPublic: album.isPublic
 		},
-		photo: photoDetail(photo),
+		photos: photoItems(ids.slice(offset, index + 2)),
 		index,
+		offset,
 		total: ids.length,
-		prevId: index > 0 ? ids[index - 1] : null,
-		nextId: index < ids.length - 1 ? ids[index + 1] : null,
 		view,
 		from: url.searchParams.get('from') === 'home' ? ('home' as const) : null,
 		origin: url.origin

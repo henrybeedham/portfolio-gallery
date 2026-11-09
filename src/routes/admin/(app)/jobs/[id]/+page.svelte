@@ -11,31 +11,92 @@
 	import BookingForm from '#lib/components/admin/BookingForm.svelte';
 	import StateBadge from '#lib/components/admin/StateBadge.svelte';
 	import { api, feedback } from '#lib/components/admin/feedback.svelte.js';
-	import { formatMoney } from '#lib/money.js';
-	import { formatJobDate, formatShortDay, invoiceLabel } from '#lib/utils.js';
+	import { formatMoney, moneyInput, parseMoney } from '#lib/money.js';
+	import { formatJobDate, formatShortDay, invoiceLabel, todayIso } from '#lib/utils.js';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
 
 	const booking = $derived(data.booking);
-	const when = $derived(formatJobDate(booking.startsAt));
+	const when = $derived(formatJobDate(booking.startsAt, booking.endsAt));
 	const unlinked = $derived(
 		data.albums.filter((album) => !booking.albums.some((linked) => linked.id === album.id))
 	);
+	const unlinkedInvoices = $derived(
+		data.invoices.filter((option) => !booking.invoices.some((linked) => linked.id === option.id))
+	);
 	let albumToLink = $state('');
+	let invoiceToLink = $state('');
 	let busy = $state(false);
 
-	async function album(action: 'link-album' | 'unlink-album', albumId: number) {
+	function album(action: 'link-album' | 'unlink-album', albumId: number) {
+		return update({ action, albumId }, action === 'link-album' ? 'Album linked' : 'Album unlinked');
+	}
+
+	function linkedInvoice(action: 'link-invoice' | 'unlink-invoice', invoiceId: number) {
+		return update(
+			{ action, invoiceId },
+			action === 'link-invoice' ? 'Invoice linked' : 'Invoice unlinked'
+		);
+	}
+
+	async function update(body: Record<string, unknown>, message: string) {
 		busy = true;
 		try {
-			await api(`/admin/api/bookings/${booking.id}`, { action, albumId });
+			await api(`/admin/api/bookings/${booking.id}`, body);
 			await invalidate('admin:booking');
 			albumToLink = '';
-			feedback.toast(action === 'link-album' ? 'Album linked' : 'Album unlinked');
+			invoiceToLink = '';
+			feedback.toast(message);
 		} catch (error) {
 			feedback.toast((error as Error).message, 'error');
 		} finally {
 			busy = false;
+		}
+	}
+
+	const draft = $derived(booking.invoices.find((invoice) => invoice.state === 'draft'));
+	let external = $state<{ number: string; date: string; amount: string; paidAt: string } | null>(
+		null
+	);
+	let recording = $state(false);
+
+	function startExternal() {
+		const today = todayIso();
+		const shootDay = booking.startsAt?.slice(0, 10);
+		external = {
+			number: '',
+			date: shootDay && shootDay < today ? shootDay : today,
+			amount: draft ? moneyInput(draft.total) : '',
+			paidAt: ''
+		};
+	}
+
+	async function recordExternal(event: SubmitEvent) {
+		event.preventDefault();
+		if (!external) return;
+		const given = external.amount.trim();
+		const amount = given ? parseMoney(given) : null;
+		if (given && amount === null) {
+			feedback.toast('Check the amount.', 'error');
+			return;
+		}
+		recording = true;
+		try {
+			await api(`/admin/api/bookings/${booking.id}`, {
+				action: 'record-external-invoice',
+				number: external.number,
+				date: external.date,
+				amount,
+				paidAt: external.paidAt
+			});
+			await invalidate('admin:booking');
+			external = null;
+			feedback.toast('Invoice recorded');
+		} catch (error) {
+			feedback.toast((error as Error).message, 'error');
+		} finally {
+			recording = false;
 		}
 	}
 
@@ -129,6 +190,15 @@
 										{/if}
 										{#if invoice.imported}· imported{/if}
 									</span>
+									{#if invoice.sharedWith.length}
+										<span class="ui-sub">
+											{formatMoney(invoice.share)} counts here · shared with
+											{#each invoice.sharedWith as other, i (other.id)}{i ? ', ' : ''}<a
+													class="shared"
+													href="/admin/jobs/{other.id}">{other.title}</a
+												>{/each}
+										</span>
+									{/if}
 								</div>
 								<div class="ui-row-actions">
 									<StateBadge state={invoice.state} />
@@ -143,6 +213,15 @@
 											<Download size={15} strokeWidth={1.5} />
 										</a>
 									{/if}
+									<button
+										class="ui-icon-btn danger"
+										onclick={() => linkedInvoice('unlink-invoice', invoice.id)}
+										disabled={busy}
+										title="Unlink invoice"
+										aria-label="Unlink invoice {invoiceLabel(invoice.number)}"
+									>
+										<X size={15} strokeWidth={1.5} />
+									</button>
 								</div>
 							</li>
 						{/each}
@@ -153,6 +232,81 @@
 						send it.
 					</p>
 				{/if}
+				{#if unlinkedInvoices.length}
+					<div class="link-row">
+						<select class="select" bind:value={invoiceToLink} aria-label="Invoice to link">
+							<option value="">Link an existing invoice…</option>
+							{#each unlinkedInvoices as option (option.id)}
+								<option value={String(option.id)}>
+									{invoiceLabel(option.number)} — {option.billToName || 'No client'} — {formatMoney(
+										option.total
+									)}
+								</option>
+							{/each}
+						</select>
+						<button
+							class="btn btn-sm btn-quiet"
+							disabled={!invoiceToLink || busy}
+							onclick={() => linkedInvoice('link-invoice', Number(invoiceToLink))}>Link</button
+						>
+					</div>
+				{/if}
+				<div class="elsewhere">
+					{#if external}
+						<form onsubmit={recordExternal}>
+							<p class="hint">
+								For an invoice you sent from another platform.
+								{#if draft}This replaces draft {invoiceLabel(draft.number)}.{/if}
+							</p>
+							<div class="field">
+								<label for="external-number"
+									>Invoice number <span class="ui-optional">optional</span></label
+								>
+								<input
+									id="external-number"
+									class="input"
+									maxlength="40"
+									bind:value={external.number}
+								/>
+							</div>
+							<div class="field">
+								<label for="external-date">Date invoiced</label>
+								<input
+									id="external-date"
+									class="input"
+									type="date"
+									required
+									bind:value={external.date}
+								/>
+							</div>
+							<div class="field">
+								<label for="external-amount">Amount <span class="ui-optional">optional</span></label
+								>
+								<div class="ui-money-input">
+									<input
+										id="external-amount"
+										class="input"
+										inputmode="decimal"
+										bind:value={external.amount}
+									/>
+								</div>
+							</div>
+							<div class="field">
+								<label for="external-paid">Paid on <span class="ui-optional">optional</span></label>
+								<input id="external-paid" class="input" type="date" bind:value={external.paidAt} />
+								<p class="hint">Leave this blank if it’s still unpaid.</p>
+							</div>
+							<div class="ui-inline">
+								<button class="btn btn-sm btn-solid" disabled={recording}>
+									{#if recording}<span class="spinner"></span>{/if} Record Invoice
+								</button>
+								<button class="link" type="button" onclick={() => (external = null)}>Cancel</button>
+							</div>
+						</form>
+					{:else}
+						<button class="link" onclick={startExternal}>Invoiced Elsewhere</button>
+					{/if}
+				</div>
 			</section>
 
 			<section class="ui-panel">
@@ -188,7 +342,7 @@
 					</p>
 				{/if}
 				{#if unlinked.length}
-					<div class="link-album">
+					<div class="link-row">
 						<select class="select" bind:value={albumToLink} aria-label="Album to link">
 							<option value="">Link an existing album…</option>
 							{#each unlinked as option (option.id)}
@@ -274,14 +428,29 @@
 		font-size: 0.88rem;
 	}
 
-	.link-album {
+	.elsewhere {
+		padding: 1rem 1.5rem 1.25rem;
+		border-top: 1px solid var(--border);
+	}
+
+	.elsewhere form {
+		display: grid;
+		gap: 1rem;
+	}
+
+	.shared {
+		color: inherit;
+		text-underline-offset: 3px;
+	}
+
+	.link-row {
 		display: flex;
 		gap: 0.5rem;
 		padding: 1rem 1.5rem 1.25rem;
 		border-top: 1px solid var(--border);
 	}
 
-	.link-album .select {
+	.link-row .select {
 		min-height: 36px;
 		padding-block: 0.4rem;
 		font-size: 0.88rem;

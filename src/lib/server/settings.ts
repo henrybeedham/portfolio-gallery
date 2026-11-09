@@ -47,6 +47,11 @@ export function getSettings(): SiteSettings {
 	return cache;
 }
 
+/** Forgets the cached settings, after the database is restored from a backup. */
+export function resetSettings() {
+	cache = undefined;
+}
+
 export function updateSettings(patch: Partial<SiteSettings>): SiteSettings {
 	const next = { ...getSettings(), ...patch };
 	run(

@@ -6,6 +6,7 @@
 		location: string;
 		date: string;
 		time: string;
+		endTime: string;
 		status: import('#lib/types.js').BookingStatus;
 		shot: boolean;
 		delivered: boolean;
@@ -48,6 +49,7 @@
 	let location = $state(start.location);
 	let date = $state(start.date);
 	let time = $state(start.time);
+	let endTime = $state(start.endTime);
 	let status = $state<BookingStatus>(start.status);
 	let shot = $state(start.shot);
 	let delivered = $state(start.delivered);
@@ -105,16 +107,45 @@
 				aria-invalid={errorField === 'title'}
 			/>
 		</div>
-		<div class="ui-grid-2">
+		<div class="ui-grid-3">
 			<div class="field">
 				<label for="date">Date <span class="ui-optional">optional</span></label>
-				<input id="date" class="input" type="date" name="date" bind:value={date} />
+				<input
+					id="date"
+					class="input"
+					type="date"
+					name="date"
+					bind:value={date}
+					aria-invalid={errorField === 'date'}
+				/>
 			</div>
 			<div class="field">
 				<label for="time">Start time <span class="ui-optional">optional</span></label>
-				<input id="time" class="input" type="time" name="time" bind:value={time} />
+				<input
+					id="time"
+					class="input"
+					type="time"
+					name="time"
+					bind:value={time}
+					aria-invalid={errorField === 'time'}
+				/>
+			</div>
+			<div class="field">
+				<label for="end-time">End time <span class="ui-optional">optional</span></label>
+				<input
+					id="end-time"
+					class="input"
+					type="time"
+					name="end_time"
+					bind:value={endTime}
+					aria-invalid={errorField === 'end_time'}
+				/>
 			</div>
 		</div>
+		<p class="hint">
+			An end time sets the length in your calendar and the hours on new invoices.
+			{#if time && endTime && endTime < time}This job finishes the next day.{/if}
+		</p>
 		<div class="field">
 			<label for="location">Location <span class="ui-optional">optional</span></label>
 			<input

@@ -3,9 +3,9 @@ import { error } from '@sveltejs/kit';
 import { effectiveCoverId, getAlbumById } from '#lib/server/albums.js';
 import { albumAccess } from '#lib/server/access.js';
 import { recordPhotoDownload } from '#lib/server/analytics.js';
-import { serveFile } from '#lib/server/files.js';
-import { generateVariants, originalPath, variantPath } from '#lib/server/images.js';
-import { getPhotoByKey } from '#lib/server/photos.js';
+import { isContinuation, serveFile } from '#lib/server/files.js';
+import { originalPath, variantPath } from '#lib/server/images.js';
+import { getPhotoByKey, regenerateVariants } from '#lib/server/photos.js';
 import { contentDisposition } from '#lib/server/zip.js';
 import type { RequestHandler } from './$types';
 
@@ -42,7 +42,7 @@ export const GET: RequestHandler = async ({ params, request, url, cookies, local
 
 	if (variant === 'original') {
 		const download = url.searchParams.has('download');
-		if (download && request.method === 'GET' && !locals.isAdmin) {
+		if (download && request.method === 'GET' && !locals.isAdmin && !isContinuation(request)) {
 			recordPhotoDownload(album, photo, url.origin);
 		}
 		const response = await serveFile(request, originalPath(photo.key, photo.ext), {
@@ -57,14 +57,15 @@ export const GET: RequestHandler = async ({ params, request, url, cookies, local
 	}
 
 	const file = variantPath(photo.key, variant as 'thumb' | 'medium');
-	if (!(await exists(file))) {
+	const options = { type: 'image/webp', cacheControl };
+	let response = await serveFile(request, file, options);
+	if (!response) {
 		// Regenerate on demand if a derivative went missing.
 		const source = originalPath(photo.key, photo.ext);
 		if (!(await exists(source))) error(404, 'Image is missing');
-		await generateVariants(source, photo.key);
+		await regenerateVariants(photo);
+		response = await serveFile(request, file, options);
 	}
-
-	const response = await serveFile(request, file, { type: 'image/webp', cacheControl });
 	if (!response) error(404, 'Not found');
 	return response;
 };

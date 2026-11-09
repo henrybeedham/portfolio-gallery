@@ -13,7 +13,7 @@
 	import Uploader from './Uploader.svelte';
 	import { api, feedback } from './feedback.svelte.js';
 	import { sortAdminPhotos } from '#lib/sort.js';
-	import { formatBytes, mediaUrl } from '#lib/utils.js';
+	import { formatBytes, formatDuration, mediaUrl } from '#lib/utils.js';
 	import type { AdminPhoto, AdminSort, Tag as TagType } from '#lib/types.js';
 
 	interface Props {
@@ -298,6 +298,9 @@
 					<span class="flags">
 						{#if photo.id === coverPhotoId}<span class="flag"><Star size={10} /> Cover</span>{/if}
 						{#if photo.id === backgroundPhotoId}<span class="flag">Background</span>{/if}
+						{#if photo.kind === 'video'}<span class="flag"
+								>Video {formatDuration(photo.duration)}</span
+							>{/if}
 					</span>
 				</button>
 				<div class="hover-actions">

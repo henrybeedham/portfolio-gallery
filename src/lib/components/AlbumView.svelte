@@ -7,6 +7,7 @@
 	import ArrowLeft from '@lucide/svelte/icons/arrow-left';
 	import Download from '@lucide/svelte/icons/download';
 	import SquareCheck from '@lucide/svelte/icons/square-check';
+	import Check from '@lucide/svelte/icons/check';
 	import Clock from '@lucide/svelte/icons/clock';
 	import Pencil from '@lucide/svelte/icons/pencil';
 	import Eye from '@lucide/svelte/icons/eye';
@@ -15,8 +16,8 @@
 	import PhotoGallery from './PhotoGallery.svelte';
 	import Lightbox from './Lightbox.svelte';
 	import SiteFooter from './SiteFooter.svelte';
-	import { downloadWithProgress, nativeDownload, STREAM_THRESHOLD } from '#lib/download.js';
-	import { downloadUrl, expiryLabel, formatDay, plural, viewQuery } from '#lib/utils.js';
+	import { nativeDownload } from '#lib/download.js';
+	import { expiryLabel, formatDay, plural, viewQuery } from '#lib/utils.js';
 	import type { AlbumViewData, PhotoItem, SortOrder, ViewQuery } from '#lib/types.js';
 
 	let { data }: { data: AlbumViewData } = $props();
@@ -52,9 +53,7 @@
 	const selected = new SvelteSet<number>();
 	let selectingAll = $state(false);
 
-	let downloadState = $state<{ target: string; progress: number | null } | null>(null);
-	let downloadError = $state<string | null>(null);
-	const busy = $derived(downloadState !== null);
+	let started = $state<'all' | 'selection' | null>(null);
 
 	let now = $state(Date.now());
 	onMount(() => {
@@ -62,6 +61,12 @@
 		return () => clearInterval(timer);
 	});
 	const expiry = $derived(expiryLabel(album.expiresAt, now));
+
+	// Counted once the page is actually shown, so hovering a link that preloads it doesn't count.
+	const slug = $derived(album.slug);
+	$effect(() => {
+		if (!data.isAdmin) fetch(`/${slug}/view`, { method: 'POST', keepalive: true }).catch(() => {});
+	});
 
 	const SORT_LABELS: Record<SortOrder, string> = {
 		oldest: 'Oldest first',
@@ -159,67 +164,21 @@
 
 	/* -------------------------------------------------------------- downloads */
 
-	function progressLabel(fallback: string, target: string) {
-		if (!downloadState || downloadState.target !== target) return fallback;
-		if (downloadState.progress === null) return 'Preparing…';
-		return `Downloading ${Math.round(downloadState.progress * 100)}%`;
-	}
-
-	async function run(target: string, task: () => Promise<void>) {
-		if (downloadState) return;
-		downloadError = null;
-		downloadState = { target, progress: null };
-		try {
-			await task();
-		} catch (error) {
-			downloadError = (error as Error).message || 'The download failed. Please try again.';
-		} finally {
-			downloadState = null;
-		}
-	}
-
-	function onprogress(progress: number | null) {
-		if (downloadState) downloadState.progress = progress;
-	}
-
-	function downloadAll() {
-		const url = `/${album.slug}/download`;
-		if (data.albumBytes > STREAM_THRESHOLD) {
-			nativeDownload(url);
-			return;
-		}
-		run('all', () => downloadWithProgress(url, { filename: `${album.title}.zip`, onprogress }));
+	/** The browser's download manager takes over, so the button only needs to acknowledge the click. */
+	function startDownload(target: 'all' | 'selection', query = '', body?: Record<string, string>) {
+		if (started) return;
+		nativeDownload(`/${album.slug}/download${query}`, body);
+		started = target;
+		setTimeout(() => (started = null), 3000);
 	}
 
 	function downloadSelected() {
-		const ids = [...selected];
-		if (!ids.length) return;
-		const url = `/${album.slug}/download`;
-		if (ids.length > 400) {
-			// Very large selections stream straight to disk through the browser's download manager.
-			nativeDownload(url, { ids: ids.join(',') });
-			return;
-		}
-		run('selection', () =>
-			downloadWithProgress(url, {
-				filename: `${album.title} - selection.zip`,
-				onprogress,
-				init: {
-					method: 'POST',
-					headers: { 'content-type': 'application/json' },
-					body: JSON.stringify({ ids })
-				}
-			})
-		);
+		if (!selected.size) return;
+		const ids = [...selected].join(',');
+		// A selection that fits in a link can be resumed by the browser if the connection drops.
+		if (ids.length <= 4000) startDownload('selection', `?ids=${ids}`);
+		else startDownload('selection', '', { ids });
 	}
-
-	function downloadPhoto(photo: PhotoItem) {
-		run(`photo-${photo.id}`, () =>
-			downloadWithProgress(downloadUrl(photo), { filename: photo.name, onprogress })
-		);
-	}
-
-	const lightboxPhoto = $derived(lightboxIndex >= 0 ? photos[lightboxIndex] : null);
 </script>
 
 <header class="topbar">
@@ -266,11 +225,9 @@
 		{/if}
 		{#if data.albumCount}
 			<div class="actions fade-up" style:animation-delay="0.2s">
-				<button class="btn btn-accent" onclick={downloadAll} disabled={busy}>
-					{#if downloadState?.target === 'all'}<span class="spinner"></span>{:else}<Download
-							size={14}
-						/>{/if}
-					{progressLabel('Download All', 'all')}
+				<button class="btn btn-accent" onclick={() => startDownload('all')} disabled={!!started}>
+					{#if started === 'all'}<Check size={14} />{:else}<Download size={14} />{/if}
+					{started === 'all' ? 'Download Started' : 'Download All'}
 				</button>
 				<button
 					class="btn btn-quiet"
@@ -281,9 +238,6 @@
 					{selecting ? 'Cancel selection' : 'Select to download'}
 				</button>
 			</div>
-		{/if}
-		{#if downloadError}
-			<p class="alert alert-error" role="alert">{downloadError}</p>
 		{/if}
 	</section>
 
@@ -387,12 +341,10 @@
 				<button
 					class="btn btn-sm btn-accent"
 					onclick={downloadSelected}
-					disabled={!selected.size || busy}
+					disabled={!selected.size || !!started}
 				>
-					{#if downloadState?.target === 'selection'}<span class="spinner"></span>{:else}<Download
-							size={13}
-						/>{/if}
-					{progressLabel('Download selected', 'selection')}
+					{#if started === 'selection'}<Check size={13} />{:else}<Download size={13} />{/if}
+					{started === 'selection' ? 'Download Started' : 'Download selected'}
 				</button>
 				<button class="close" onclick={exitSelection} aria-label="Exit selection mode">
 					<X size={18} strokeWidth={1.5} />
@@ -402,18 +354,13 @@
 	</div>
 {/if}
 
-{#if lightboxPhoto}
+{#if lightboxIndex >= 0}
 	<Lightbox
 		{photos}
 		index={lightboxIndex}
 		{total}
 		onclose={closeLightbox}
 		onnavigate={navigateLightbox}
-		ondownload={downloadPhoto}
-		downloading={downloadState?.target === `photo-${lightboxPhoto.id}`}
-		downloadLabel={downloadState?.target === `photo-${lightboxPhoto.id}`
-			? progressLabel('Download Photo', `photo-${lightboxPhoto.id}`)
-			: null}
 	/>
 {/if}
 

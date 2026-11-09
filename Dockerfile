@@ -19,11 +19,15 @@ RUN bun run build \
 FROM node:24-bookworm-slim
 WORKDIR /app
 
+# The larger thread pool stops bulk image processing from holding up visitors' file requests.
 ENV NODE_ENV=production \
 	DATA_DIR=/data \
 	PORT=3000 \
-	HOST=0.0.0.0
+	HOST=0.0.0.0 \
+	UV_THREADPOOL_SIZE=16
 
+# ffmpeg and ffprobe make video posters and read videos' length and date.
+COPY --from=mwader/static-ffmpeg:9.0.2-1 /ffmpeg /ffprobe /usr/local/bin/
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/build ./build
 COPY package.json server.js ./
