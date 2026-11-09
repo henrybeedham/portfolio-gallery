@@ -18,7 +18,7 @@ function hmac(value: string) {
 	return crypto.createHmac('sha256', sessionSecret()).update(value).digest('base64url');
 }
 
-function safeEqual(a: string, b: string) {
+export function safeEqual(a: string, b: string) {
 	const ha = crypto.createHash('sha256').update(a).digest();
 	const hb = crypto.createHash('sha256').update(b).digest();
 	return crypto.timingSafeEqual(ha, hb);

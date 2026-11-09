@@ -16,7 +16,7 @@
 	import Lightbox from './Lightbox.svelte';
 	import SiteFooter from './SiteFooter.svelte';
 	import { downloadWithProgress, nativeDownload, STREAM_THRESHOLD } from '#lib/download.js';
-	import { downloadUrl, expiryLabel, formatDay, plural, viewQuery } from '#lib/utils.js';
+	import { expiryLabel, formatDay, plural, viewQuery } from '#lib/utils.js';
 	import type { AlbumViewData, PhotoItem, SortOrder, ViewQuery } from '#lib/types.js';
 
 	let { data }: { data: AlbumViewData } = $props();
@@ -212,14 +212,6 @@
 			})
 		);
 	}
-
-	function downloadPhoto(photo: PhotoItem) {
-		run(`photo-${photo.id}`, () =>
-			downloadWithProgress(downloadUrl(photo), { filename: photo.name, onprogress })
-		);
-	}
-
-	const lightboxPhoto = $derived(lightboxIndex >= 0 ? photos[lightboxIndex] : null);
 </script>
 
 <header class="topbar">
@@ -402,18 +394,13 @@
 	</div>
 {/if}
 
-{#if lightboxPhoto}
+{#if lightboxIndex >= 0}
 	<Lightbox
 		{photos}
 		index={lightboxIndex}
 		{total}
 		onclose={closeLightbox}
 		onnavigate={navigateLightbox}
-		ondownload={downloadPhoto}
-		downloading={downloadState?.target === `photo-${lightboxPhoto.id}`}
-		downloadLabel={downloadState?.target === `photo-${lightboxPhoto.id}`
-			? progressLabel('Download Photo', `photo-${lightboxPhoto.id}`)
-			: null}
 	/>
 {/if}
 

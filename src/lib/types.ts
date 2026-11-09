@@ -68,17 +68,6 @@ export interface PhotoItem extends ImageRef {
 	tags: number[];
 }
 
-export interface PhotoDetail extends PhotoItem {
-	size: number;
-	takenAt: string | null;
-	camera: string | null;
-	lens: string | null;
-	focalLength: number | null;
-	aperture: number | null;
-	exposureTime: number | null;
-	iso: number | null;
-}
-
 export interface AdminPhoto extends PhotoItem {
 	size: number;
 	downloads: number;

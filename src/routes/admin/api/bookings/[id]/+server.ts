@@ -9,6 +9,7 @@ import {
 	type BookingFlag
 } from '#lib/server/bookings.js';
 import { requireAdmin } from '#lib/server/guard.js';
+import { recordExternalInvoice } from '#lib/server/invoices.js';
 import type { RequestHandler } from './$types';
 
 function requireBooking(id: string) {
@@ -37,6 +38,11 @@ export const POST: RequestHandler = async ({ request, params, locals }) => {
 			if (!album) error(404, 'Album not found');
 			if (body.action === 'link-album') linkAlbum(booking.id, album.id);
 			else unlinkAlbum(booking.id, album.id);
+			return Response.json({ ok: true });
+		}
+		case 'record-external-invoice': {
+			const problem = recordExternalInvoice(booking, body);
+			if (problem) error(400, problem);
 			return Response.json({ ok: true });
 		}
 		default:

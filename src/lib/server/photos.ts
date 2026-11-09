@@ -10,7 +10,7 @@ import {
 	removePhotoFiles
 } from './images.js';
 import { seededShuffle } from '#lib/sort.js';
-import type { AdminPhoto, PhotoDetail, PhotoItem, SortOrder, Tag } from '#lib/types.js';
+import type { AdminPhoto, PhotoItem, SortOrder, Tag } from '#lib/types.js';
 
 export interface PhotoRow {
 	id: number;
@@ -108,20 +108,6 @@ export function photoItems(ids: number[]): PhotoItem[] {
 		.map((id) => byId.get(id))
 		.filter((row): row is PhotoRow => !!row)
 		.map((row) => toItem(row, tags.get(row.id) ?? []));
-}
-
-export function photoDetail(row: PhotoRow): PhotoDetail {
-	return {
-		...toItem(row, tagsFor([row.id]).get(row.id) ?? []),
-		size: row.size,
-		takenAt: row.taken_at,
-		camera: row.camera,
-		lens: row.lens,
-		focalLength: row.focal_length,
-		aperture: row.aperture,
-		exposureTime: row.exposure_time,
-		iso: row.iso
-	};
 }
 
 export function adminPhotos(albumId: number): AdminPhoto[] {

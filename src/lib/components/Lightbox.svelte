@@ -5,42 +5,53 @@
 	import X from '@lucide/svelte/icons/x';
 	import Download from '@lucide/svelte/icons/download';
 	import type { PhotoItem } from '#lib/types.js';
-	import { mediaUrl } from '#lib/utils.js';
+	import { downloadWithProgress } from '#lib/download.js';
+	import { downloadUrl, mediaUrl } from '#lib/utils.js';
 
 	interface Props {
 		photos: PhotoItem[];
 		index: number;
 		total: number;
+		/** Where `photos[0]` sits in the album, when only part of it is loaded. */
+		offset?: number;
 		onclose: () => void;
 		onnavigate: (index: number) => void;
-		ondownload: (photo: PhotoItem) => void;
-		downloadLabel?: string | null;
-		downloading?: boolean;
 	}
 
-	let {
-		photos,
-		index,
-		total,
-		onclose,
-		onnavigate,
-		ondownload,
-		downloadLabel = null,
-		downloading = false
-	}: Props = $props();
+	let { photos, index, total, offset = 0, onclose, onnavigate }: Props = $props();
 
 	const photo = $derived(photos[index]);
 	let direction = $state(1);
 	let touchStart: { x: number; y: number } | null = null;
 
 	const hasPrev = $derived(index > 0);
-	const hasNext = $derived(index < total - 1);
+	const hasNext = $derived(offset + index < total - 1);
+
+	// undefined when idle, null while the size is unknown, otherwise 0–1.
+	let progress = $state<number | null | undefined>(undefined);
+	let downloadError = $state<string | null>(null);
+
+	async function download() {
+		if (progress !== undefined) return;
+		progress = null;
+		downloadError = null;
+		try {
+			await downloadWithProgress(downloadUrl(photo), {
+				filename: photo.name,
+				onprogress: (value) => (progress = value)
+			});
+		} catch {
+			downloadError = 'The download failed. Please try again.';
+		} finally {
+			progress = undefined;
+		}
+	}
 
 	function go(delta: number) {
 		const target = index + delta;
-		if (target < 0 || target >= total) return;
-		if (target >= photos.length) return; // waiting for more photos to load
+		if (target < 0 || target >= photos.length) return; // the next page may still be loading
 		direction = delta;
+		downloadError = null;
 		onnavigate(target);
 	}
 
@@ -105,18 +116,32 @@
 	>
 		<header class="bar">
 			<div class="meta">
-				<span class="counter">{index + 1} / {total}</span>
-				<span class="name">{photo.name}</span>
+				<span class="counter">{offset + index + 1} / {total}</span>
+				{#if downloadError}
+					<span class="error" role="alert">{downloadError}</span>
+				{:else}
+					<span class="name">{photo.name}</span>
+				{/if}
 			</div>
 			<div class="actions">
 				<button
 					class="btn btn-sm light"
-					onclick={() => ondownload(photo)}
-					disabled={downloading}
+					onclick={download}
+					disabled={progress !== undefined}
 					aria-live="polite"
 				>
-					{#if downloading}<span class="spinner"></span>{:else}<Download size={14} />{/if}
-					<span>{downloadLabel ?? 'Download Photo'}</span>
+					{#if progress !== undefined}<span class="spinner"></span>{:else}<Download
+							size={14}
+						/>{/if}
+					<span>
+						{#if progress === undefined}
+							Download Photo
+						{:else if progress === null}
+							Preparing…
+						{:else}
+							Downloading {Math.round(progress * 100)}%
+						{/if}
+					</span>
 				</button>
 				<button class="icon" onclick={onclose} aria-label="Close viewer">
 					<X size={22} strokeWidth={1.5} />
@@ -200,6 +225,10 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
+	}
+
+	.error {
+		min-width: 0;
 	}
 
 	.actions {

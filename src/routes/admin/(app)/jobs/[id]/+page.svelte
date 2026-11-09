@@ -11,8 +11,8 @@
 	import BookingForm from '#lib/components/admin/BookingForm.svelte';
 	import StateBadge from '#lib/components/admin/StateBadge.svelte';
 	import { api, feedback } from '#lib/components/admin/feedback.svelte.js';
-	import { formatMoney } from '#lib/money.js';
-	import { formatJobDate, formatShortDay, invoiceLabel } from '#lib/utils.js';
+	import { formatMoney, moneyInput, parseMoney } from '#lib/money.js';
+	import { formatJobDate, formatShortDay, invoiceLabel, todayIso } from '#lib/utils.js';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
@@ -36,6 +36,51 @@
 			feedback.toast((error as Error).message, 'error');
 		} finally {
 			busy = false;
+		}
+	}
+
+	const draft = $derived(booking.invoices.find((invoice) => invoice.state === 'draft'));
+	let external = $state<{ number: string; date: string; amount: string; paidAt: string } | null>(
+		null
+	);
+	let recording = $state(false);
+
+	function startExternal() {
+		const today = todayIso();
+		const shootDay = booking.startsAt?.slice(0, 10);
+		external = {
+			number: '',
+			date: shootDay && shootDay < today ? shootDay : today,
+			amount: draft ? moneyInput(draft.total) : '',
+			paidAt: ''
+		};
+	}
+
+	async function recordExternal(event: SubmitEvent) {
+		event.preventDefault();
+		if (!external) return;
+		const given = external.amount.trim();
+		const amount = given ? parseMoney(given) : null;
+		if (given && amount === null) {
+			feedback.toast('Check the amount.', 'error');
+			return;
+		}
+		recording = true;
+		try {
+			await api(`/admin/api/bookings/${booking.id}`, {
+				action: 'record-external-invoice',
+				number: external.number,
+				date: external.date,
+				amount,
+				paidAt: external.paidAt
+			});
+			await invalidate('admin:booking');
+			external = null;
+			feedback.toast('Invoice recorded');
+		} catch (error) {
+			feedback.toast((error as Error).message, 'error');
+		} finally {
+			recording = false;
 		}
 	}
 
@@ -153,6 +198,62 @@
 						send it.
 					</p>
 				{/if}
+				<div class="elsewhere">
+					{#if external}
+						<form onsubmit={recordExternal}>
+							<p class="hint">
+								For an invoice you sent from another platform.
+								{#if draft}This replaces draft {invoiceLabel(draft.number)}.{/if}
+							</p>
+							<div class="field">
+								<label for="external-number"
+									>Invoice number <span class="ui-optional">optional</span></label
+								>
+								<input
+									id="external-number"
+									class="input"
+									maxlength="40"
+									bind:value={external.number}
+								/>
+							</div>
+							<div class="field">
+								<label for="external-date">Date invoiced</label>
+								<input
+									id="external-date"
+									class="input"
+									type="date"
+									required
+									bind:value={external.date}
+								/>
+							</div>
+							<div class="field">
+								<label for="external-amount">Amount <span class="ui-optional">optional</span></label
+								>
+								<div class="ui-money-input">
+									<input
+										id="external-amount"
+										class="input"
+										inputmode="decimal"
+										bind:value={external.amount}
+									/>
+								</div>
+							</div>
+							<div class="field">
+								<label for="external-paid">Paid on <span class="ui-optional">optional</span></label>
+								<input id="external-paid" class="input" type="date" bind:value={external.paidAt} />
+								<p class="hint">Leave this blank if it’s still unpaid.</p>
+							</div>
+							<div class="ui-inline">
+								<button class="btn btn-sm btn-solid" disabled={recording}>
+									{#if recording}<span class="spinner"></span>{/if} Record Invoice
+								</button>
+								<button class="link" type="button" onclick={() => (external = null)}>Cancel</button>
+							</div>
+						</form>
+					{:else}
+						<button class="link" onclick={startExternal}>Invoiced Elsewhere</button>
+					{/if}
+				</div>
 			</section>
 
 			<section class="ui-panel">
@@ -272,6 +373,16 @@
 		gap: 0.5rem;
 		padding: 1.25rem 1.5rem;
 		font-size: 0.88rem;
+	}
+
+	.elsewhere {
+		padding: 1rem 1.5rem 1.25rem;
+		border-top: 1px solid var(--border);
+	}
+
+	.elsewhere form {
+		display: grid;
+		gap: 1rem;
 	}
 
 	.link-album {

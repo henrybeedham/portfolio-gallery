@@ -81,12 +81,14 @@ Prettier-formatted, so `bun run lint` reports it; leave it alone unless asked.
 **Public**
 
 - **Pages:** `/` (home), `/galleries`, and `/[slug]` (an album, with a password `unlock` action).
-- **Lightbox:** uses shallow routing (`PageState.lightbox`). Each photo also has its own page at
-  `/[slug]/photo/[id]`.
+- **Photo viewer:** `Lightbox.svelte` is the only one. The album and home pages open it with shallow
+  routing (`PageState.lightbox`). Each photo also has its own URL at `/[slug]/photo/[id]`, for
+  reloads and shared links, which renders the same viewer.
 - **Album endpoints:** `/[slug]/photos` returns JSON pages for infinite scroll; `/[slug]/download`
   streams a ZIP.
 - **Images:** `/media/[key]/[variant]` (`thumb|medium|original`) and `/site/hero/[size]`.
-- **Other:** `/site/themes.css`, `/album/[...path]` (legacy redirects) and `/healthz`.
+- **Other:** `/site/themes.css`, `/site/calendar/[token].ics` (the jobs feed), `/album/[...path]`
+  (legacy redirects) and `/healthz`.
 - **Album slugs live at the root.** Any new top-level route must be added to `RESERVED_SLUGS` in
   `src/lib/server/albums.ts`.
 
@@ -172,7 +174,9 @@ background maintenance tasks (`jobs.ts`, `/admin/api/jobs`). The page route is s
     Issuing it (`issueInvoice`) dates it today and recomputes the due date with `invoiceDueDate`.
   - An **imported** record (`imported = 1`) was converted from the money jobs used to hold
     (`legacy-money.ts`). It has no PDF, its number may be empty or list several earlier numbers, and
-    it's left out of “time to get paid”. The spreadsheet import makes the same conversion.
+    it's left out of “time to get paid”. The spreadsheet import makes the same conversion, and
+    “Invoiced Elsewhere” on a job (`recordExternalInvoice`) creates one by hand, replacing a draft
+    if the job has one.
 - **Invoices are snapshots.**
   - The sender, bill-to, payment details, line items (JSON) and style are copied onto the invoice
     row, so changing defaults never alters an issued invoice.
@@ -190,6 +194,9 @@ background maintenance tasks (`jobs.ts`, `/admin/api/jobs`). The page route is s
   and a job picks one by id.
 - **Spreadsheet import** (`booking-import.ts`) parses pasted TSV/CSV by header name. The "Mine"
   column maps yes → confirmed, maybe → tentative, no → cancelled.
+- **Calendar feed** (`calendar.ts`): a private iCalendar feed of dated, non-cancelled jobs. Calendar
+  apps can't sign in, so a random token in the URL is the access; it's a separate settings row
+  (`'calendar-token'`), reset from `/admin/jobs/calendar`. Times are floating, matching `starts_at`.
 - **Analytics** (`insights.ts`):
   - Academic years start in September.
   - Gallery charts read `album_daily_stats`, updated in `analytics.ts`.
