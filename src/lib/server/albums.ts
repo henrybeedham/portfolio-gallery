@@ -336,6 +336,10 @@ export function getStats() {
 	};
 }
 
+export function albumPhotoCount(albumId: number) {
+	return get<{ n: number }>('SELECT COUNT(*) AS n FROM photos WHERE album_id = ?', albumId)!.n;
+}
+
 export function albumPhotoStats(albumId: number) {
 	return get<{ count: number; bytes: number }>(
 		'SELECT COUNT(*) AS count, COALESCE(SUM(size), 0) AS bytes FROM photos WHERE album_id = ?',

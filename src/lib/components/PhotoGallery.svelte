@@ -55,6 +55,7 @@
 			? `${photo.name}${isSelected ? ' (selected)' : ''} — click to ${isSelected ? 'deselect' : 'select'}`
 			: photo.name}
 		data-sveltekit-noscroll
+		data-sveltekit-preload-data="off"
 		style:aspect-ratio={layout === 'masonry' ? `${photo.w || 3} / ${photo.h || 2}` : undefined}
 	>
 		<Img

@@ -23,12 +23,6 @@ export interface PhotoRow {
 	width: number;
 	height: number;
 	taken_at: string | null;
-	camera: string | null;
-	lens: string | null;
-	focal_length: number | null;
-	aperture: number | null;
-	exposure_time: number | null;
-	iso: number | null;
 	downloads: number;
 	version: number;
 	created_at: string;
@@ -68,30 +62,14 @@ export function orderedPhotoIds(
 	return view.sort === 'random' ? seededShuffle(ids, view.seed ?? 1) : ids;
 }
 
-function tagsFor(ids: number[]): Map<number, number[]> {
-	const map = new Map<number, number[]>();
-	if (!ids.length) return map;
-	const rows = all<{ photo_id: number; tag_id: number }>(
-		`SELECT photo_id, tag_id FROM photo_tags WHERE photo_id IN (${placeholders(ids.length)})`,
-		...ids
-	);
-	for (const row of rows) {
-		const list = map.get(row.photo_id) ?? [];
-		list.push(row.tag_id);
-		map.set(row.photo_id, list);
-	}
-	return map;
-}
-
-function toItem(row: PhotoRow, tags: number[]): PhotoItem {
+function toItem(row: PhotoRow): PhotoItem {
 	return {
 		id: row.id,
 		key: row.key,
 		v: row.version,
 		w: row.width,
 		h: row.height,
-		name: row.original_name,
-		tags
+		name: row.original_name
 	};
 }
 
@@ -103,11 +81,10 @@ export function photoItems(ids: number[]): PhotoItem[] {
 		...ids
 	);
 	const byId = new Map(rows.map((row) => [row.id, row]));
-	const tags = tagsFor(ids);
 	return ids
 		.map((id) => byId.get(id))
 		.filter((row): row is PhotoRow => !!row)
-		.map((row) => toItem(row, tags.get(row.id) ?? []));
+		.map(toItem);
 }
 
 export function adminPhotos(albumId: number): AdminPhoto[] {
@@ -126,7 +103,8 @@ export function adminPhotos(albumId: number): AdminPhoto[] {
 		tags.set(row.photo_id, list);
 	}
 	return rows.map((row) => ({
-		...toItem(row, tags.get(row.id) ?? []),
+		...toItem(row),
+		tags: tags.get(row.id) ?? [],
 		size: row.size,
 		downloads: row.downloads,
 		takenAt: row.taken_at,
@@ -177,9 +155,8 @@ export async function addPhoto(
 
 		const photoId = transaction(() => {
 			const result = run(
-				`INSERT INTO photos (album_id, key, ext, original_name, mime, size, width, height, taken_at, camera, lens,
-					focal_length, aperture, exposure_time, iso)
-				 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				`INSERT INTO photos (album_id, key, ext, original_name, mime, size, width, height, taken_at)
+				 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 				albumId,
 				key,
 				ext,
@@ -188,20 +165,17 @@ export async function addPhoto(
 				stat.size,
 				width,
 				height,
-				metadata.takenAt,
-				metadata.camera,
-				metadata.lens,
-				metadata.focalLength,
-				metadata.aperture,
-				metadata.exposureTime,
-				metadata.iso
+				metadata.takenAt
 			);
 			tagWithKeywords(albumId, result.lastInsertRowid, metadata.keywords);
 			return result.lastInsertRowid;
 		});
 		const row = getPhoto(photoId)!;
 		return {
-			...toItem(row, tagsFor([row.id]).get(row.id) ?? []),
+			...toItem(row),
+			tags: all<{ tag_id: number }>('SELECT tag_id FROM photo_tags WHERE photo_id = ?', row.id).map(
+				(tag) => tag.tag_id
+			),
 			size: row.size,
 			downloads: 0,
 			takenAt: row.taken_at,
@@ -259,18 +233,11 @@ export async function refreshMetadata(row: PhotoRow) {
 	]);
 	transaction(() => {
 		run(
-			`UPDATE photos SET size = ?, width = ?, height = ?, taken_at = ?, camera = ?, lens = ?, focal_length = ?,
-				aperture = ?, exposure_time = ?, iso = ? WHERE id = ?`,
+			'UPDATE photos SET size = ?, width = ?, height = ?, taken_at = ? WHERE id = ?',
 			stat.size,
 			size.width,
 			size.height,
 			metadata.takenAt,
-			metadata.camera,
-			metadata.lens,
-			metadata.focalLength,
-			metadata.aperture,
-			metadata.exposureTime,
-			metadata.iso,
 			row.id
 		);
 		tagWithKeywords(row.album_id, row.id, metadata.keywords);

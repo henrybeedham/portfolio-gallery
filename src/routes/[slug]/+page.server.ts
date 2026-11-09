@@ -1,7 +1,7 @@
 import { error, fail, redirect } from '@sveltejs/kit';
 import {
 	albumIsExpired,
-	albumPhotoStats,
+	albumPhotoCount,
 	getAlbumById,
 	getAlbumBySlug,
 	type Album
@@ -66,7 +66,6 @@ export const load: PageServerLoad = (event) => {
 	const tags = albumTags(album.id);
 	const view = parseView(url, album, tags);
 	const ids = orderedPhotoIds(album.id, view);
-	const stats = albumPhotoStats(album.id);
 	const background = album.backgroundPhotoId ? getPhoto(album.backgroundPhotoId) : undefined;
 
 	return {
@@ -77,8 +76,7 @@ export const load: PageServerLoad = (event) => {
 		view,
 		photos: photoItems(ids.slice(0, PAGE_SIZE)),
 		total: ids.length,
-		albumCount: stats.count,
-		albumBytes: stats.bytes,
+		albumCount: albumPhotoCount(album.id),
 		background:
 			background && background.album_id === album.id
 				? { key: background.key, v: background.version, w: background.width, h: background.height }

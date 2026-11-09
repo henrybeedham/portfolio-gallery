@@ -2,9 +2,20 @@ import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
 import { Readable } from 'node:stream';
+import { createRequire } from 'node:module';
+import zlib from 'node:zlib';
 import yazl from 'yazl';
 import { originalPath } from './images.js';
 import type { PhotoRow } from './photos.js';
+
+const require = createRequire(import.meta.url);
+
+// yazl checksums every byte with a JavaScript CRC-32, which held ZIP downloads to about 500 MB/s.
+// Node's native one gives the same result more than ten times faster.
+require(require.resolve('buffer-crc32', { paths: [require.resolve('yazl')] })).unsigned = (
+	data: Buffer,
+	previous?: number
+) => zlib.crc32(data, previous);
 
 export function contentDisposition(filename: string, type: 'attachment' | 'inline' = 'attachment') {
 	const fallback = filename.replace(/[^\x20-\x7e]/g, '_').replace(/["\\]/g, '_');
@@ -49,7 +60,7 @@ export async function zipResponse(rows: PhotoRow[], filename: string): Promise<R
 		zip.addReadStreamLazy(
 			entry.name,
 			{ size: entry.size, mtime: entry.mtime, compress: false },
-			(callback) => callback(null, fs.createReadStream(entry.file))
+			(callback) => callback(null, fs.createReadStream(entry.file, { highWaterMark: 1024 * 1024 }))
 		);
 	}
 
