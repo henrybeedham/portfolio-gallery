@@ -62,6 +62,12 @@
 	});
 	const expiry = $derived(expiryLabel(album.expiresAt, now));
 
+	// Counted once the page is actually shown, so hovering a link that preloads it doesn't count.
+	const slug = $derived(album.slug);
+	$effect(() => {
+		if (!data.isAdmin) fetch(`/${slug}/view`, { method: 'POST', keepalive: true }).catch(() => {});
+	});
+
 	const SORT_LABELS: Record<SortOrder, string> = {
 		oldest: 'Oldest first',
 		newest: 'Newest first',
@@ -159,15 +165,19 @@
 	/* -------------------------------------------------------------- downloads */
 
 	/** The browser's download manager takes over, so the button only needs to acknowledge the click. */
-	function startDownload(target: 'all' | 'selection', body?: Record<string, string>) {
+	function startDownload(target: 'all' | 'selection', query = '', body?: Record<string, string>) {
 		if (started) return;
-		nativeDownload(`/${album.slug}/download`, body);
+		nativeDownload(`/${album.slug}/download${query}`, body);
 		started = target;
 		setTimeout(() => (started = null), 3000);
 	}
 
 	function downloadSelected() {
-		if (selected.size) startDownload('selection', { ids: [...selected].join(',') });
+		if (!selected.size) return;
+		const ids = [...selected].join(',');
+		// A selection that fits in a link can be resumed by the browser if the connection drops.
+		if (ids.length <= 4000) startDownload('selection', `?ids=${ids}`);
+		else startDownload('selection', '', { ids });
 	}
 </script>
 

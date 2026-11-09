@@ -8,7 +8,6 @@ import {
 } from '#lib/server/albums.js';
 import { albumAccess } from '#lib/server/access.js';
 import { unlockAlbum, verifyPassword } from '#lib/server/auth.js';
-import { recordView } from '#lib/server/analytics.js';
 import { renderMarkdown } from '#lib/server/markdown.js';
 import { albumTags, getPhoto, orderedPhotoIds, PAGE_SIZE, photoItems } from '#lib/server/photos.js';
 import { clientIp, rateLimit } from '#lib/server/ratelimit.js';
@@ -37,7 +36,7 @@ function contact() {
 }
 
 export const load: PageServerLoad = (event) => {
-	const { params, url, cookies, locals, request } = event;
+	const { params, url, cookies, locals } = event;
 	const album = getAlbumBySlug(params.slug);
 	if (!album) error(404, 'Gallery not found');
 
@@ -60,8 +59,6 @@ export const load: PageServerLoad = (event) => {
 	if (access === 'locked') {
 		return { ...base, status: 'locked' as const };
 	}
-
-	if (!locals.isAdmin) recordView(album, clientIp(event), request.headers.get('user-agent'));
 
 	const tags = albumTags(album.id);
 	const view = parseView(url, album, tags);

@@ -21,9 +21,14 @@ const EXTENSION_TYPES: Record<string, string> = {
 	jpeg: 'image/jpeg',
 	png: 'image/png',
 	webp: 'image/webp',
-	gif: 'image/gif'
+	gif: 'image/gif',
+	mp4: 'video/mp4',
+	m4v: 'video/mp4',
+	mov: 'video/quicktime',
+	webm: 'video/webm'
 };
 
+/** The type a file's name suggests, for listing importable photos and videos. */
 export function typeFromFilename(name: string): string | null {
 	const ext = path.extname(name).slice(1).toLowerCase();
 	return EXTENSION_TYPES[ext] ?? null;
@@ -36,7 +41,7 @@ const FORMAT_TYPES: Record<string, string> = {
 	gif: 'image/gif'
 };
 
-/** Detects the real image type from the file contents, ignoring the claimed extension. */
+/** Detects the real image type from the file contents, ignoring the claimed extension. Photos only. */
 export async function detectType(file: string): Promise<{ mime: string; ext: string } | null> {
 	try {
 		const meta = await sharp(file, { failOn: 'none' }).metadata();
@@ -94,7 +99,7 @@ function thumbSize(width: number, height: number) {
 	};
 }
 
-export async function orientedSize(source: string) {
+export async function orientedSize(source: string | Buffer) {
 	const meta = await sharp(source, { failOn: 'none' }).metadata();
 	const swap = (meta.orientation ?? 1) >= 5;
 	const width = (swap ? meta.height : meta.width) ?? 0;
@@ -102,7 +107,8 @@ export async function orientedSize(source: string) {
 	return { width, height };
 }
 
-export async function generateVariants(source: string, key: string) {
+/** Thumbnails from a photo, or from a video's poster frame. */
+export async function generateVariants(source: string | Buffer, key: string) {
 	return processing.run(async () => {
 		const { width, height } = await orientedSize(source);
 		if (!width || !height) throw new Error('Could not read image dimensions');

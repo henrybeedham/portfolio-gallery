@@ -5,12 +5,7 @@ import { setAlbumImage } from '#lib/server/albums.js';
 import { clearAnalytics } from '#lib/server/analytics.js';
 import { importDir } from '#lib/server/config.js';
 import { requireAdmin, requireAlbum } from '#lib/server/guard.js';
-import {
-	detectType,
-	generateVariants,
-	originalPath,
-	typeFromFilename
-} from '#lib/server/images.js';
+import { typeFromFilename } from '#lib/server/images.js';
 import { startJob } from '#lib/server/jobs.js';
 import {
 	addPhoto,
@@ -19,9 +14,11 @@ import {
 	deletePhotos,
 	deleteAlbum,
 	deleteTag,
+	detectMedia,
 	getPhoto,
 	photosForAlbum,
 	refreshMetadata,
+	regenerateVariants,
 	setTag
 } from '#lib/server/photos.js';
 import type { Album } from '#lib/server/albums.js';
@@ -111,8 +108,7 @@ export const POST: RequestHandler = async ({ request, params, locals }) => {
 				label: 'Regenerating thumbnails',
 				items: photosForAlbum(album.id),
 				worker: async (row) => {
-					const size = await generateVariants(originalPath(row.key, row.ext), row.key);
-					bumpVersion(row.id, size);
+					bumpVersion(row.id, await regenerateVariants(row));
 				}
 			});
 			return Response.json({ job });
@@ -146,9 +142,9 @@ export const POST: RequestHandler = async ({ request, params, locals }) => {
 				items: files,
 				worker: async (name) => {
 					const file = path.join(dir, name);
-					const type = await detectType(file);
-					if (!type) throw new Error(`${name} is not a supported image`);
-					await addPhoto(album.id, file, name, type.mime, type.ext, { keepSourceOnFailure: true });
+					const type = await detectMedia(file);
+					if (!type) throw new Error(`${name} isn’t a supported photo or video`);
+					await addPhoto(album.id, file, name, type, { keepSourceOnFailure: true });
 				}
 			});
 			return Response.json({ job });

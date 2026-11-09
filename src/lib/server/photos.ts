@@ -1,6 +1,7 @@
 import fsp from 'node:fs/promises';
 import { all, get, placeholders, run, transaction } from './db.js';
 import {
+	detectType,
 	extractMetadata,
 	generateVariants,
 	moveFile,
@@ -9,6 +10,7 @@ import {
 	originalPath,
 	removePhotoFiles
 } from './images.js';
+import { detectVideo, prepareVideo, probeVideo } from './video.js';
 import { seededShuffle } from '#lib/sort.js';
 import type { AdminPhoto, PhotoItem, SortOrder, Tag } from '#lib/types.js';
 
@@ -23,6 +25,9 @@ export interface PhotoRow {
 	width: number;
 	height: number;
 	taken_at: string | null;
+	kind: string;
+	/** Seconds, for videos. */
+	duration: number | null;
 	downloads: number;
 	version: number;
 	created_at: string;
@@ -62,7 +67,20 @@ export function orderedPhotoIds(
 	return view.sort === 'random' ? seededShuffle(ids, view.seed ?? 1) : ids;
 }
 
+export type MediaType = { mime: string; ext: string; kind: 'photo' | 'video' };
+
+/** What a file really is, whatever its name says: a supported photo or video, or null. */
+export async function detectMedia(file: string): Promise<MediaType | null> {
+	const image = await detectType(file);
+	return image ? { ...image, kind: 'photo' } : detectVideo(file);
+}
+
 function toItem(row: PhotoRow): PhotoItem {
+	if (row.kind === 'video') return { ...photoItem(row), kind: 'video', duration: row.duration };
+	return photoItem(row);
+}
+
+function photoItem(row: PhotoRow): PhotoItem {
 	return {
 		id: row.id,
 		key: row.key,
@@ -130,44 +148,57 @@ export function photosForAlbum(albumId: number, ids?: number[]): PhotoRow[] {
 
 /* ------------------------------------------------------------------- writes */
 
+async function photoDetails(file: string, key: string) {
+	const [{ width, height }, metadata] = await Promise.all([
+		generateVariants(file, key),
+		extractMetadata(file)
+	]);
+	return { width, height, takenAt: metadata.takenAt, keywords: metadata.keywords, duration: null };
+}
+
+async function videoDetails(file: string, key: string) {
+	return { ...(await prepareVideo(file, key)), keywords: [] as string[] };
+}
+
 /**
- * Takes ownership of `tmpFile`, stores it as an original, generates thumbnails
- * and records it in the database.
+ * Takes ownership of `tmpFile`, stores it as an original, generates thumbnails (a video's from its
+ * poster frame) and records it in the database.
  */
 export async function addPhoto(
 	albumId: number,
 	tmpFile: string,
 	originalName: string,
-	mime: string,
-	ext: string,
+	type: MediaType,
 	options: { keepSourceOnFailure?: boolean } = {}
 ): Promise<AdminPhoto> {
 	const key = newKey();
-	const destination = originalPath(key, ext);
+	const destination = originalPath(key, type.ext);
 	await moveFile(tmpFile, destination);
 
 	try {
-		const [{ width, height }, metadata, stat] = await Promise.all([
-			generateVariants(destination, key),
-			extractMetadata(destination),
+		const [details, stat] = await Promise.all([
+			type.kind === 'video' ? videoDetails(destination, key) : photoDetails(destination, key),
 			fsp.stat(destination)
 		]);
 
 		const photoId = transaction(() => {
 			const result = run(
-				`INSERT INTO photos (album_id, key, ext, original_name, mime, size, width, height, taken_at)
-				 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				`INSERT INTO photos (album_id, key, ext, original_name, mime, size, width, height, taken_at,
+					kind, duration)
+				 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 				albumId,
 				key,
-				ext,
+				type.ext,
 				originalName,
-				mime,
+				type.mime,
 				stat.size,
-				width,
-				height,
-				metadata.takenAt
+				details.width,
+				details.height,
+				details.takenAt,
+				type.kind,
+				details.duration
 			);
-			tagWithKeywords(albumId, result.lastInsertRowid, metadata.keywords);
+			tagWithKeywords(albumId, result.lastInsertRowid, details.keywords);
 			return result.lastInsertRowid;
 		});
 		const row = getPhoto(photoId)!;
@@ -183,7 +214,7 @@ export async function addPhoto(
 		};
 	} catch (error) {
 		if (options.keepSourceOnFailure) await moveFile(destination, tmpFile).catch(() => {});
-		await removePhotoFiles(key, ext);
+		await removePhotoFiles(key, type.ext);
 		throw error;
 	}
 }
@@ -224,8 +255,27 @@ export function bumpVersion(photoId: number, fields: { width: number; height: nu
 	);
 }
 
+/** Makes a photo's thumbnails, or a video's poster, again. */
+export function regenerateVariants(row: PhotoRow): Promise<{ width: number; height: number }> {
+	const file = originalPath(row.key, row.ext);
+	return row.kind === 'video' ? prepareVideo(file, row.key) : generateVariants(file, row.key);
+}
+
 export async function refreshMetadata(row: PhotoRow) {
 	const file = originalPath(row.key, row.ext);
+	if (row.kind === 'video') {
+		const [info, stat] = await Promise.all([probeVideo(file), fsp.stat(file)]);
+		run(
+			'UPDATE photos SET size = ?, width = ?, height = ?, taken_at = ?, duration = ? WHERE id = ?',
+			stat.size,
+			info?.width || row.width,
+			info?.height || row.height,
+			info?.takenAt ?? row.taken_at,
+			info?.duration ?? row.duration,
+			row.id
+		);
+		return;
+	}
 	const [metadata, stat, size] = await Promise.all([
 		extractMetadata(file),
 		fsp.stat(file),

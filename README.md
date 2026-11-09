@@ -12,15 +12,17 @@ A self-hosted photography portfolio and client-delivery platform. It combines a 
 - `/galleries`: a responsive masonry listing of every public album.
 - Album pages on custom slugs (`/your-album`) with Markdown descriptions, their own theme or the site’s, an optional blurred background, tag filters, sort order (oldest, newest or random), progressive “Load More” and an expiry countdown.
 - A lightbox with keyboard, swipe and click-outside controls. Every photo also has its own shareable link with Open Graph/Twitter metadata.
-- Downloads: single originals, the whole album, or a selection as a streamed ZIP, handed to the browser's own download manager.
+- Videos (MP4, MOV and WebM) alongside photos, with a poster frame as the thumbnail, the length shown on the grid, and playback in the lightbox.
+- Downloads: single originals, the whole album, or a selection as a streamed ZIP, handed to the browser's own download manager. Interrupted downloads resume where they stopped.
 - Password-protected galleries, which stay unlocked for the browser session, and expiring galleries that show your contact details once they expire.
 
 **Admin** (`/admin`)
 
 - Dashboard with totals (albums, photos, page views, photo and album downloads) and an album table.
-- Album editor with batched multi-file uploads and progress, shift-click range selection, bulk delete and tagging (keywords from Lightroom and similar tools become tags automatically), cover and background images, analytics, and sharing links.
+- Album editor with batched multi-file uploads and progress (sent in 8 MB pieces, so large videos get through proxies and a dropped connection only repeats one piece), shift-click range selection, bulk delete and tagging (keywords from Lightroom and similar tools become tags automatically), cover and background images, analytics, and sharing links.
 - Maintenance jobs: regenerate thumbnails, re-extract metadata, and import from a server folder.
 - Settings for branding, the hero image, homepage copy, contact details, Discord notifications, the theme, and defaults for new albums.
+- **Backups** (`/admin/backups`): the database is backed up automatically before every update (the last ten are kept), and you can back up, download, restore or delete from the page. **Download Everything** streams the database with every original photo and video as one ZIP, to keep somewhere else.
 
 **Jobs, invoices and analytics**
 
@@ -38,6 +40,8 @@ A self-hosted photography portfolio and client-delivery platform. It combines a 
   line items, a due date (by default the shoot date, or your payment terms), and a paid stamp once
   paid. Your details, bank details and notes are copied onto each invoice, so changing your defaults
   later never alters old invoices. Nothing is shared by link; download the PDF and send it yourself.
+- **Tax year export** (`/admin/invoices/tax-year`): a UK tax year's invoices (6 April to 5 April) as
+  CSV, counted by date paid (the cash basis) or date issued.
 - **Drafts**: save an invoice as a draft to hold a job's fee before you send anything, for example
   5 hours of video at £60, 2 hours of editing at £40 and 2 hours of photography at £60. Drafts count
   as booked work in Analytics. **Issue Invoice** dates it that day and works out the due date again.
@@ -67,7 +71,7 @@ cp .env.example .env      # set ADMIN_PASSWORD (and optionally SESSION_SECRET / 
 docker compose up -d --build
 ```
 
-Open <http://localhost:3000> and sign in at `/admin/login`.
+The compose file doesn't publish a port: a reverse proxy on the same Docker network (Coolify's, for example) routes to the app on port 3000. To open it directly, add `ports: ['3000:3000']` to the `gallery` service, then open <http://localhost:3000> and sign in at `/admin/login`.
 
 If `ADMIN_PASSWORD` isn't set, a password is generated on first start and saved to `data/.admin-password` (it isn't printed to the logs). Placeholder passwords such as `change-me` are refused at startup.
 
@@ -92,24 +96,24 @@ Put images in `./import`, or in `./import/<album-slug>` to target one album. The
 
 ### Configuration
 
-| Variable          | Default        | Description                                                                   |
-| ----------------- | -------------- | ----------------------------------------------------------------------------- |
-| `ADMIN_USERNAME`  | `admin`        | Admin username                                                                |
-| `ADMIN_PASSWORD`  | generated      | Admin password                                                                |
-| `SESSION_SECRET`  | generated      | Secret used to sign cookies                                                   |
-| `ORIGIN`          | auto           | Public URL, e.g. `https://photos.example.com` (see below)                     |
-| `BODY_SIZE_LIMIT` | `512M`         | Maximum size of a single uploaded photo (other requests are capped at 1 MB)   |
-| `TRUST_PROXY`     | `auto`         | Whose `X-Forwarded-*` headers to trust: `auto`, `true` or `false` (see below) |
-| `XFF_DEPTH`       | `1`            | Number of proxies in front of the app, for reading `X-Forwarded-For`          |
-| `IMPORT_DIR`      | `/data/import` | Server-side import folder                                                     |
-| `PUID` / `PGID`   | `1000`         | User and group the app runs as; the entrypoint fixes `/data` ownership        |
-| `PORT`            | `3000`         | Port inside the container (`GALLERY_PORT` sets the published port)            |
+| Variable          | Default        | Description                                                                                               |
+| ----------------- | -------------- | --------------------------------------------------------------------------------------------------------- |
+| `ADMIN_USERNAME`  | `admin`        | Admin username                                                                                            |
+| `ADMIN_PASSWORD`  | generated      | Admin password                                                                                            |
+| `SESSION_SECRET`  | generated      | Secret used to sign cookies                                                                               |
+| `ORIGIN`          | auto           | Public URL, e.g. `https://photos.example.com` (see below)                                                 |
+| `BODY_SIZE_LIMIT` | `512M`         | Largest single upload request (photos and videos go up in 8 MB pieces; other requests are capped at 1 MB) |
+| `TRUST_PROXY`     | `auto`         | Whose `X-Forwarded-*` headers to trust: `auto`, `true` or `false` (see below)                             |
+| `XFF_DEPTH`       | `1`            | Number of proxies in front of the app, for reading `X-Forwarded-For`                                      |
+| `IMPORT_DIR`      | `/data/import` | Server-side import folder                                                                                 |
+| `PUID` / `PGID`   | `1000`         | User and group the app runs as; the entrypoint fixes `/data` ownership                                    |
+| `PORT`            | `3000`         | Port inside the container                                                                                 |
 
 ### Reverse proxy
 
 The server works over plain `http://` on your LAN and behind a TLS reverse proxy. It reads `X-Forwarded-Proto`, `X-Forwarded-Host` and `X-Forwarded-For`, which Caddy, Traefik and most nginx setups send. If your proxy doesn't send them, set `ORIGIN`.
 
-Those headers are only trusted from connections on loopback or private networks (`TRUST_PROXY=auto`), so visitors reaching the app directly from the internet can't spoof the site address or their IP (which login and gallery rate limits rely on). Set `TRUST_PROXY=false` if there's no proxy at all. If the proxy runs on the same host, publish the port only on loopback with `GALLERY_BIND=127.0.0.1`. With more than one proxy in a chain (e.g. Cloudflare in front of nginx), set `XFF_DEPTH` to the number of proxies.
+Those headers are only trusted from connections on loopback or private networks (`TRUST_PROXY=auto`), so visitors reaching the app directly from the internet can't spoof the site address or their IP (which login and gallery rate limits rely on). Set `TRUST_PROXY=false` if there's no proxy at all. The compose file publishes no port, so the proxy is the only way in. With more than one proxy in a chain (e.g. Cloudflare in front of nginx), set `XFF_DEPTH` to the number of proxies.
 
 Allow large request bodies for uploads, and turn off response buffering so client downloads go straight through instead of being written to the proxy's disk first. With nginx:
 
@@ -122,7 +126,9 @@ proxy_set_header X-Forwarded-Host  $host;
 proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
 ```
 
-Caddy needs nothing extra: `photos.example.com { reverse_proxy localhost:3000 }`.
+Caddy needs nothing extra: `photos.example.com { reverse_proxy gallery:3000 }`.
+
+With Coolify, give the `gallery` service a domain with port 3000, e.g. `https://photos.example.com:3000`. Its proxy needs no other changes: uploads are sent in small pieces, so they stay within Traefik's 60-second request limit.
 
 ## Migrating from the previous gallery
 

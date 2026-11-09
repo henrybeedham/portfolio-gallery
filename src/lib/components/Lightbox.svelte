@@ -45,6 +45,8 @@
 	}
 
 	function onkeydown(event: KeyboardEvent) {
+		// Arrow keys seek within a focused video.
+		if (event.key !== 'Escape' && (event.target as Element | null)?.closest?.('video')) return;
 		if (event.key === 'ArrowLeft') go(-1);
 		else if (event.key === 'ArrowRight') go(1);
 		else if (event.key === 'Escape') onclose();
@@ -53,8 +55,16 @@
 	}
 
 	function ontouchstart(event: TouchEvent) {
+		touchStart = null;
 		if (event.touches.length !== 1) return;
-		touchStart = { x: event.touches[0].clientX, y: event.touches[0].clientY };
+		const touch = event.touches[0];
+		// Swipes over a video's controls along the bottom scrub the video instead.
+		const video = (event.target as Element).closest?.('video');
+		if (video) {
+			const rect = video.getBoundingClientRect();
+			if (touch.clientY > rect.bottom - Math.max(64, rect.height * 0.25)) return;
+		}
+		touchStart = { x: touch.clientX, y: touch.clientY };
 	}
 
 	function ontouchend(event: TouchEvent) {
@@ -97,7 +107,7 @@
 		class="lightbox"
 		role="dialog"
 		aria-modal="true"
-		aria-label="Photo viewer"
+		aria-label={photo.kind === 'video' ? 'Video viewer' : 'Photo viewer'}
 		tabindex="-1"
 		transition:fade={{ duration: 250 }}
 		{ontouchstart}
@@ -111,7 +121,13 @@
 			<div class="actions">
 				<button class="btn btn-sm light" onclick={download} disabled={started} aria-live="polite">
 					{#if started}<Check size={14} />{:else}<Download size={14} />{/if}
-					<span>{started ? 'Download Started' : 'Download Photo'}</span>
+					<span
+						>{started
+							? 'Download Started'
+							: photo.kind === 'video'
+								? 'Download Video'
+								: 'Download Photo'}</span
+					>
 				</button>
 				<button class="icon" onclick={onclose} aria-label="Close viewer">
 					<X size={22} strokeWidth={1.5} />
@@ -122,14 +138,30 @@
 		<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
 		<div class="stage" onclick={onbackdrop}>
 			{#key photo.id}
-				<img
-					src={mediaUrl(photo, 'medium')}
-					alt={photo.name}
-					width={photo.w || undefined}
-					height={photo.h || undefined}
-					in:fly={{ x: direction * 36, duration: 380, opacity: 0 }}
-					style:aspect-ratio={photo.w && photo.h ? `${photo.w} / ${photo.h}` : undefined}
-				/>
+				{#if photo.kind === 'video'}
+					<!-- svelte-ignore a11y_media_has_caption -->
+					<video
+						src={mediaUrl(photo, 'original')}
+						poster={mediaUrl(photo, 'medium')}
+						aria-label={photo.name}
+						controls
+						playsinline
+						preload="metadata"
+						width={photo.w || undefined}
+						height={photo.h || undefined}
+						in:fly={{ x: direction * 36, duration: 380, opacity: 0 }}
+						style:aspect-ratio={photo.w && photo.h ? `${photo.w} / ${photo.h}` : undefined}
+					></video>
+				{:else}
+					<img
+						src={mediaUrl(photo, 'medium')}
+						alt={photo.name}
+						width={photo.w || undefined}
+						height={photo.h || undefined}
+						in:fly={{ x: direction * 36, duration: 380, opacity: 0 }}
+						style:aspect-ratio={photo.w && photo.h ? `${photo.w} / ${photo.h}` : undefined}
+					/>
+				{/if}
 			{/key}
 		</div>
 
@@ -242,7 +274,8 @@
 		cursor: zoom-out;
 	}
 
-	.stage img {
+	.stage img,
+	.stage video {
 		grid-area: 1 / 1;
 		max-width: 100%;
 		max-height: calc(100svh - 76px - clamp(1rem, 3vw, 2.5rem));

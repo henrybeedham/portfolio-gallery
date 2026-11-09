@@ -19,6 +19,16 @@ export function downloadUrl(image: ImageRef) {
 	return `/media/${image.key}/original?download=1`;
 }
 
+/** 42 → “0:42”, 3725 → “1:02:05”. */
+export function formatDuration(seconds: number | null | undefined): string {
+	if (!seconds || !Number.isFinite(seconds)) return '';
+	const total = Math.round(seconds);
+	const s = String(total % 60).padStart(2, '0');
+	const m = Math.floor(total / 60) % 60;
+	const h = Math.floor(total / 3600);
+	return h ? `${h}:${String(m).padStart(2, '0')}:${s}` : `${m}:${s}`;
+}
+
 export function formatBytes(bytes: number): string {
 	if (!bytes) return '0 B';
 	const units = ['B', 'KB', 'MB', 'GB', 'TB'];
@@ -157,6 +167,17 @@ export function jobHours(
 	if (!startsAt || !endsAt) return null;
 	const ms = Date.parse(`${endsAt}Z`) - Date.parse(`${startsAt}Z`);
 	return ms > 0 ? Math.round((ms / 36e5) * 100) / 100 : null;
+}
+
+/**
+ * When a job that starts at `startsAt` and lasts `hours` ends, as a naive local YYYY-MM-DDTHH:mm.
+ * Null without a start time (a lone midnight counts as none) or for a day's hours or more.
+ */
+export function jobEndFromHours(startsAt: string | null | undefined, hours: number): string | null {
+	if (!startsAt || !/T\d{2}:\d{2}$/.test(startsAt) || startsAt.endsWith('T00:00')) return null;
+	const minutes = Math.round(hours * 60);
+	if (minutes <= 0 || minutes >= 24 * 60) return null;
+	return new Date(Date.parse(`${startsAt}Z`) + minutes * 60_000).toISOString().slice(0, 16);
 }
 
 /** The latest shoot date among an invoice's jobs, which its due date follows. */

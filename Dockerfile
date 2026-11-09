@@ -26,6 +26,8 @@ ENV NODE_ENV=production \
 	HOST=0.0.0.0 \
 	UV_THREADPOOL_SIZE=16
 
+# ffmpeg and ffprobe make video posters and read videos' length and date.
+COPY --from=mwader/static-ffmpeg:9.0.2-1 /ffmpeg /ffprobe /usr/local/bin/
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/build ./build
 COPY package.json server.js ./
