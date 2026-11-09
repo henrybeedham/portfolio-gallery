@@ -4,8 +4,9 @@
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
 	import X from '@lucide/svelte/icons/x';
 	import Download from '@lucide/svelte/icons/download';
+	import Check from '@lucide/svelte/icons/check';
 	import type { PhotoItem } from '#lib/types.js';
-	import { downloadWithProgress } from '#lib/download.js';
+	import { nativeDownload } from '#lib/download.js';
 	import { downloadUrl, mediaUrl } from '#lib/utils.js';
 
 	interface Props {
@@ -27,31 +28,19 @@
 	const hasPrev = $derived(index > 0);
 	const hasNext = $derived(offset + index < total - 1);
 
-	// undefined when idle, null while the size is unknown, otherwise 0–1.
-	let progress = $state<number | null | undefined>(undefined);
-	let downloadError = $state<string | null>(null);
+	let started = $state(false);
 
-	async function download() {
-		if (progress !== undefined) return;
-		progress = null;
-		downloadError = null;
-		try {
-			await downloadWithProgress(downloadUrl(photo), {
-				filename: photo.name,
-				onprogress: (value) => (progress = value)
-			});
-		} catch {
-			downloadError = 'The download failed. Please try again.';
-		} finally {
-			progress = undefined;
-		}
+	function download() {
+		if (started) return;
+		nativeDownload(downloadUrl(photo));
+		started = true;
+		setTimeout(() => (started = false), 3000);
 	}
 
 	function go(delta: number) {
 		const target = index + delta;
 		if (target < 0 || target >= photos.length) return; // the next page may still be loading
 		direction = delta;
-		downloadError = null;
 		onnavigate(target);
 	}
 
@@ -117,31 +106,12 @@
 		<header class="bar">
 			<div class="meta">
 				<span class="counter">{offset + index + 1} / {total}</span>
-				{#if downloadError}
-					<span class="error" role="alert">{downloadError}</span>
-				{:else}
-					<span class="name">{photo.name}</span>
-				{/if}
+				<span class="name">{photo.name}</span>
 			</div>
 			<div class="actions">
-				<button
-					class="btn btn-sm light"
-					onclick={download}
-					disabled={progress !== undefined}
-					aria-live="polite"
-				>
-					{#if progress !== undefined}<span class="spinner"></span>{:else}<Download
-							size={14}
-						/>{/if}
-					<span>
-						{#if progress === undefined}
-							Download Photo
-						{:else if progress === null}
-							Preparing…
-						{:else}
-							Downloading {Math.round(progress * 100)}%
-						{/if}
-					</span>
+				<button class="btn btn-sm light" onclick={download} disabled={started} aria-live="polite">
+					{#if started}<Check size={14} />{:else}<Download size={14} />{/if}
+					<span>{started ? 'Download Started' : 'Download Photo'}</span>
 				</button>
 				<button class="icon" onclick={onclose} aria-label="Close viewer">
 					<X size={22} strokeWidth={1.5} />
@@ -225,10 +195,6 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
-	}
-
-	.error {
-		min-width: 0;
 	}
 
 	.actions {

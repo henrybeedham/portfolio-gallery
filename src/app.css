@@ -211,12 +211,6 @@ button {
 	letter-spacing: 0.15em;
 }
 
-.btn-icon {
-	min-height: 36px;
-	width: 36px;
-	padding: 0;
-}
-
 .link {
 	display: inline-flex;
 	align-items: center;
@@ -325,11 +319,6 @@ button {
 .alert-error {
 	color: var(--danger);
 	background: var(--danger-soft);
-}
-
-.alert-success {
-	color: var(--success);
-	background: var(--success-soft);
 }
 
 /* --------------------------------------------------------------- markdown */

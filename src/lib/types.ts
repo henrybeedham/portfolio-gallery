@@ -65,10 +65,10 @@ export interface ImageRef {
 export interface PhotoItem extends ImageRef {
 	id: number;
 	name: string;
-	tags: number[];
 }
 
 export interface AdminPhoto extends PhotoItem {
+	tags: number[];
 	size: number;
 	downloads: number;
 	takenAt: string | null;
@@ -132,7 +132,6 @@ export interface AlbumViewData {
 	photos: PhotoItem[];
 	total: number;
 	albumCount: number;
-	albumBytes: number;
 	background: ImageRef | null;
 }
 

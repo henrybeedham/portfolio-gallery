@@ -133,25 +133,9 @@ export async function generateVariants(source: string, key: string) {
 
 export interface PhotoMetadata {
 	takenAt: string | null;
-	camera: string | null;
-	lens: string | null;
-	focalLength: number | null;
-	aperture: number | null;
-	exposureTime: number | null;
-	iso: number | null;
 	/** Keywords from Lightroom and similar tools, which become album tags. */
 	keywords: string[];
 }
-
-const EMPTY_METADATA: Omit<PhotoMetadata, 'keywords'> = {
-	takenAt: null,
-	camera: null,
-	lens: null,
-	focalLength: null,
-	aperture: null,
-	exposureTime: null,
-	iso: null
-};
 
 function exifDate(value: unknown): string | null {
 	if (value instanceof Date && !isNaN(value.getTime())) {
@@ -162,18 +146,6 @@ function exifDate(value: unknown): string | null {
 	if (!match || match[1] === '0000') return null;
 	const [, y, m, d, hh, mm, ss] = match;
 	return `${y}-${m}-${d}T${hh}:${mm}:${ss}`;
-}
-
-function num(value: unknown): number | null {
-	if (typeof value === 'number' && isFinite(value) && value > 0) return value;
-	if (Array.isArray(value)) return num(value[0]);
-	return null;
-}
-
-function text(value: unknown): string | null {
-	if (typeof value !== 'string') return null;
-	const trimmed = value.replace(/\0/g, '').trim();
-	return trimmed || null;
 }
 
 /** The longest tag name, matching what the admin UI allows. */
@@ -276,27 +248,12 @@ export async function extractMetadata(source: string): Promise<PhotoMetadata> {
 	} catch {
 		exif = undefined;
 	}
-	if (!exif) return { ...EMPTY_METADATA, keywords: [] };
+	if (!exif) return { takenAt: null, keywords: [] };
 	const xmp = xmpKeywords(exif.xmp);
-
-	const make = text(exif.Make);
-	const model = text(exif.Model);
-	let camera = model;
-	if (make && model && !model.toLowerCase().startsWith(make.split(' ')[0].toLowerCase())) {
-		camera = `${make} ${model}`;
-	} else if (!model) {
-		camera = make;
-	}
 
 	return {
 		takenAt:
 			exifDate(exif.DateTimeOriginal) ?? exifDate(exif.CreateDate) ?? exifDate(exif.ModifyDate),
-		camera,
-		lens: text(exif.LensModel) ?? text(exif.Lens),
-		focalLength: num(exif.FocalLength),
-		aperture: num(exif.FNumber) ?? num(exif.ApertureValue),
-		exposureTime: num(exif.ExposureTime),
-		iso: num(exif.ISO) ?? num(exif.ISOSpeedRatings) ?? num(exif.PhotographicSensitivity),
 		keywords: cleanKeywords(xmp.length ? xmp : iptcKeywords(exif.Keywords))
 	};
 }

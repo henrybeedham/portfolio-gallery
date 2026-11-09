@@ -129,8 +129,9 @@ export function renderInvoicePdf(invoice: InvoiceDocument): Promise<Buffer> {
 		autoFirstPage: false,
 		info: {
 			Title: `Invoice ${invoice.number}`,
-			Author: invoice.sender.name || undefined,
-			Subject: invoice.billToName ? `Invoice for ${invoice.billToName}` : undefined
+			// PDFKit crashes on an undefined value, so blank fields are left out altogether.
+			...(invoice.sender.name && { Author: invoice.sender.name }),
+			...(invoice.billToName && { Subject: `Invoice for ${invoice.billToName}` })
 		}
 	});
 	for (const [name, data] of Object.entries(font)) doc.registerFont(name, data);

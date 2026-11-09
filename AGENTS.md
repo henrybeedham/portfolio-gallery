@@ -60,6 +60,7 @@ Prettier-formatted, so `bun run lint` reports it; leave it alone unless asked.
   - Sets `locals.isAdmin`.
   - Fills the `%gallery.theme%`, `%gallery.themesVersion%` and `%gallery.themes%` placeholders in
     `src/app.html`.
+  - Gzips HTML and JSON responses.
 
 ## Layout
 
@@ -147,6 +148,10 @@ Prettier-formatted, so `bun run lint` reports it; leave it alone unless asked.
   - Each photo has a random `key`. Its `version` changes when the thumbnails are regenerated and
     is used for cache-busting (`?v=`).
   - `sharp` work goes through the `processing` limiter in `images.ts`.
+  - Client downloads go through the browser's own download manager (`download.ts`), so a large ZIP
+    never sits in the page's memory.
+  - The Dockerfile and `bun run start` set `UV_THREADPOOL_SIZE=16`, so bulk image processing doesn't
+    delay file requests, which share libuv's thread pool.
   - Embedded keywords (XMP `dc:subject`, falling back to IPTC) become album tags on upload, folder
     import and “Re-extract metadata”. This only ever adds tags, so hand-applied ones survive.
 - **Maintenance tasks** (regenerating thumbnails, refreshing metadata, importing from a folder) run

@@ -199,6 +199,21 @@ const MIGRATIONS: Migration[] = [
 	ALTER TABLE invoices_new RENAME TO invoices;
 	CREATE UNIQUE INDEX invoices_number ON invoices(number) WHERE imported = 0;
 	CREATE INDEX invoice_bookings_booking ON invoice_bookings(booking_id);
+	`,
+	// Album pages and covers read photos in capture order, which this index returns already sorted.
+	// It also serves every lookup by album, so it replaces the plain index.
+	`
+	CREATE INDEX photos_album_chrono ON photos(album_id, COALESCE(taken_at, created_at));
+	DROP INDEX photos_album;
+	`,
+	// Camera settings are no longer shown anywhere. The capture date stays.
+	`
+	ALTER TABLE photos DROP COLUMN camera;
+	ALTER TABLE photos DROP COLUMN lens;
+	ALTER TABLE photos DROP COLUMN focal_length;
+	ALTER TABLE photos DROP COLUMN aperture;
+	ALTER TABLE photos DROP COLUMN exposure_time;
+	ALTER TABLE photos DROP COLUMN iso;
 	`
 ];
 

@@ -57,14 +57,15 @@ export const GET: RequestHandler = async ({ params, request, url, cookies, local
 	}
 
 	const file = variantPath(photo.key, variant as 'thumb' | 'medium');
-	if (!(await exists(file))) {
+	const options = { type: 'image/webp', cacheControl };
+	let response = await serveFile(request, file, options);
+	if (!response) {
 		// Regenerate on demand if a derivative went missing.
 		const source = originalPath(photo.key, photo.ext);
 		if (!(await exists(source))) error(404, 'Image is missing');
 		await generateVariants(source, photo.key);
+		response = await serveFile(request, file, options);
 	}
-
-	const response = await serveFile(request, file, { type: 'image/webp', cacheControl });
 	if (!response) error(404, 'Not found');
 	return response;
 };
