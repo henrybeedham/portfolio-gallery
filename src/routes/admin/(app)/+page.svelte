@@ -234,7 +234,9 @@
 		font-size: 1.5rem;
 	}
 
+	/* Positioned to contain the visually hidden headings; see .ui-table-wrap in admin-ui.css. */
 	.table-wrap {
+		position: relative;
 		overflow-x: auto;
 	}
 
