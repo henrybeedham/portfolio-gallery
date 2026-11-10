@@ -192,7 +192,13 @@ a.ui-stat:hover {
 
 /* ---------------------------------------------------------------- tables */
 
+/*
+ * Positioned so absolutely positioned children (the visually hidden "Actions" headings) are
+ * contained by the scroller. Otherwise they sit at the table's far edge, outside it, and widen the
+ * whole page on phones.
+ */
 .ui-table-wrap {
+	position: relative;
 	overflow-x: auto;
 }
 
