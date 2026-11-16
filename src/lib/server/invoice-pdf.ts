@@ -207,8 +207,14 @@ export function renderInvoicePdf(invoice: InvoiceDocument): Promise<Buffer> {
 		align: 'right',
 		lineBreak: false
 	});
-	eyebrow(`No. ${invoice.number}`, M + CONTENT / 2, M + 46, CONTENT / 2, 'right');
-	let rightY = M + 60;
+	set('medium', 9.5, c.label);
+	doc.text(`NO. ${invoice.number}`, M + CONTENT / 2, M + 46, {
+		width: CONTENT / 2,
+		align: 'right',
+		characterSpacing: 1.5,
+		lineBreak: false
+	});
+	let rightY = M + 62;
 	if (invoice.paidAt) {
 		const label = `PAID  ${formatShortDay(invoice.paidAt).toUpperCase()}`;
 		set('semibold', 6.8, c.accent);
