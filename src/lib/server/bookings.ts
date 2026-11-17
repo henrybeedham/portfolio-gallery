@@ -3,6 +3,8 @@
  * already means background maintenance tasks. A job holds no money: fees and payments live on its
  * invoices, and drafts hold the fee you expect before you send anything.
  */
+import type { ClashJob } from '#lib/job-clash.js';
+import { deliverJobsForAlbum } from './delivery.js';
 import { all, get, placeholders, run } from './db.js';
 import type {
 	AlbumRef,
@@ -275,6 +277,7 @@ export function linkAlbum(bookingId: number, albumId: number) {
 		bookingId,
 		albumId
 	);
+	deliverJobsForAlbum(albumId);
 }
 
 export function unlinkAlbum(bookingId: number, albumId: number) {
@@ -311,6 +314,25 @@ export function bookingOptions() {
 		startsAt: booking.startsAt,
 		endsAt: booking.endsAt,
 		status: booking.status
+	}));
+}
+
+/** Every dated, non-cancelled job, for the clash warnings on the job form. */
+export function clashCandidates(): ClashJob[] {
+	return all<{
+		id: number;
+		title: string;
+		starts_at: string;
+		ends_at: string | null;
+		status: BookingStatus;
+	}>(
+		"SELECT id, title, starts_at, ends_at, status FROM bookings WHERE starts_at IS NOT NULL AND status != 'cancelled'"
+	).map((row) => ({
+		id: row.id,
+		title: row.title,
+		startsAt: row.starts_at,
+		endsAt: row.ends_at,
+		status: row.status
 	}));
 }
 

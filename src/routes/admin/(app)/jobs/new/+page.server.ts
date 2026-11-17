@@ -1,7 +1,7 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { listBillingAddresses } from '#lib/server/billing.js';
 import { parseBookingForm } from '#lib/server/booking-form.js';
-import { clientSuggestions, createBooking } from '#lib/server/bookings.js';
+import { clashCandidates, clientSuggestions, createBooking } from '#lib/server/bookings.js';
 import { requireAdmin } from '#lib/server/guard.js';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -10,6 +10,7 @@ export const load: PageServerLoad = ({ locals }) => {
 	return {
 		addresses: listBillingAddresses(),
 		clients: clientSuggestions(),
+		others: clashCandidates(),
 		initial: {
 			title: '',
 			client: '',

@@ -14,6 +14,7 @@
 	import StateBadge from '#lib/components/admin/StateBadge.svelte';
 	import StageIcon from '#lib/components/admin/StageIcon.svelte';
 	import { stageLabels, stageOf, type Stage } from '#lib/job-stage.js';
+	import { clashesFor } from '#lib/job-clash.js';
 	import { api, feedback } from '#lib/components/admin/feedback.svelte.js';
 	import { formatMoney } from '#lib/money.js';
 	import type { Booking } from '#lib/types.js';
@@ -84,6 +85,16 @@
 	});
 	const counts = $derived(
 		Object.fromEntries(filters.map((f) => [f.id, matching.filter(f.test).length]))
+	);
+
+	/** Jobs whose times overlap another job's, with the titles of the others. */
+	const clashing = $derived(
+		new Map(
+			data.bookings
+				.map((b) => [b.id, clashesFor(b, data.bookings).filter((c) => c.overlap)] as const)
+				.filter(([, clashes]) => clashes.length)
+				.map(([id, clashes]) => [id, clashes.map((c) => c.job.title).join(', ')])
+		)
 	);
 
 	// Matches the current chip hides, so a search on “Active” can still find an old job.
@@ -199,6 +210,12 @@
 										{#if when.day}
 											<span class="day">{when.day}</span>
 											{#if when.time}<span class="ui-sub">{when.time}</span>{/if}
+											{#if clashing.has(booking.id)}
+												<span
+													class="ui-badge warn clash"
+													title="Overlaps {clashing.get(booking.id)}">Clash</span
+												>
+											{/if}
 										{:else}
 											<span class="ui-sub">Date TBC</span>
 										{/if}
@@ -370,6 +387,10 @@
 	.date {
 		white-space: nowrap;
 		width: 1%;
+	}
+
+	.clash {
+		margin-top: 0.3rem;
 	}
 
 	.day {

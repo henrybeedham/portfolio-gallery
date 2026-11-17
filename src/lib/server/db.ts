@@ -224,6 +224,14 @@ const MIGRATIONS: Migration[] = [
 	`
 	ALTER TABLE photos ADD COLUMN kind TEXT NOT NULL DEFAULT 'photo';
 	ALTER TABLE photos ADD COLUMN duration REAL;
+	`,
+	// Jobs with a visible gallery that has photos in it count as delivered (see delivery.ts).
+	`
+	UPDATE bookings SET delivered = 1
+	WHERE delivered = 0 AND status != 'cancelled' AND id IN (
+		SELECT ba.booking_id FROM booking_albums ba JOIN albums a ON a.id = ba.album_id
+		WHERE a.is_public = 1 AND EXISTS (SELECT 1 FROM photos p WHERE p.album_id = a.id)
+	);
 	`
 ];
 
