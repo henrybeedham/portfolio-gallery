@@ -67,6 +67,35 @@
 		Object.fromEntries(filters.map((f) => [f.id, data.bookings.filter(f.test).length]))
 	);
 
+	type Stage = 'overdue' | 'deliver' | 'invoice' | 'awaiting' | 'upcoming' | 'tentative' | 'done';
+
+	// In the order the key shows them.
+	const stageLabels: Record<Stage, string> = {
+		overdue: 'Overdue',
+		deliver: 'To deliver',
+		invoice: 'To invoice',
+		awaiting: 'Awaiting payment',
+		upcoming: 'Upcoming',
+		tentative: 'Tentative',
+		done: 'Done'
+	};
+
+	/** Where a job is in the process, most pressing first. Cancelled jobs have no stage. */
+	function stageOf(b: Booking): Stage | null {
+		if (b.status === 'cancelled') return null;
+		if (b.payment === 'overdue') return 'overdue';
+		if (b.status === 'tentative') return 'tentative';
+		if (b.upcoming) return 'upcoming';
+		if (!b.delivered) return 'deliver';
+		if (b.payment === 'not-invoiced' || b.payment === 'draft') return 'invoice';
+		if (b.payment !== 'paid') return 'awaiting';
+		return 'done';
+	}
+
+	const shownStages = $derived(
+		(Object.keys(stageLabels) as Stage[]).filter((stage) => shown.some((b) => stageOf(b) === stage))
+	);
+
 	const stats = $derived([
 		{ label: 'Upcoming', value: String(data.stats.upcoming), href: '?show=upcoming' },
 		{ label: 'To deliver', value: String(data.stats.toDeliver), href: '?show=deliver' },
@@ -131,6 +160,13 @@
 	</div>
 
 	{#if shown.length}
+		{#if shownStages.length > 1}
+			<ul class="key" aria-label="Stages">
+				{#each shownStages as stage (stage)}
+					<li class="stage-{stage}"><span class="swatch"></span>{stageLabels[stage]}</li>
+				{/each}
+			</ul>
+		{/if}
 		<div class="ui-table-wrap">
 			<table class="ui-table">
 				<thead>
@@ -147,8 +183,10 @@
 				<tbody>
 					{#each shown as booking (booking.id)}
 						{@const when = formatJobDate(booking.startsAt, booking.endsAt)}
-						<tr class:ui-faded={booking.status === 'cancelled'}>
-							<td class="date">
+						{@const stage = stageOf(booking)}
+						<tr class:ui-faded={booking.status === 'cancelled'} class="stage-{stage ?? 'none'}">
+							<td class="date" title={stage ? stageLabels[stage] : undefined}>
+								{#if stage}<span class="visually-hidden">{stageLabels[stage]}:</span>{/if}
 								{#if when.day}
 									<span class="day">{when.day}</span>
 									{#if when.time}<span class="ui-sub">{when.time}</span>{/if}
@@ -266,6 +304,69 @@
 </section>
 
 <style>
+	/* Each stage's colour, used by the row's left stripe and the key. */
+	.stage-overdue {
+		--stage: var(--danger);
+	}
+	.stage-deliver {
+		--stage: var(--warning);
+	}
+	.stage-invoice {
+		--stage: var(--highlight, var(--text));
+	}
+	.stage-awaiting {
+		--stage: color-mix(in srgb, var(--success) 45%, transparent);
+	}
+	.stage-upcoming,
+	.stage-tentative {
+		--stage: var(--border-strong);
+	}
+	.stage-done {
+		--stage: var(--success);
+	}
+
+	tr:not(.stage-none) .date {
+		box-shadow: inset 3px 0 0 var(--stage);
+	}
+
+	/* Tentative jobs get a dashed stripe: not settled yet. */
+	tr.stage-tentative .date {
+		box-shadow: none;
+		background: repeating-linear-gradient(to bottom, var(--stage) 0 5px, transparent 5px 9px) left /
+			3px 100% no-repeat;
+	}
+
+	.key {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.4rem 1.25rem;
+		margin: 0;
+		padding: 0.75rem 1.5rem;
+		list-style: none;
+		border-bottom: 1px solid var(--border);
+		font-size: 0.66rem;
+		font-weight: 500;
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
+		color: var(--text-muted);
+	}
+
+	.key li {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.swatch {
+		width: 3px;
+		height: 0.9rem;
+		background: var(--stage);
+	}
+
+	.key .stage-tentative .swatch {
+		background: repeating-linear-gradient(to bottom, var(--stage) 0 4px, transparent 4px 6px);
+	}
+
 	.date {
 		white-space: nowrap;
 		width: 1%;
