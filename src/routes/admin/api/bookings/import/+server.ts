@@ -63,7 +63,6 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 				status: BOOKING_STATUSES.includes(raw.status as BookingStatus)
 					? (raw.status as BookingStatus)
 					: 'confirmed',
-				shot: raw.shot === true,
 				delivered: raw.delivered === true,
 				notes: text(raw.notes)
 			});

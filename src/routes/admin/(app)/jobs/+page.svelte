@@ -29,13 +29,14 @@
 		{
 			id: 'active',
 			label: 'Active',
-			test: (b) => b.status !== 'cancelled' && !(b.payment === 'paid' && b.shot && b.delivered)
+			// Done once it's happened, been delivered and been paid.
+			test: (b) => b.status !== 'cancelled' && !(b.payment === 'paid' && b.delivered && !b.upcoming)
 		},
 		{ id: 'upcoming', label: 'Upcoming', test: (b) => b.status !== 'cancelled' && b.upcoming },
 		{
 			id: 'deliver',
 			label: 'To deliver',
-			test: (b) => b.status === 'confirmed' && !b.delivered && (b.shot || !b.upcoming)
+			test: (b) => b.status === 'confirmed' && !b.delivered && !b.upcoming
 		},
 		{
 			id: 'invoice',
@@ -55,7 +56,13 @@
 	const filter = $derived(
 		filters.find((f) => f.id === page.url.searchParams.get('show')) ?? filters[0]
 	);
-	const shown = $derived(data.bookings.filter(filter.test));
+	// Date order, earliest first. “All” runs newest first so years of history don’t bury this term.
+	const shown = $derived.by(() => {
+		const list = data.bookings.filter(filter.test);
+		if (filter.id !== 'all') return list;
+		const dated = list.filter((b) => b.startsAt).reverse();
+		return [...list.filter((b) => !b.startsAt), ...dated];
+	});
 	const counts = $derived(
 		Object.fromEntries(filters.map((f) => [f.id, data.bookings.filter(f.test).length]))
 	);
@@ -68,7 +75,7 @@
 		{ label: 'Paid', value: formatMoney(data.stats.paid), href: null }
 	]);
 
-	async function setFlag(booking: Booking, flag: 'shot' | 'delivered', value: boolean) {
+	async function setFlag(booking: Booking, flag: 'delivered', value: boolean) {
 		pending = `${booking.id}:${flag}`;
 		try {
 			await api(`/admin/api/bookings/${booking.id}`, { action: 'set-flag', flag, value });
@@ -133,7 +140,6 @@
 						<th class="ui-num">Fee</th>
 						<th>Invoice</th>
 						<th>Paid</th>
-						<th class="ui-center">Shot</th>
 						<th>Delivered</th>
 						<th class="ui-shrink"><span class="visually-hidden">Actions</span></th>
 					</tr>
@@ -199,14 +205,6 @@
 								{:else}
 									<StateBadge state={booking.payment} />
 								{/if}
-							</td>
-							<td class="ui-center">
-								<FlagCheck
-									on={booking.shot}
-									label={booking.shot ? 'Mark as not shot' : 'Mark as shot'}
-									busy={pending === `${booking.id}:shot`}
-									onclick={() => setFlag(booking, 'shot', !booking.shot)}
-								/>
 							</td>
 							<td>
 								<div class="delivered">

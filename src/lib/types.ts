@@ -265,7 +265,6 @@ export interface Booking {
 	/** Naive local date and time, set only when the start has a time too. */
 	endsAt: string | null;
 	status: BookingStatus;
-	shot: boolean;
 	delivered: boolean;
 	notes: string;
 	/** Money lives on invoices only; this is the job's share of its invoices, drafts included. */

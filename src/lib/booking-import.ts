@@ -16,7 +16,6 @@ export interface ImportRow {
 	hours: number;
 	rate: number;
 	status: BookingStatus;
-	shot: boolean;
 	delivered: boolean;
 	paid: boolean;
 	legacyInvoices: string;
@@ -32,7 +31,6 @@ const COLUMNS: Record<keyof Omit<ImportRow, 'line' | 'billingAddressId'>, string
 	hours: ['hours', 'duration', 'length'],
 	rate: ['rate', 'hourly rate', 'rate per hour'],
 	status: ['mine', 'status', 'confirmed'],
-	shot: ['shot'],
 	delivered: ['delivered'],
 	paid: ['paid'],
 	legacyInvoices: [
@@ -233,7 +231,6 @@ export function parseSheet(text: string): ParseResult {
 			hours: Math.round((hours ?? 0) * 1000) / 1000,
 			rate: rate ?? 0,
 			status: status(cell('status')),
-			shot: yes(cell('shot')),
 			delivered: yes(cell('delivered')),
 			paid: yes(cell('paid')),
 			legacyInvoices: invoiceNumbers(cell('legacyInvoices')),

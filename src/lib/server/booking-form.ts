@@ -70,7 +70,6 @@ export function parseBookingForm(data: FormData): BookingFormResult {
 			startsAt: startsAt(date, time),
 			endsAt: endsAt(date, time, endTime),
 			status: str('status') as BookingStatus,
-			shot: checkbox(data, 'shot'),
 			delivered: checkbox(data, 'delivered'),
 			notes: String(data.get('notes') ?? '')
 		})
