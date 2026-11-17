@@ -18,7 +18,10 @@ A self-hosted photography portfolio and client-delivery platform. It combines a 
 
 **Admin** (`/admin`)
 
-- Dashboard with totals (albums, photos, page views, photo and album downloads) and an album table.
+- **Dashboard**: what needs attention (overdue invoices, jobs to deliver or invoice), jobs in the next two weeks, money (outstanding, overdue, paid this month and this tax year) and gallery activity over the last week.
+- **Galleries** (`/admin/albums`): every album as a table or a grid of covers, with search and filters (public, private, password, expired).
+- **Search**: ⌘K (Ctrl K) finds pages, galleries, jobs, invoices and clients from anywhere in the admin, and each list has its own search box.
+- **Lightroom Classic** (`/admin/lightroom`): a publish-service plugin, downloaded from this page with the site's address filled in. Each published collection is an album; republished edits replace photos in place. It signs in with an API token made on the same page.
 - Album editor with batched multi-file uploads and progress (sent in 8 MB pieces, so large videos get through proxies and a dropped connection only repeats one piece), shift-click range selection, bulk delete and tagging (keywords from Lightroom and similar tools become tags automatically), cover and background images, analytics, and sharing links.
 - Maintenance jobs: regenerate thumbnails, re-extract metadata, and import from a server folder.
 - Settings for branding, the hero image, homepage copy, contact details, Discord notifications, the theme, and defaults for new albums.
@@ -27,8 +30,9 @@ A self-hosted photography portfolio and client-delivery platform. It combines a 
 **Jobs, invoices and analytics**
 
 - **Jobs** (`/admin/jobs`): each shoot with its date, start and end time, client and location, plus whether it's
-  confirmed, tentative or cancelled. Tick off shot and delivered straight from the list, and link one
-  or more albums. Albums never need a job or an invoice. Jobs hold no money: a job's fee and whether
+  confirmed, tentative or cancelled. Each row is coloured by its stage (to deliver, to invoice,
+  awaiting payment, overdue…), jobs whose times overlap are flagged, and a job is marked delivered on
+  its own once a linked album is public and has photos. Link one or more albums. Albums never need a job or an invoice. Jobs hold no money: a job's fee and whether
   it's paid come from its invoices. One invoice can cover several jobs, with its amount split evenly
   between them, and a job can have several invoices. Sent an invoice from another platform? Use “Invoiced Elsewhere”
   on the job to record it.

@@ -89,6 +89,9 @@ Prettier-formatted, so `bun run lint` reports it; leave it alone unless asked.
   streams a ZIP (resumable: `zip.ts`); `/[slug]/view` counts a view. The album page posts to it once
   it's shown, so hover-preloading a link doesn't count; don't count views in a `load`.
 - **Images:** `/media/[key]/[variant]` (`thumb|medium|original`) and `/site/hero/[size]`.
+- **Lightroom API:** `/api/lightroom/…`, used by the Lightroom Classic plugin. It's authorised by
+  an API token (`Authorization: Bearer gal_…`, `api-tokens.ts`), not the session cookie, so every
+  endpoint calls `requireToken(event)` from `lightroom.ts`.
 - **Other:** `/site/themes.css`, `/site/calendar/[token].ics` (the jobs feed), `/album/[...path]`
   (legacy redirects) and `/healthz`.
 - **Album slugs live at the root.** Any new top-level route must be added to `RESERVED_SLUGS` in
@@ -106,6 +109,17 @@ Prettier-formatted, so `bun run lint` reports it; leave it alone unless asked.
   - Use `feedback.toast()` and `feedback.confirm()`, never `alert` or `confirm`.
 - **Page-level forms** (settings, album form, job form) use SvelteKit form actions with
   `use:enhance`.
+
+## Lightroom plugin
+
+- The plugin is Lua, in `lightroom/GalleryPublisher.lrplugin/`. It's bundled into the server with
+  `import.meta.glob` and downloaded from `/admin/lightroom/plugin.zip`, with `Defaults.lua` filled in
+  with the site's address (`lightroom-plugin.ts`). Lightroom runs Lua 5.1, so keep the plugin to
+  5.1 and the SDK's `import` modules; `JSON.lua` is its own encoder and decoder.
+- A published collection is an album (its remote id). Photos use the same chunked upload as the
+  browser (`upload-receiver.ts`); `x-replace-photo` swaps a republished photo's file in place
+  (`replacePhoto` in `photos.ts`), keeping its id, tags and downloads.
+- Changing the API means changing the plugin too, and users must download it again.
 
 ## Auth and access
 

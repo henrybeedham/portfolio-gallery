@@ -36,7 +36,11 @@ const trustProxy = (process.env.TRUST_PROXY || 'auto').toLowerCase();
 const XFF_DEPTH = Math.max(1, Number(process.env.XFF_DEPTH) || 1);
 
 /** Requests to these paths may carry large bodies (upload pieces of 8 MB, and the hero image). */
-const LARGE_BODY_PATHS = [/^\/admin\/api\/albums\/\d+\/upload\/?$/, /^\/admin\/settings\/?$/];
+const LARGE_BODY_PATHS = [
+	/^\/admin\/api\/albums\/\d+\/upload\/?$/,
+	/^\/api\/lightroom\/albums\/\d+\/photos\/?$/,
+	/^\/admin\/settings\/?$/
+];
 /** Every other request body (forms, JSON) must fit in this many bytes. */
 const SMALL_BODY_LIMIT = 1024 * 1024;
 /** Small bodies must arrive within this time, so slow-drip requests can't pile up. */

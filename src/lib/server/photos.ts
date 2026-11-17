@@ -221,6 +221,51 @@ export async function addPhoto(
 	}
 }
 
+/**
+ * Swaps a photo's file for a new one (an edit republished from Lightroom), keeping its id, tags,
+ * downloads and any place as a cover or background. Takes ownership of `tmpFile`.
+ */
+export async function replacePhoto(
+	row: PhotoRow,
+	tmpFile: string,
+	originalName: string,
+	type: MediaType
+): Promise<PhotoRow> {
+	const key = newKey();
+	const destination = originalPath(key, type.ext);
+	await moveFile(tmpFile, destination);
+	try {
+		const [details, stat] = await Promise.all([
+			type.kind === 'video' ? videoDetails(destination, key) : photoDetails(destination, key),
+			fsp.stat(destination)
+		]);
+		transaction(() => {
+			run(
+				`UPDATE photos SET key = ?, ext = ?, original_name = ?, mime = ?, size = ?, width = ?,
+					height = ?, taken_at = ?, kind = ?, duration = ?, version = version + 1
+				 WHERE id = ?`,
+				key,
+				type.ext,
+				originalName,
+				type.mime,
+				stat.size,
+				details.width,
+				details.height,
+				details.takenAt,
+				type.kind,
+				details.duration,
+				row.id
+			);
+			tagWithKeywords(row.album_id, row.id, details.keywords);
+		});
+	} catch (error) {
+		await removePhotoFiles(key, type.ext);
+		throw error;
+	}
+	await removePhotoFiles(row.key, row.ext);
+	return getPhoto(row.id)!;
+}
+
 export async function deletePhotos(albumId: number, ids: number[]) {
 	const rows = photosForAlbum(albumId, ids);
 	if (!rows.length) return 0;
