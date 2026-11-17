@@ -3,7 +3,8 @@
 	import { fade } from 'svelte/transition';
 	import House from '@lucide/svelte/icons/house';
 	import LayoutDashboard from '@lucide/svelte/icons/layout-dashboard';
-	import Plus from '@lucide/svelte/icons/plus';
+	import Images from '@lucide/svelte/icons/images';
+	import Search from '@lucide/svelte/icons/search';
 	import Settings from '@lucide/svelte/icons/settings';
 	import Briefcase from '@lucide/svelte/icons/briefcase';
 	import Receipt from '@lucide/svelte/icons/receipt';
@@ -13,15 +14,27 @@
 	import Menu from '@lucide/svelte/icons/menu';
 	import X from '@lucide/svelte/icons/x';
 	import FeedbackHost from '#lib/components/admin/FeedbackHost.svelte';
+	import CommandPalette from '#lib/components/admin/CommandPalette.svelte';
+	import { onMount } from 'svelte';
 	import '#lib/components/admin/admin-ui.css';
 	import type { LayoutProps } from './$types';
 
 	let { children, data }: LayoutProps = $props();
 	let menuOpen = $state(false);
+	let searchOpen = $state(false);
+	let shortcut = $state('Ctrl K');
+	onMount(() => {
+		if (/Mac|iPhone|iPad/.test(navigator.userAgent)) shortcut = '⌘K';
+	});
+
+	function openSearch() {
+		menuOpen = false;
+		searchOpen = true;
+	}
 
 	const links = [
 		{ href: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
-		{ href: '/admin/albums/new', label: 'New Album', icon: Plus, exact: true },
+		{ href: '/admin/albums', label: 'Galleries', icon: Images, exact: false },
 		{ href: '/admin/jobs', label: 'Jobs', icon: Briefcase, exact: false },
 		{ href: '/admin/invoices', label: 'Invoices', icon: Receipt, exact: false },
 		{ href: '/admin/analytics', label: 'Analytics', icon: ChartColumn, exact: false },
@@ -31,7 +44,7 @@
 
 	function active(href: string, exact: boolean) {
 		const path = page.url.pathname;
-		if (exact) return path === href || (href === '/admin' && /^\/admin\/albums\/\d+/.test(path));
+		if (exact) return path === href;
 		return path.startsWith(href);
 	}
 
@@ -55,6 +68,9 @@
 		<a class="nav-link" href="/" target="_blank" rel="noopener">
 			<House size={16} strokeWidth={1.5} /> Public homepage
 		</a>
+		<button class="nav-link search" onclick={openSearch}>
+			<Search size={16} strokeWidth={1.5} /> Search <kbd>{shortcut}</kbd>
+		</button>
 		<div class="divider"></div>
 		{#each links as link (link.href)}
 			<a class="nav-link" class:active={active(link.href, link.exact)} href={link.href}>
@@ -74,6 +90,9 @@
 			<Menu size={20} strokeWidth={1.5} />
 		</button>
 		<span class="brand-title">{data.settings.siteTitle}</span>
+		<button class="menu-button search-button" onclick={openSearch} aria-label="Search">
+			<Search size={19} strokeWidth={1.5} />
+		</button>
 	</header>
 
 	{#if menuOpen}
@@ -98,6 +117,7 @@
 </div>
 
 <FeedbackHost />
+<CommandPalette bind:open={searchOpen} />
 
 <style>
 	.admin {
@@ -229,6 +249,20 @@
 		background: var(--surface);
 		color: var(--text);
 		border-left-color: var(--text);
+	}
+
+	.search kbd {
+		margin-left: auto;
+		padding: 0.1rem 0.35rem;
+		border: 1px solid var(--border-strong);
+		font-family: var(--font-sans);
+		font-size: 0.64rem;
+		letter-spacing: 0.06em;
+		color: var(--text-subtle);
+	}
+
+	.search-button {
+		margin-left: auto;
 	}
 
 	.divider {

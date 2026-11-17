@@ -190,6 +190,20 @@ a.ui-stat:hover {
 	font-variant-numeric: tabular-nums;
 }
 
+/* Under a filtered list: “3 more matches in other filters. Search all”. */
+.ui-elsewhere {
+	margin: 0;
+	padding: 0.85rem 1.5rem;
+	border-top: 1px solid var(--border);
+	font-size: 0.85rem;
+	color: var(--text-muted);
+}
+
+.ui-elsewhere a {
+	color: var(--text);
+	text-underline-offset: 3px;
+}
+
 /* ---------------------------------------------------------------- tables */
 
 /*
@@ -717,4 +731,34 @@ a.ui-badge:hover {
 	grid-column: 2;
 	font-size: 0.74rem;
 	color: var(--text-subtle);
+}
+
+/* ---------------------------------------------------------------- job stages */
+
+/* Each stage's colour (theme tokens, falling back to the semantic colours) for stripe and icon. */
+.stage-overdue {
+	--stage: var(--stage-overdue, var(--danger));
+}
+.stage-deliver {
+	--stage: var(--stage-deliver, var(--warning));
+}
+.stage-invoice {
+	--stage: var(--stage-invoice, var(--highlight, var(--text)));
+}
+.stage-awaiting {
+	--stage: var(--stage-awaiting, var(--text-muted));
+}
+.stage-upcoming,
+.stage-tentative {
+	--stage: var(--stage-upcoming, var(--border-strong));
+}
+.stage-done {
+	--stage: var(--stage-done, var(--success));
+}
+
+.stage-icon {
+	display: inline-flex;
+	flex: none;
+	margin-top: 0.1rem;
+	color: var(--stage);
 }

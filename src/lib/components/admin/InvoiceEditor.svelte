@@ -28,6 +28,7 @@
 	import X from '@lucide/svelte/icons/x';
 	import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
 	import ThemePicker from './ThemePicker.svelte';
+	import SearchSelect from './SearchSelect.svelte';
 	import Toggle from './Toggle.svelte';
 	import { api, feedback } from './feedback.svelte.js';
 	import { formatMoney, itemsTotal, lineAmount, moneyInput, parseMoney } from '#lib/money.js';
@@ -163,9 +164,8 @@
 		if (hoursFromJobs) items[0].quantity = String(totalHours);
 	}
 
-	function addJob(event: Event & { currentTarget: HTMLSelectElement }) {
-		const id = Number(event.currentTarget.value);
-		event.currentTarget.value = '';
+	function addJob(value: string) {
+		const id = Number(value);
 		if (!id) return;
 		bookingIds.push(id);
 		fillFromJobs();
@@ -314,13 +314,17 @@
 						{/each}
 					</ul>
 				{/if}
-				<select id="job" class="select" value="" onchange={addJob}>
-					<option value="">{linkedJobs.length ? 'Add another job…' : 'Not linked to a job'}</option>
-					{#each availableJobs as job (job.id)}
-						{@const when = formatJobDate(job.startsAt)}
-						<option value={String(job.id)}>{job.title}{when.day ? ` — ${when.day}` : ''}</option>
-					{/each}
-				</select>
+				<SearchSelect
+					id="job"
+					label="Link a job"
+					placeholder={linkedJobs.length ? 'Add another job…' : 'Search jobs to link…'}
+					options={availableJobs.map((job) => ({
+						value: String(job.id),
+						label: job.title,
+						detail: [formatJobDate(job.startsAt).day, job.client].filter(Boolean).join(' · ')
+					}))}
+					onselect={addJob}
+				/>
 				<p class="hint">
 					{#if mode === 'create'}Choosing a job fills in the client, address, due date and hours.{/if}
 					With more than one job, the amount is split evenly between them.

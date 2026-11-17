@@ -1,413 +1,729 @@
 <script lang="ts">
-	import { invalidate } from '$app/navigation';
 	import Plus from '@lucide/svelte/icons/plus';
-	import Pencil from '@lucide/svelte/icons/pencil';
-	import Eye from '@lucide/svelte/icons/eye';
-	import Trash2 from '@lucide/svelte/icons/trash-2';
-	import Lock from '@lucide/svelte/icons/lock';
-	import Star from '@lucide/svelte/icons/star';
+	import FilePlus from '@lucide/svelte/icons/file-plus';
+	import ImagePlus from '@lucide/svelte/icons/image-plus';
+	import ArrowRight from '@lucide/svelte/icons/arrow-right';
+	import CircleCheckBig from '@lucide/svelte/icons/circle-check-big';
 	import ImageIcon from '@lucide/svelte/icons/image';
-	import Images from '@lucide/svelte/icons/images';
-	import { api, feedback } from '#lib/components/admin/feedback.svelte.js';
-	import { formatBytes, formatDateTime, mediaUrl } from '#lib/utils.js';
+	import StageIcon from '#lib/components/admin/StageIcon.svelte';
+	import StateBadge from '#lib/components/admin/StateBadge.svelte';
+	import type { Stage } from '#lib/job-stage.js';
+	import { formatMoney } from '#lib/money.js';
+	import {
+		addDays,
+		formatBytes,
+		formatJobDate,
+		formatShortDay,
+		invoiceLabel,
+		mediaUrl,
+		plural,
+		todayIso
+	} from '#lib/utils.js';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
-	let deleting = $state<number | null>(null);
 
-	const stats = $derived([
-		{ label: 'Albums', value: data.stats.albums },
-		{ label: 'Photos', value: data.stats.photos, note: formatBytes(data.stats.bytes) },
-		{ label: 'Page views', value: data.stats.views },
-		{ label: 'Photo downloads', value: data.stats.photoDownloads },
-		{ label: 'Album downloads', value: data.stats.albumDownloads }
+	/** How many of each “needs attention” group to list before linking to the rest. */
+	const LIMIT = 5;
+	const today = todayIso();
+	const monthName = new Date().toLocaleDateString('en-GB', { month: 'long' });
+
+	const attentionCount = $derived(
+		data.attention.overdue.length + data.attention.deliver.length + data.attention.invoice.length
+	);
+
+	/** “Today”, “Tomorrow”, “In 3 days”. */
+	function relativeDay(startsAt: string) {
+		const day = startsAt.slice(0, 10);
+		if (day === today) return 'Today';
+		if (day === addDays(today, 1)) return 'Tomorrow';
+		const [y, m, d] = day.split('-').map(Number);
+		const [ty, tm, td] = today.split('-').map(Number);
+		const days = Math.round((Date.UTC(y, m - 1, d) - Date.UTC(ty, tm - 1, td)) / 86_400_000);
+		return `In ${days} days`;
+	}
+
+	/** Parts of a date for the little calendar tile in “Coming up”. */
+	function tile(startsAt: string) {
+		const [y, m, d] = startsAt.slice(0, 10).split('-').map(Number);
+		const date = new Date(Date.UTC(y, m - 1, d));
+		const part = (options: Intl.DateTimeFormatOptions) =>
+			date.toLocaleDateString('en-GB', { ...options, timeZone: 'UTC' });
+		return { weekday: part({ weekday: 'short' }), day: d, month: part({ month: 'short' }) };
+	}
+
+	/** “+12%” against last week, or nothing worth saying. */
+	function change(now: number, before: number) {
+		if (!before) return now ? 'New this week' : '';
+		const percent = Math.round(((now - before) / before) * 100);
+		if (!percent) return 'Same as last week';
+		return `${percent > 0 ? '+' : '−'}${Math.abs(percent)}% on last week`;
+	}
+
+	const money = $derived([
+		{
+			label: 'Outstanding',
+			value: formatMoney(data.money.outstanding),
+			note: plural(data.money.unpaidCount, 'invoice'),
+			href: '/admin/invoices?show=unpaid'
+		},
+		{
+			label: 'Overdue',
+			value: formatMoney(data.money.overdue),
+			note: plural(data.money.overdueCount, 'invoice'),
+			href: '/admin/invoices?show=overdue',
+			danger: data.money.overdueCount > 0
+		},
+		{
+			label: `Paid in ${monthName}`,
+			value: formatMoney(data.money.paidThisMonth),
+			note: plural(data.money.paidThisMonthCount, 'invoice'),
+			href: '/admin/invoices?show=paid'
+		},
+		{
+			label: `Paid in ${data.money.taxYear}`,
+			value: formatMoney(data.money.paidThisTaxYear),
+			note: 'This tax year',
+			href: '/admin/invoices/tax-year'
+		}
 	]);
 
-	async function remove(album: (typeof data.albums)[number]) {
-		const confirmed = await feedback.confirm({
-			title: `Delete “${album.title}”?`,
-			message: `This permanently deletes the album and all ${album.count} photo${album.count === 1 ? '' : 's'}, including the original files. This cannot be undone.`,
-			confirmLabel: 'Delete album',
-			danger: true
-		});
-		if (!confirmed) return;
-		deleting = album.id;
-		try {
-			await api(`/admin/api/albums/${album.id}`, undefined, 'DELETE');
-			await invalidate('admin:albums');
-			feedback.toast(`Deleted “${album.title}”`);
-		} catch (error) {
-			feedback.toast((error as Error).message, 'error');
-		} finally {
-			deleting = null;
+	const activity = $derived([
+		{
+			label: 'Views',
+			now: data.activity.week.views,
+			before: data.activity.previousWeek.views
+		},
+		{
+			label: 'Photo downloads',
+			now: data.activity.week.photoDownloads,
+			before: data.activity.previousWeek.photoDownloads
+		},
+		{
+			label: 'Album downloads',
+			now: data.activity.week.albumDownloads,
+			before: data.activity.previousWeek.albumDownloads
 		}
-	}
+	]);
 </script>
 
 <svelte:head>
 	<title>Dashboard — {data.settings.siteTitle}</title>
 </svelte:head>
 
-<header class="page-head">
+<header class="ui-head">
 	<div>
 		<p class="eyebrow">Overview</p>
 		<h1>Dashboard</h1>
 	</div>
-	<a class="btn btn-solid" href="/admin/albums/new"><Plus size={14} /> New Album</a>
+	<div class="ui-actions">
+		<a class="btn btn-quiet" href="/admin/albums/new"><ImagePlus size={14} /> New Album</a>
+		<a class="btn btn-quiet" href="/admin/invoices/new"><FilePlus size={14} /> New Invoice</a>
+		<a class="btn btn-solid" href="/admin/jobs/new"><Plus size={14} /> New Job</a>
+	</div>
 </header>
 
-<section class="stats">
-	{#each stats as stat (stat.label)}
-		<div class="stat">
+<section class="ui-stats" aria-label="Money">
+	{#each money as stat (stat.label)}
+		<a class="ui-stat" href={stat.href}>
 			<span class="eyebrow">{stat.label}</span>
-			<strong>{stat.value.toLocaleString()}</strong>
-			{#if stat.note}<span class="subtle note">{stat.note}</span>{/if}
-		</div>
+			<strong class:danger={stat.danger}>{stat.value}</strong>
+			<span class="ui-note">{stat.note}</span>
+		</a>
 	{/each}
 </section>
 
-<section class="panel">
-	<div class="panel-head">
-		<h2>Albums</h2>
-		<span class="subtle">{data.albums.length} total</span>
+{#snippet group(stage: Stage, title: string, count: number, href: string)}
+	<div class="group-head stage-{stage}">
+		<span class="stage-icon" aria-hidden="true"><StageIcon {stage} /></span>
+		<h3>{title}</h3>
+		<span class="ui-count">{count}</span>
+		<a class="all" {href}>View all <ArrowRight size={12} /></a>
+	</div>
+{/snippet}
+
+{#snippet more(count: number, href: string)}
+	{#if count > LIMIT}
+		<li class="more"><a {href}>and {count - LIMIT} more</a></li>
+	{/if}
+{/snippet}
+
+<div class="board">
+	<div class="column">
+		<section class="ui-panel">
+			<div class="ui-panel-head">
+				<h2>Needs attention</h2>
+				{#if attentionCount}<span class="ui-sub">{plural(attentionCount, 'thing')}</span>{/if}
+			</div>
+			{#if attentionCount}
+				<div class="groups">
+					{#if data.attention.overdue.length}
+						<div class="group">
+							{@render group(
+								'overdue',
+								'Overdue invoices',
+								data.attention.overdue.length,
+								'/admin/invoices?show=overdue'
+							)}
+							<ul class="items stage-overdue">
+								{#each data.attention.overdue.slice(0, LIMIT) as invoice (invoice.id)}
+									<li>
+										<a class="item" href="/admin/invoices/{invoice.id}">
+											<span class="item-title"
+												>{invoice.billToName || invoice.jobs[0]?.title || 'No client'}</span
+											>
+											<span class="ui-sub">
+												{invoiceLabel(invoice.number)} · due {formatShortDay(invoice.dueDate)}
+											</span>
+										</a>
+										<span class="amount">{formatMoney(invoice.total)}</span>
+									</li>
+								{/each}
+								{@render more(data.attention.overdue.length, '/admin/invoices?show=overdue')}
+							</ul>
+						</div>
+					{/if}
+
+					{#if data.attention.deliver.length}
+						<div class="group">
+							{@render group(
+								'deliver',
+								'To deliver',
+								data.attention.deliver.length,
+								'/admin/jobs?show=deliver'
+							)}
+							<ul class="items stage-deliver">
+								{#each data.attention.deliver.slice(0, LIMIT) as job (job.id)}
+									<li>
+										<a class="item" href="/admin/jobs/{job.id}">
+											<span class="item-title">{job.title}</span>
+											<span class="ui-sub">
+												{[formatJobDate(job.startsAt).day, job.client].filter(Boolean).join(' · ')}
+											</span>
+										</a>
+										<span class="ui-sub">
+											{job.albums.length ? 'Gallery linked' : 'No gallery yet'}
+										</span>
+									</li>
+								{/each}
+								{@render more(data.attention.deliver.length, '/admin/jobs?show=deliver')}
+							</ul>
+						</div>
+					{/if}
+
+					{#if data.attention.invoice.length}
+						<div class="group">
+							{@render group(
+								'invoice',
+								'To invoice',
+								data.attention.invoice.length,
+								'/admin/jobs?show=invoice'
+							)}
+							<ul class="items stage-invoice">
+								{#each data.attention.invoice.slice(0, LIMIT) as job (job.id)}
+									{@const draft = job.invoices.find((invoice) => invoice.state === 'draft')}
+									<li>
+										<a class="item" href="/admin/jobs/{job.id}">
+											<span class="item-title">{job.title}</span>
+											<span class="ui-sub">
+												{[formatJobDate(job.startsAt).day, job.client].filter(Boolean).join(' · ')}
+											</span>
+										</a>
+										{#if draft}
+											<a class="action" href="/admin/invoices/{draft.id}">
+												Send draft {formatMoney(job.total)}
+											</a>
+										{:else}
+											<a class="action" href="/admin/invoices/new?job={job.id}">Create invoice</a>
+										{/if}
+									</li>
+								{/each}
+								{@render more(data.attention.invoice.length, '/admin/jobs?show=invoice')}
+							</ul>
+						</div>
+					{/if}
+				</div>
+			{:else}
+				<div class="ui-empty compact">
+					<CircleCheckBig size={26} strokeWidth={1} />
+					<h3>All caught up</h3>
+					<p>Nothing to deliver, invoice or chase.</p>
+				</div>
+			{/if}
+		</section>
+
+		<section class="ui-panel">
+			<div class="ui-panel-head">
+				<h2>Coming up</h2>
+				<span class="ui-sub">Next {data.aheadDays} days</span>
+			</div>
+			{#if data.comingUp.length}
+				<ul class="upcoming">
+					{#each data.comingUp as job (job.id)}
+						{@const when = tile(job.startsAt!)}
+						{@const time = formatJobDate(job.startsAt, job.endsAt).time}
+						<li class:tentative={job.status === 'tentative'}>
+							<div class="tile" aria-hidden="true">
+								<span>{when.weekday}</span>
+								<strong>{when.day}</strong>
+								<span>{when.month}</span>
+							</div>
+							<div class="up-body">
+								<a class="ui-title" href="/admin/jobs/{job.id}">{job.title}</a>
+								<span class="ui-sub">
+									{[relativeDay(job.startsAt!), time, job.client, job.location]
+										.filter(Boolean)
+										.join(' · ')}
+								</span>
+							</div>
+							{#if job.status === 'tentative'}<StateBadge state="tentative" />{/if}
+						</li>
+					{/each}
+				</ul>
+			{:else}
+				<div class="ui-empty compact">
+					<h3>A quiet fortnight</h3>
+					{#if data.nextAfter}
+						<p>
+							Nothing booked in the next {data.aheadDays} days. Next up:
+							<a href="/admin/jobs/{data.nextAfter.id}">{data.nextAfter.title}</a>,
+							{formatJobDate(data.nextAfter.startsAt).day}.
+						</p>
+					{:else}
+						<p>No upcoming jobs.</p>
+					{/if}
+				</div>
+			{/if}
+		</section>
 	</div>
 
-	{#if data.albums.length}
-		<div class="table-wrap">
-			<table>
-				<thead>
-					<tr>
-						<th class="cover-col"><span class="visually-hidden">Cover</span></th>
-						<th>Title</th>
-						<th>Photos</th>
-						<th>Status</th>
-						<th>Visibility</th>
-						<th>Created</th>
-						<th class="actions-col"><span class="visually-hidden">Actions</span></th>
-					</tr>
-				</thead>
-				<tbody>
-					{#each data.albums as album (album.id)}
-						<tr class:muted-row={deleting === album.id}>
-							<td class="cover-col">
-								<a href="/admin/albums/{album.id}" class="thumb" tabindex="-1">
-									{#if album.cover}
-										<img src={mediaUrl(album.cover, 'thumb')} alt="" loading="lazy" />
-									{:else}
-										<ImageIcon size={16} strokeWidth={1.25} />
-									{/if}
-								</a>
-							</td>
-							<td>
-								<a class="title" href="/admin/albums/{album.id}">{album.title}</a>
-								<span class="slug">/{album.slug}</span>
-							</td>
-							<td class="num">{album.count.toLocaleString()}</td>
-							<td>
-								<div class="badges">
-									<span class="badge" class:ok={album.isPublic}>
-										{album.isPublic ? 'Public' : 'Private'}
+	<div class="column">
+		<section class="ui-panel">
+			<div class="ui-panel-head">
+				<h2>Gallery activity</h2>
+				<span class="ui-sub">Last 7 days</span>
+			</div>
+			<div class="week">
+				{#each activity as stat (stat.label)}
+					<div class="week-stat">
+						<span class="eyebrow">{stat.label}</span>
+						<strong>{stat.now.toLocaleString('en-GB')}</strong>
+						<span class="ui-sub">{change(stat.now, stat.before)}</span>
+					</div>
+				{/each}
+			</div>
+
+			<div class="sub-section">
+				<h3 class="eyebrow">Most visited</h3>
+				{#if data.activity.top.length}
+					<ol class="top">
+						{#each data.activity.top as album (album.id)}
+							<li>
+								<a href="/admin/albums/{album.id}">{album.title}</a>
+								<span class="ui-sub">
+									{plural(album.views, 'view')} · {plural(
+										album.photoDownloads + album.albumDownloads,
+										'download'
+									)}
+								</span>
+							</li>
+						{/each}
+					</ol>
+				{:else}
+					<p class="ui-sub">No visits this week.</p>
+				{/if}
+			</div>
+
+			{#if data.activity.recent.length}
+				<div class="sub-section">
+					<div class="sub-head">
+						<h3 class="eyebrow">Recently added</h3>
+						<a class="all" href="/admin/albums">All galleries <ArrowRight size={12} /></a>
+					</div>
+					<ul class="recent">
+						{#each data.activity.recent as album (album.id)}
+							<li>
+								<a href="/admin/albums/{album.id}">
+									<span class="cover">
+										{#if album.cover}
+											<img src={mediaUrl(album.cover, 'thumb')} alt="" loading="lazy" />
+										{:else}
+											<ImageIcon size={18} strokeWidth={1.25} />
+										{/if}
 									</span>
-									{#if album.expired}<span class="badge warn">Expired</span>{/if}
-									{#if album.locked}
-										<span class="badge" title="Password protected"><Lock size={11} /> Password</span
-										>
-									{/if}
-								</div>
-							</td>
-							<td>
-								<div class="badges">
-									{#if album.isFeatured}<span class="badge"><Star size={11} /> Featured</span>{/if}
-									{#if album.showOnHome}<span class="badge">Homepage</span>{/if}
-									{#if album.showOnGalleries}<span class="badge">Galleries</span>{/if}
-									{#if !album.isFeatured && !album.showOnHome && !album.showOnGalleries}
-										<span class="subtle small">Link only</span>
-									{/if}
-								</div>
-							</td>
-							<td class="date">{formatDateTime(album.createdAt)}</td>
-							<td class="actions-col">
-								<div class="row-actions">
-									<a
-										class="icon-btn"
-										href="/admin/albums/{album.id}"
-										title="Edit"
-										aria-label="Edit {album.title}"
-									>
-										<Pencil size={15} strokeWidth={1.5} />
-									</a>
-									<a
-										class="icon-btn"
-										href="/{album.slug}"
-										target="_blank"
-										rel="noopener"
-										title="View"
-										aria-label="View {album.title}"
-									>
-										<Eye size={15} strokeWidth={1.5} />
-									</a>
-									<button
-										class="icon-btn danger"
-										onclick={() => remove(album)}
-										disabled={deleting === album.id}
-										title="Delete"
-										aria-label="Delete {album.title}"
-									>
-										{#if deleting === album.id}<span class="spinner"></span>{:else}<Trash2
-												size={15}
-												strokeWidth={1.5}
-											/>{/if}
-									</button>
-								</div>
-							</td>
-						</tr>
-					{/each}
-				</tbody>
-			</table>
-		</div>
-	{:else}
-		<div class="empty">
-			<Images size={28} strokeWidth={1} />
-			<h3>No albums yet</h3>
-			<p class="muted">Create your first album to start uploading photos.</p>
-			<a class="btn btn-solid" href="/admin/albums/new"><Plus size={14} /> New Album</a>
-		</div>
-	{/if}
-</section>
+									<span class="recent-title">{album.title}</span>
+									<span class="ui-sub">{plural(album.count, 'photo')}</span>
+								</a>
+							</li>
+						{/each}
+					</ul>
+				</div>
+			{/if}
+
+			<p class="totals">
+				All time: {plural(data.activity.totals.albums, 'album')} ·
+				{plural(data.activity.totals.photos, 'photo')} ({formatBytes(data.activity.totals.bytes)}) ·
+				{plural(data.activity.totals.views, 'view')} ·
+				{plural(
+					data.activity.totals.photoDownloads + data.activity.totals.albumDownloads,
+					'download'
+				)}.
+				<a href="/admin/analytics">Analytics</a>
+			</p>
+		</section>
+	</div>
+</div>
 
 <style>
-	.page-head {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: flex-end;
-		justify-content: space-between;
-		gap: 1rem;
-		margin-bottom: 2.25rem;
+	.danger {
+		color: var(--danger);
 	}
 
-	h1 {
-		font-size: clamp(2.2rem, 4vw, 3rem);
-		margin-top: 0.5rem;
-	}
-
-	.stats {
+	.board {
 		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+		gap: 1.5rem;
+		align-items: start;
+	}
+
+	@media (min-width: 1100px) {
+		.board {
+			grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+		}
+	}
+
+	.column {
+		display: grid;
+		gap: 1.5rem;
+		min-width: 0;
+	}
+
+	.ui-panel-head {
+		align-items: baseline;
+	}
+
+	.compact {
+		padding: 2.5rem 1.5rem;
+	}
+
+	.compact a {
+		color: var(--text);
+		text-underline-offset: 3px;
+	}
+
+	/* ---- needs attention */
+
+	.group + .group {
+		border-top: 1px solid var(--border);
+	}
+
+	.group-head {
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+		padding: 1rem 1.5rem 0.4rem;
+	}
+
+	.group-head .stage-icon {
+		margin-top: 0;
+	}
+
+	h3 {
+		font-family: var(--font-sans);
+		font-size: 0.68rem;
+		font-weight: 500;
+		letter-spacing: 0.16em;
+		text-transform: uppercase;
+		color: var(--text-muted);
+	}
+
+	.ui-count {
+		font-size: 0.72rem;
+		color: var(--text-subtle);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.all {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.3rem;
+		margin-left: auto;
+		font-size: 0.66rem;
+		font-weight: 500;
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
+		color: var(--text-muted);
+		text-decoration: none;
+	}
+
+	.all:hover {
+		color: var(--text);
+	}
+
+	.items {
+		margin: 0;
+		padding: 0 0 0.75rem;
+		list-style: none;
+	}
+
+	.items li {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+		padding: 0.55rem 1.5rem 0.55rem calc(1.5rem - 3px);
+		border-left: 3px solid var(--stage);
+		margin-left: 1.5rem;
+	}
+
+	.items li + li {
+		margin-top: 0.15rem;
+	}
+
+	.item {
+		flex: 1;
+		min-width: 0;
+		text-decoration: none;
+	}
+
+	.item-title {
+		display: block;
+		font-family: var(--font-serif);
+		font-size: 1.02rem;
+		line-height: 1.3;
+	}
+
+	.item:hover .item-title {
+		text-decoration: underline;
+		text-underline-offset: 3px;
+	}
+
+	.amount {
+		font-variant-numeric: lining-nums tabular-nums;
+		white-space: nowrap;
+	}
+
+	.action {
+		flex: none;
+		font-size: 0.66rem;
+		font-weight: 500;
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
+		color: var(--text-muted);
+		text-decoration: none;
+		border-bottom: 1px solid var(--border-strong);
+		white-space: nowrap;
+	}
+
+	.action:hover {
+		color: var(--text);
+		border-color: var(--text);
+	}
+
+	.items .more {
+		border-left-style: dashed;
+	}
+
+	.more a {
+		font-size: 0.82rem;
+		color: var(--text-muted);
+		text-underline-offset: 3px;
+	}
+
+	@media (max-width: 520px) {
+		.items li {
+			flex-wrap: wrap;
+			gap: 0.35rem 1rem;
+			margin-left: 1rem;
+			padding-right: 1rem;
+		}
+
+		.group-head {
+			padding-left: 1rem;
+			padding-right: 1rem;
+		}
+	}
+
+	/* ---- coming up */
+
+	.upcoming {
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.upcoming li {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+		padding: 0.85rem 1.5rem;
+		border-bottom: 1px solid var(--border);
+	}
+
+	.upcoming li:last-child {
+		border-bottom: 0;
+	}
+
+	.tile {
+		display: grid;
+		justify-items: center;
+		flex: none;
+		width: 52px;
+		padding: 0.35rem 0;
+		border: 1px solid var(--border-strong);
+		font-size: 0.6rem;
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
+		color: var(--text-muted);
+	}
+
+	.tile strong {
+		font-family: var(--font-serif);
+		font-size: 1.35rem;
+		font-weight: 400;
+		line-height: 1.1;
+		letter-spacing: 0;
+		color: var(--text);
+		font-variant-numeric: lining-nums;
+	}
+
+	.tentative .tile {
+		border-style: dashed;
+	}
+
+	.up-body {
+		flex: 1;
+		min-width: 0;
+	}
+
+	/* ---- gallery activity */
+
+	.week {
+		display: grid;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
 		gap: 1px;
 		background: var(--border);
-		border: 1px solid var(--border);
-		margin-bottom: 2.5rem;
+		border-bottom: 1px solid var(--border);
 	}
 
-	.stat {
+	.week-stat {
 		display: grid;
-		gap: 0.6rem;
-		padding: 1.4rem 1.5rem;
+		align-content: start;
+		gap: 0.45rem;
+		padding: 1.1rem 1.25rem;
 		background: var(--bg-elevated);
 	}
 
-	.stat strong {
+	.week-stat strong {
 		font-family: var(--font-serif);
-		font-size: 2.2rem;
+		font-size: 1.7rem;
 		font-weight: 400;
 		line-height: 1;
+		font-variant-numeric: lining-nums;
 	}
 
-	.note {
-		font-size: 0.78rem;
+	@media (max-width: 520px) {
+		.week {
+			grid-template-columns: minmax(0, 1fr);
+		}
 	}
 
-	.panel {
-		border: 1px solid var(--border);
-		background: var(--bg-elevated);
-	}
-
-	.panel-head {
-		display: flex;
-		align-items: baseline;
-		justify-content: space-between;
+	.sub-section {
+		display: grid;
+		gap: 0.75rem;
 		padding: 1.25rem 1.5rem;
 		border-bottom: 1px solid var(--border);
 	}
 
-	.panel-head h2 {
-		font-size: 1.5rem;
+	.sub-head {
+		display: flex;
+		align-items: center;
 	}
 
-	/* Positioned to contain the visually hidden headings; see .ui-table-wrap in admin-ui.css. */
-	.table-wrap {
-		position: relative;
-		overflow-x: auto;
+	.top {
+		display: grid;
+		gap: 0.6rem;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+		counter-reset: top;
 	}
 
-	table {
-		width: 100%;
-		border-collapse: collapse;
-		font-size: 0.88rem;
+	.top li {
+		display: grid;
+		grid-template-columns: 1.4rem minmax(0, 1fr);
+		counter-increment: top;
 	}
 
-	th {
-		text-align: left;
-		font-size: 0.64rem;
-		font-weight: 500;
-		letter-spacing: 0.16em;
-		text-transform: uppercase;
+	.top li::before {
+		content: counter(top);
+		grid-row: span 2;
+		font-family: var(--font-serif);
 		color: var(--text-subtle);
-		padding: 0.85rem 1rem;
-		border-bottom: 1px solid var(--border);
-		white-space: nowrap;
 	}
 
-	td {
-		padding: 0.85rem 1rem;
-		border-bottom: 1px solid var(--border);
-		vertical-align: middle;
+	.top a {
+		font-family: var(--font-serif);
+		text-decoration: none;
 	}
 
-	tbody tr:last-child td {
-		border-bottom: 0;
+	.top a:hover {
+		text-decoration: underline;
+		text-underline-offset: 3px;
 	}
 
-	tbody tr {
-		transition: background-color 0.15s;
+	.recent {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+		gap: 0.75rem;
+		margin: 0;
+		padding: 0;
+		list-style: none;
 	}
 
-	tbody tr:hover {
-		background: color-mix(in srgb, var(--surface) 55%, transparent);
+	.recent a {
+		display: grid;
+		gap: 0.2rem;
+		text-decoration: none;
 	}
 
-	.muted-row {
-		opacity: 0.5;
-	}
-
-	.cover-col {
-		width: 72px;
-		padding-right: 0;
-	}
-
-	.thumb {
+	.cover {
 		display: grid;
 		place-items: center;
-		width: 56px;
-		height: 56px;
+		aspect-ratio: 4 / 3;
+		margin-bottom: 0.3rem;
 		overflow: hidden;
 		background: var(--placeholder);
 		color: var(--text-subtle);
 	}
 
-	.thumb img {
+	.cover img {
 		width: 100%;
 		height: 100%;
 		object-fit: cover;
+		transition: transform 0.6s var(--ease);
 	}
 
-	.title {
-		display: block;
+	.recent a:hover img {
+		transform: scale(1.04);
+	}
+
+	.recent-title {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 		font-family: var(--font-serif);
-		font-size: 1.08rem;
-		text-decoration: none;
+		font-size: 0.95rem;
 	}
 
-	.title:hover {
-		text-decoration: underline;
-		text-underline-offset: 3px;
-	}
-
-	.slug {
-		font-size: 0.78rem;
+	.totals {
+		margin: 0;
+		padding: 1rem 1.5rem;
+		font-size: 0.8rem;
 		color: var(--text-subtle);
+		line-height: 1.6;
 	}
 
-	.num {
-		font-variant-numeric: tabular-nums;
-	}
-
-	.date {
-		white-space: nowrap;
+	.totals a {
 		color: var(--text-muted);
-		font-size: 0.82rem;
-	}
-
-	.badges {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.35rem;
-	}
-
-	.badge {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.3rem;
-		padding: 0.18rem 0.5rem;
-		border: 1px solid var(--border-strong);
-		font-size: 0.68rem;
-		letter-spacing: 0.04em;
-		color: var(--text-muted);
-		white-space: nowrap;
-	}
-
-	.badge.ok {
-		color: var(--success);
-		border-color: color-mix(in srgb, var(--success) 50%, transparent);
-	}
-
-	.badge.warn {
-		color: var(--warning);
-		border-color: color-mix(in srgb, var(--warning) 50%, transparent);
-	}
-
-	.small {
-		font-size: 0.78rem;
-	}
-
-	.actions-col {
-		width: 1%;
-	}
-
-	.row-actions {
-		display: flex;
-		gap: 0.25rem;
-	}
-
-	.icon-btn {
-		display: grid;
-		place-items: center;
-		width: 34px;
-		height: 34px;
-		border: 1px solid transparent;
-		background: none;
-		color: var(--text-muted);
-		cursor: pointer;
-		transition:
-			border-color 0.15s,
-			color 0.15s;
-	}
-
-	.icon-btn:hover {
-		border-color: var(--border-strong);
-		color: var(--text);
-	}
-
-	.icon-btn.danger:hover {
-		border-color: var(--danger);
-		color: var(--danger);
-	}
-
-	.empty {
-		display: grid;
-		justify-items: center;
-		gap: 0.85rem;
-		padding: 4rem 1rem;
-		text-align: center;
-		color: var(--text-muted);
-	}
-
-	.empty h3 {
-		font-size: 1.6rem;
-		color: var(--text);
-	}
-
-	.empty .btn {
-		margin-top: 0.75rem;
+		text-underline-offset: 3px;
 	}
 </style>

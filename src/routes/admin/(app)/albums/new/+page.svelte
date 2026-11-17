@@ -1,5 +1,5 @@
 <script lang="ts">
-	import ArrowLeft from '@lucide/svelte/icons/arrow-left';
+	import BackLink from '#lib/components/admin/BackLink.svelte';
 	import AlbumForm from '#lib/components/admin/AlbumForm.svelte';
 	import type { PageProps } from './$types';
 
@@ -11,7 +11,7 @@
 </svelte:head>
 
 <div class="page">
-	<a class="link" href="/admin"><ArrowLeft size={14} /> Dashboard</a>
+	<BackLink list="galleries" label="Galleries" />
 	<header>
 		<p class="eyebrow">Albums</p>
 		<h1>New album</h1>

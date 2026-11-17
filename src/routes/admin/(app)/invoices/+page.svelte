@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { rememberList } from '#lib/components/admin/list-memory.js';
+	import { chipHref, rememberList } from '#lib/components/admin/list-memory.js';
+	import SearchBox from '#lib/components/admin/SearchBox.svelte';
 	import { invalidate } from '$app/navigation';
 	import { page } from '$app/state';
 	import Plus from '@lucide/svelte/icons/plus';
@@ -14,14 +15,27 @@
 	import { api, feedback } from '#lib/components/admin/feedback.svelte.js';
 	import { formatMoney } from '#lib/money.js';
 	import type { InvoiceSummary } from '#lib/types.js';
-	import { formatShortDay, invoiceLabel, plural } from '#lib/utils.js';
+	import { formatShortDay, invoiceLabel, matchesSearch, plural } from '#lib/utils.js';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
 
-	// So the back links on a invoice's page return to this filter.
+	// So the back links on an invoice's page return to this filter and search.
 	$effect(() => rememberList('invoices', page.url.search));
 	let pending = $state<number | null>(null);
+	let query = $state(page.url.searchParams.get('q') ?? '');
+
+	const matching = $derived(
+		data.invoices.filter((i) =>
+			matchesSearch(
+				query,
+				i.number,
+				i.billToName,
+				formatMoney(i.total),
+				...i.jobs.map((job) => job.title)
+			)
+		)
+	);
 
 	type Filter = 'all' | 'drafts' | 'unpaid' | 'overdue' | 'paid';
 	const filters: { id: Filter; label: string; test: (i: InvoiceSummary) => boolean }[] = [
@@ -34,7 +48,8 @@
 	const filter = $derived(
 		filters.find((f) => f.id === page.url.searchParams.get('show')) ?? filters[0]
 	);
-	const shown = $derived(data.invoices.filter(filter.test));
+	const shown = $derived(matching.filter(filter.test));
+	const elsewhere = $derived(query.trim() ? matching.length - shown.length : 0);
 
 	async function togglePaid(invoice: InvoiceSummary) {
 		pending = invoice.id;
@@ -116,17 +131,22 @@
 
 <section class="ui-panel">
 	<div class="ui-panel-head">
+		<SearchBox
+			bind:value={query}
+			label="Search invoices"
+			placeholder="Search number, client, job"
+		/>
 		<nav class="ui-chips" aria-label="Filter invoices">
 			{#each filters as item (item.id)}
 				<a
 					class="ui-chip"
 					class:active={filter.id === item.id}
-					href={item.id === 'all' ? '/admin/invoices' : `?show=${item.id}`}
+					href={chipHref('/admin/invoices', item.id === 'all' ? null : item.id, query)}
 					data-sveltekit-noscroll
 					data-sveltekit-replacestate
 				>
 					{item.label}
-					<span class="ui-count">{data.invoices.filter(item.test).length}</span>
+					<span class="ui-count">{matching.filter(item.test).length}</span>
 				</a>
 			{/each}
 		</nav>
@@ -221,7 +241,11 @@
 	{:else if data.invoices.length}
 		<div class="ui-empty">
 			<h3>Nothing here</h3>
-			<p>No invoices match “{filter.label}”.</p>
+			{#if query.trim()}
+				<p>No {filter.id === 'all' ? '' : `“${filter.label}” `}invoices match “{query.trim()}”.</p>
+			{:else}
+				<p>No invoices match “{filter.label}”.</p>
+			{/if}
 		</div>
 	{:else}
 		<div class="ui-empty">
@@ -233,6 +257,14 @@
 				<a class="btn btn-solid" href="/admin/invoices/new"><Plus size={14} /> New Invoice</a>
 			</div>
 		</div>
+	{/if}
+	{#if elsewhere > 0}
+		<p class="ui-elsewhere">
+			{plural(elsewhere, 'more match', 'more matches')} in other filters.
+			<a href={chipHref('/admin/invoices', null, query)} data-sveltekit-noscroll
+				>Search all invoices</a
+			>
+		</p>
 	{/if}
 </section>
 
