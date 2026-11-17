@@ -232,6 +232,16 @@ const MIGRATIONS: Migration[] = [
 		SELECT ba.booking_id FROM booking_albums ba JOIN albums a ON a.id = ba.album_id
 		WHERE a.is_public = 1 AND EXISTS (SELECT 1 FROM photos p WHERE p.album_id = a.id)
 	);
+	`,
+	// Tokens that let apps such as the Lightroom plugin use the API. Only a hash is kept.
+	`
+	CREATE TABLE api_tokens (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		name TEXT NOT NULL,
+		token_hash TEXT NOT NULL UNIQUE,
+		created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+		last_used_at TEXT
+	);
 	`
 ];
 

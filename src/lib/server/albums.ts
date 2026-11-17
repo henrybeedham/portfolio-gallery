@@ -186,6 +186,15 @@ export function updateAlbum(id: number, input: AlbumInput) {
 	});
 }
 
+/** Changes just the title, as when a collection is renamed in Lightroom. The address stays. */
+export function renameAlbum(id: number, title: string) {
+	run(
+		`UPDATE albums SET title = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?`,
+		title,
+		id
+	);
+}
+
 /** How many albums have chosen each theme (albums following the site's theme aren't counted). */
 export function albumThemeCounts(): Map<string, number> {
 	const rows = all<{ theme: string; n: number }>(

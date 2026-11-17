@@ -32,6 +32,7 @@
 		['Invoice Settings', '/admin/invoices/settings'],
 		['Tax Year Export', '/admin/invoices/tax-year'],
 		['Analytics', '/admin/analytics'],
+		['Lightroom', '/admin/lightroom'],
 		['Backups', '/admin/backups'],
 		['Settings', '/admin/settings']
 	].map(([title, href]) => ({ kind: 'page', title, detail: '', href, keywords: '' }));

@@ -10,6 +10,7 @@
 	import Receipt from '@lucide/svelte/icons/receipt';
 	import ChartColumn from '@lucide/svelte/icons/chart-column';
 	import DatabaseBackup from '@lucide/svelte/icons/database-backup';
+	import Aperture from '@lucide/svelte/icons/aperture';
 	import LogOut from '@lucide/svelte/icons/log-out';
 	import Menu from '@lucide/svelte/icons/menu';
 	import X from '@lucide/svelte/icons/x';
@@ -38,6 +39,7 @@
 		{ href: '/admin/jobs', label: 'Jobs', icon: Briefcase, exact: false },
 		{ href: '/admin/invoices', label: 'Invoices', icon: Receipt, exact: false },
 		{ href: '/admin/analytics', label: 'Analytics', icon: ChartColumn, exact: false },
+		{ href: '/admin/lightroom', label: 'Lightroom', icon: Aperture, exact: false },
 		{ href: '/admin/backups', label: 'Backups', icon: DatabaseBackup, exact: false },
 		{ href: '/admin/settings', label: 'Settings', icon: Settings, exact: false }
 	];
