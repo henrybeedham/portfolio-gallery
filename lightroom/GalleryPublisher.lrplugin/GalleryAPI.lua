@@ -127,7 +127,7 @@ function API.uploadFile(settings, albumId, path, filename, replaceId)
 	local id = uploadId()
 	local offset, failures = 0, 0
 
-	local ok, result = pcall(function()
+	local ok, result = LrTasks.pcall(function()
 		while true do
 			file:seek('set', offset)
 			local chunk = file:read(CHUNK_SIZE) or ''
