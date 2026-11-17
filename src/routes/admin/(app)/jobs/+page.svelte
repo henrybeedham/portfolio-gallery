@@ -11,6 +11,7 @@
 	import Images from '@lucide/svelte/icons/images';
 	import FlagCheck from '#lib/components/admin/FlagCheck.svelte';
 	import StateBadge from '#lib/components/admin/StateBadge.svelte';
+	import StageIcon, { type Stage } from '#lib/components/admin/StageIcon.svelte';
 	import { api, feedback } from '#lib/components/admin/feedback.svelte.js';
 	import { formatMoney } from '#lib/money.js';
 	import type { Booking } from '#lib/types.js';
@@ -66,8 +67,6 @@
 	const counts = $derived(
 		Object.fromEntries(filters.map((f) => [f.id, data.bookings.filter(f.test).length]))
 	);
-
-	type Stage = 'overdue' | 'deliver' | 'invoice' | 'awaiting' | 'upcoming' | 'tentative' | 'done';
 
 	// In the order the key shows them.
 	const stageLabels: Record<Stage, string> = {
@@ -163,7 +162,9 @@
 		{#if shownStages.length > 1}
 			<ul class="key" aria-label="Stages">
 				{#each shownStages as stage (stage)}
-					<li class="stage-{stage}"><span class="swatch"></span>{stageLabels[stage]}</li>
+					<li class="stage-{stage}">
+						<span class="stage-icon"><StageIcon {stage} /></span>{stageLabels[stage]}
+					</li>
 				{/each}
 			</ul>
 		{/if}
@@ -186,13 +187,20 @@
 						{@const stage = stageOf(booking)}
 						<tr class:ui-faded={booking.status === 'cancelled'} class="stage-{stage ?? 'none'}">
 							<td class="date" title={stage ? stageLabels[stage] : undefined}>
-								{#if stage}<span class="visually-hidden">{stageLabels[stage]}:</span>{/if}
-								{#if when.day}
-									<span class="day">{when.day}</span>
-									{#if when.time}<span class="ui-sub">{when.time}</span>{/if}
-								{:else}
-									<span class="ui-sub">Date TBC</span>
-								{/if}
+								<div class="when">
+									{#if stage}
+										<span class="stage-icon" aria-hidden="true"><StageIcon {stage} /></span>
+										<span class="visually-hidden">{stageLabels[stage]}:</span>
+									{/if}
+									<div>
+										{#if when.day}
+											<span class="day">{when.day}</span>
+											{#if when.time}<span class="ui-sub">{when.time}</span>{/if}
+										{:else}
+											<span class="ui-sub">Date TBC</span>
+										{/if}
+									</div>
+								</div>
 							</td>
 							<td class="job">
 								<a class="ui-title" href="/admin/jobs/{booking.id}">{booking.title}</a>
@@ -304,36 +312,49 @@
 </section>
 
 <style>
-	/* Each stage's colour, used by the row's left stripe and the key. */
+	/* Each stage's colour (theme tokens, falling back to the semantic colours) for stripe and icon. */
 	.stage-overdue {
-		--stage: var(--danger);
+		--stage: var(--stage-overdue, var(--danger));
 	}
 	.stage-deliver {
-		--stage: var(--warning);
+		--stage: var(--stage-deliver, var(--warning));
 	}
 	.stage-invoice {
-		--stage: var(--highlight, var(--text));
+		--stage: var(--stage-invoice, var(--highlight, var(--text)));
 	}
 	.stage-awaiting {
-		--stage: color-mix(in srgb, var(--success) 45%, transparent);
+		--stage: var(--stage-awaiting, var(--text-muted));
 	}
 	.stage-upcoming,
 	.stage-tentative {
-		--stage: var(--border-strong);
+		--stage: var(--stage-upcoming, var(--border-strong));
 	}
 	.stage-done {
-		--stage: var(--success);
+		--stage: var(--stage-done, var(--success));
 	}
 
 	tr:not(.stage-none) .date {
-		box-shadow: inset 3px 0 0 var(--stage);
+		box-shadow: inset 4px 0 0 var(--stage);
 	}
 
 	/* Tentative jobs get a dashed stripe: not settled yet. */
 	tr.stage-tentative .date {
 		box-shadow: none;
 		background: repeating-linear-gradient(to bottom, var(--stage) 0 5px, transparent 5px 9px) left /
-			3px 100% no-repeat;
+			4px 100% no-repeat;
+	}
+
+	.when {
+		display: flex;
+		align-items: flex-start;
+		gap: 0.6rem;
+	}
+
+	.stage-icon {
+		display: inline-flex;
+		flex: none;
+		margin-top: 0.1rem;
+		color: var(--stage);
 	}
 
 	.key {
@@ -357,14 +378,8 @@
 		gap: 0.5rem;
 	}
 
-	.swatch {
-		width: 3px;
-		height: 0.9rem;
-		background: var(--stage);
-	}
-
-	.key .stage-tentative .swatch {
-		background: repeating-linear-gradient(to bottom, var(--stage) 0 4px, transparent 4px 6px);
+	.key .stage-icon {
+		margin-top: 0;
 	}
 
 	.date {

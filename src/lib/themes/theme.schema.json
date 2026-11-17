@@ -124,6 +124,30 @@
 				"chart-4": {
 					"$ref": "#/definitions/color",
 					"description": "Optional. Lightest step of the chart ramp."
+				},
+				"stage-overdue": {
+					"$ref": "#/definitions/color",
+					"description": "Optional. Jobs list stripe and icon: an invoice is overdue."
+				},
+				"stage-deliver": {
+					"$ref": "#/definitions/color",
+					"description": "Optional. Jobs list stripe and icon: shot but not delivered."
+				},
+				"stage-invoice": {
+					"$ref": "#/definitions/color",
+					"description": "Optional. Jobs list stripe and icon: delivered but not invoiced."
+				},
+				"stage-awaiting": {
+					"$ref": "#/definitions/color",
+					"description": "Optional. Jobs list stripe and icon: invoiced and awaiting payment."
+				},
+				"stage-upcoming": {
+					"$ref": "#/definitions/color",
+					"description": "Optional. Jobs list stripe and icon: not happened yet, and tentative jobs."
+				},
+				"stage-done": {
+					"$ref": "#/definitions/color",
+					"description": "Optional. Jobs list stripe and icon: delivered and paid."
 				}
 			},
 			"propertyNames": { "pattern": "^[a-z][a-z0-9-]*$" },

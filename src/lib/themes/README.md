@@ -54,20 +54,21 @@ also copy files there directly; they appear within a few seconds. Built-in theme
 
 ### Colours
 
-| Key                                        | Used for                                                                                                               |
-| ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
-| `bg`                                       | Page background (and the invoice page)                                                                                 |
-| `bg-elevated`                              | Cards, panels, inputs, the admin sidebar                                                                               |
-| `surface`, `surface-strong`                | Hover fills, active navigation; the invoice “Balance due” box                                                          |
-| `text`                                     | Primary text and the default ink                                                                                       |
-| `text-muted`, `text-subtle`                | Body copy and labels; hints and metadata                                                                               |
-| `border`, `border-strong`                  | Hairlines; hovered inputs and badges                                                                                   |
-| `overlay`, `header-bg`, `lightbox-bg`      | Scrims, the translucent header, the photo viewer                                                                       |
-| `danger`, `success`, `warning` (+ `-soft`) | Errors, confirmations, cautions                                                                                        |
-| `accent`, `accent-text`                    | Selected chips and accent buttons, and the text on them                                                                |
-| `placeholder`                              | Behind images while they load                                                                                          |
-| `highlight` _(optional)_                   | Replaces the ink for solid buttons, eyebrows, focus rings, the invoice title and chart colour (the green theme's gold) |
-| `chart-1` … `chart-4` _(optional)_         | Analytics chart colours. By default `chart-1` is the highlight (or ink) and the others are lighter steps of it         |
+| Key                                                                                                              | Used for                                                                                                                                 |
+| ---------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `bg`                                                                                                             | Page background (and the invoice page)                                                                                                   |
+| `bg-elevated`                                                                                                    | Cards, panels, inputs, the admin sidebar                                                                                                 |
+| `surface`, `surface-strong`                                                                                      | Hover fills, active navigation; the invoice “Balance due” box                                                                            |
+| `text`                                                                                                           | Primary text and the default ink                                                                                                         |
+| `text-muted`, `text-subtle`                                                                                      | Body copy and labels; hints and metadata                                                                                                 |
+| `border`, `border-strong`                                                                                        | Hairlines; hovered inputs and badges                                                                                                     |
+| `overlay`, `header-bg`, `lightbox-bg`                                                                            | Scrims, the translucent header, the photo viewer                                                                                         |
+| `danger`, `success`, `warning` (+ `-soft`)                                                                       | Errors, confirmations, cautions                                                                                                          |
+| `accent`, `accent-text`                                                                                          | Selected chips and accent buttons, and the text on them                                                                                  |
+| `placeholder`                                                                                                    | Behind images while they load                                                                                                            |
+| `highlight` _(optional)_                                                                                         | Replaces the ink for solid buttons, eyebrows, focus rings, the invoice title and chart colour (the green theme's gold)                   |
+| `chart-1` … `chart-4` _(optional)_                                                                               | Analytics chart colours. By default `chart-1` is the highlight (or ink) and the others are lighter steps of it                           |
+| `stage-overdue`, `stage-deliver`, `stage-invoice`, `stage-awaiting`, `stage-upcoming`, `stage-done` _(optional)_ | The jobs list's stage stripes and icons. Keep them distinct hues. They fall back to the danger, warning, ink, success and border colours |
 
 Colours can be any CSS colour (`#rrggbb`, `rgba(…)`, `hsl(…)`). PDF invoices understand hex and
 `rgb()`/`rgba()` only, so use those for `bg`, `text`, `text-muted`, `text-subtle`, `border`,
