@@ -197,6 +197,11 @@ background maintenance tasks (`jobs.ts`, `/admin/api/jobs`). The page route is s
 - **End times.** `ends_at` is a naive local `YYYY-MM-DDTHH:mm`, set only when the start has a time.
   An end earlier than the start means the next day. It drives the calendar event's length and the
   hours prefilled on a new invoice (`jobHours`).
+- **Delivered** is ticked automatically once a linked album is public and has photos
+  (`delivery.ts`, called when an album is linked, saved or gets a photo). It never unticks, so it
+  can still be set by hand. "Shot" isn't tracked: a job whose date has passed has been shot.
+- **Clashes** (`job-clash.ts`): jobs on the same day are mentioned on the job form, and jobs whose
+  times overlap are flagged there and on the jobs list.
 - **Invoice states.**
   - A **draft** (`draft = 1`) hasn't been sent. It holds the expected fee, counts as booked (or
     tentative, for a tentative job) in analytics, can't be marked paid, and isn't outstanding.

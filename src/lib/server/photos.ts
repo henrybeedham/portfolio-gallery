@@ -1,5 +1,6 @@
 import fsp from 'node:fs/promises';
 import { all, get, placeholders, run, transaction } from './db.js';
+import { deliverJobsForAlbum } from './delivery.js';
 import {
 	detectType,
 	extractMetadata,
@@ -199,6 +200,7 @@ export async function addPhoto(
 				details.duration
 			);
 			tagWithKeywords(albumId, result.lastInsertRowid, details.keywords);
+			deliverJobsForAlbum(albumId);
 			return result.lastInsertRowid;
 		});
 		const row = getPhoto(photoId)!;

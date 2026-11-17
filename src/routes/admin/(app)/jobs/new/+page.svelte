@@ -20,6 +20,7 @@
 		initial={data.initial}
 		addresses={data.addresses}
 		clients={data.clients}
+		others={data.others}
 		submitLabel="Create Job"
 		error={form?.error ?? null}
 		errorField={form?.field ?? null}

@@ -3,6 +3,7 @@ import { listBillingAddresses } from '#lib/server/billing.js';
 import { parseBookingForm } from '#lib/server/booking-form.js';
 import {
 	albumOptions,
+	clashCandidates,
 	clientSuggestions,
 	getBooking,
 	updateBooking
@@ -25,6 +26,7 @@ export const load: PageServerLoad = ({ params, locals, depends }) => {
 		booking,
 		addresses: listBillingAddresses(),
 		clients: clientSuggestions(),
+		others: clashCandidates(),
 		albums: albumOptions(),
 		invoices: listInvoices().map(({ id, number, billToName, total }) => ({
 			id,

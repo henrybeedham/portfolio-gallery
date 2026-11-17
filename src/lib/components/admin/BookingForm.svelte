@@ -18,12 +18,19 @@
 	import { enhance } from '$app/forms';
 	import Toggle from './Toggle.svelte';
 	import { feedback } from './feedback.svelte.js';
+	import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
+	import { clashesFor, type ClashJob } from '#lib/job-clash.js';
 	import type { BillingAddress, BookingStatus } from '#lib/types.js';
+	import { formatJobDate } from '#lib/utils.js';
 
 	interface Props {
 		initial: BookingFormValues;
 		addresses: BillingAddress[];
 		clients: { client: string; billingAddressId: number | null }[];
+		/** Other jobs, to warn about ones on the same day. */
+		others?: ClashJob[];
+		/** This job's id when editing, so it doesn't clash with itself. */
+		jobId?: number;
 		action?: string;
 		submitLabel?: string;
 		error?: string | null;
@@ -34,6 +41,8 @@
 		initial,
 		addresses,
 		clients,
+		others = [],
+		jobId,
 		action = '',
 		submitLabel = 'Save Job',
 		error = null,
@@ -52,6 +61,18 @@
 	let status = $state<BookingStatus>(start.status);
 	let delivered = $state(start.delivered);
 	let saving = $state(false);
+
+	const clashes = $derived(
+		clashesFor(
+			{
+				id: jobId,
+				startsAt: date ? (time ? `${date}T${time}` : date) : null,
+				endsAt: date && time && endTime ? `${date}T${endTime}` : null,
+				status
+			},
+			others
+		)
+	);
 
 	const selectedAddress = $derived(addresses.find((a) => a.id === billingAddressId));
 
@@ -144,6 +165,39 @@
 			An end time sets the length in your calendar and the hours on new invoices.
 			{#if time && endTime && endTime < time}This job finishes the next day.{/if}
 		</p>
+		{#if clashes.length}
+			{@const overlapping = clashes.filter((clash) => clash.overlap)}
+			{@const sameDay = clashes.filter((clash) => !clash.overlap)}
+			<div class="clashes" role="status">
+				{#if overlapping.length}
+					<p class="clash">
+						<TriangleAlert size={15} strokeWidth={1.5} />
+						<span>
+							Clashes with
+							{#each overlapping as clash, i (clash.job.id)}
+								{@const when = formatJobDate(clash.job.startsAt, clash.job.endsAt)}
+								{i ? (i === overlapping.length - 1 ? ' and ' : ', ') : ''}<a
+									href="/admin/jobs/{clash.job.id}"
+									target="_blank"
+									rel="noopener">{clash.job.title}</a
+								>{when.time ? ` (${when.time})` : ''}{/each}.
+						</span>
+					</p>
+				{/if}
+				{#if sameDay.length}
+					<p class="hint">
+						Also on this day:
+						{#each sameDay as clash, i (clash.job.id)}
+							{@const when = formatJobDate(clash.job.startsAt, clash.job.endsAt)}
+							{i ? ', ' : ''}<a href="/admin/jobs/{clash.job.id}" target="_blank" rel="noopener"
+								>{clash.job.title}</a
+							>{when.time ? ` at ${when.time}` : ''}{clash.job.status === 'tentative'
+								? ' (tentative)'
+								: ''}{/each}.
+					</p>
+				{/if}
+			</div>
+		{/if}
 		<div class="field">
 			<label for="location">Location <span class="ui-optional">optional</span></label>
 			<input
@@ -251,7 +305,7 @@
 			<Toggle
 				name="delivered"
 				label="Delivered"
-				description="Link the album below once it’s saved."
+				description="Ticks itself once a linked gallery is public and has photos in it."
 				bind:checked={delivered}
 			/>
 		</div>
@@ -272,6 +326,33 @@
 </form>
 
 <style>
+	.clashes {
+		display: grid;
+		gap: 0.5rem;
+		margin-top: -0.5rem;
+	}
+
+	.clash {
+		display: flex;
+		align-items: flex-start;
+		gap: 0.5rem;
+		padding: 0.7rem 0.85rem;
+		border: 1px solid color-mix(in srgb, var(--warning) 50%, transparent);
+		background: var(--warning-soft);
+		color: var(--warning);
+		font-size: 0.88rem;
+	}
+
+	.clash :global(svg) {
+		flex: none;
+		margin-top: 0.15rem;
+	}
+
+	.clashes a {
+		color: inherit;
+		text-underline-offset: 3px;
+	}
+
 	.form {
 		display: grid;
 		gap: 1.5rem;

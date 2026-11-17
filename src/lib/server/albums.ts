@@ -1,4 +1,5 @@
 import { all, get, run, transaction } from './db.js';
+import { deliverJobsForAlbum } from './delivery.js';
 import type { AlbumCardData, ImageRef, Layout, SortOrder } from '#lib/types.js';
 import { isExpired } from '#lib/utils.js';
 
@@ -181,6 +182,7 @@ export function updateAlbum(id: number, input: AlbumInput) {
 			input.sortOrder,
 			id
 		);
+		deliverJobsForAlbum(id);
 	});
 }
 
