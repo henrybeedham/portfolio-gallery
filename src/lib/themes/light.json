@@ -26,6 +26,12 @@
 		"warning-soft": "rgba(143, 106, 29, 0.1)",
 		"accent": "#26231f",
 		"accent-text": "#ffffff",
-		"placeholder": "#e8e0d3"
+		"placeholder": "#e8e0d3",
+		"stage-overdue": "#c4372a",
+		"stage-deliver": "#dd7a12",
+		"stage-invoice": "#6b4fc8",
+		"stage-awaiting": "#2479b8",
+		"stage-upcoming": "#9b9284",
+		"stage-done": "#2e8b4e"
 	}
 }

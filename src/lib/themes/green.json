@@ -27,6 +27,12 @@
 		"highlight": "#e2c068",
 		"accent": "#e2c068",
 		"accent-text": "#14261c",
-		"placeholder": "#1e3428"
+		"placeholder": "#1e3428",
+		"stage-overdue": "#f4735e",
+		"stage-deliver": "#f7953f",
+		"stage-invoice": "#b9a0f7",
+		"stage-awaiting": "#62c3f0",
+		"stage-upcoming": "#7d9174",
+		"stage-done": "#82e090"
 	}
 }
