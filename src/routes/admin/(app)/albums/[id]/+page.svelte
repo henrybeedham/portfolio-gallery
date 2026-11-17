@@ -1,6 +1,7 @@
 <script lang="ts">
+	import { listUrl } from '#lib/components/admin/list-memory.js';
 	import { goto, invalidate } from '$app/navigation';
-	import ArrowLeft from '@lucide/svelte/icons/arrow-left';
+	import BackLink from '#lib/components/admin/BackLink.svelte';
 	import Copy from '@lucide/svelte/icons/copy';
 	import ExternalLink from '@lucide/svelte/icons/external-link';
 	import Eye from '@lucide/svelte/icons/eye';
@@ -67,7 +68,7 @@
 		try {
 			await api(`/admin/api/albums/${album.id}`, undefined, 'DELETE');
 			feedback.toast(`Deleted “${album.title}”`);
-			await goto('/admin');
+			await goto(listUrl('galleries'));
 		} catch (error) {
 			feedback.toast((error as Error).message, 'error');
 		}
@@ -79,7 +80,7 @@
 </svelte:head>
 
 {#key album.id}
-	<a class="link" href="/admin"><ArrowLeft size={14} /> Dashboard</a>
+	<BackLink list="galleries" label="Galleries" />
 
 	<header class="head">
 		<div class="title-block">

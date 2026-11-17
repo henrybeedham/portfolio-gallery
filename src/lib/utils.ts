@@ -208,3 +208,16 @@ export function formatJobDate(
 	if (time && endsAt) return { day, time: `${time}–${endsAt.slice(11, 16)}` };
 	return { day, time: time === '00:00' ? '' : time };
 }
+
+/** Lower-case and without accents, so “cafe” finds “Café”. */
+function foldForSearch(text: string): string {
+	return text.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+}
+
+/** True when every word of `query` appears somewhere in `fields`. An empty query matches all. */
+export function matchesSearch(query: string, ...fields: (string | null | undefined)[]): boolean {
+	const words = foldForSearch(query).split(/\s+/).filter(Boolean);
+	if (!words.length) return true;
+	const haystack = foldForSearch(fields.filter(Boolean).join(' '));
+	return words.every((word) => haystack.includes(word));
+}

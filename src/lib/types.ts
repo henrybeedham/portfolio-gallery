@@ -288,3 +288,13 @@ export interface InvoiceSummary {
 	imported: boolean;
 	style: string;
 }
+
+/** One thing the admin ⌘K search can find. */
+export interface SearchEntry {
+	kind: 'gallery' | 'job' | 'invoice' | 'client';
+	title: string;
+	detail: string;
+	href: string;
+	/** Extra text to match on that isn't shown. */
+	keywords: string;
+}

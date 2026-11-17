@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { rememberList } from '#lib/components/admin/list-memory.js';
+	import { chipHref, rememberList } from '#lib/components/admin/list-memory.js';
+	import SearchBox from '#lib/components/admin/SearchBox.svelte';
 	import { invalidate } from '$app/navigation';
 	import { page } from '$app/state';
 	import Plus from '@lucide/svelte/icons/plus';
@@ -11,18 +12,35 @@
 	import Images from '@lucide/svelte/icons/images';
 	import FlagCheck from '#lib/components/admin/FlagCheck.svelte';
 	import StateBadge from '#lib/components/admin/StateBadge.svelte';
-	import StageIcon, { type Stage } from '#lib/components/admin/StageIcon.svelte';
+	import StageIcon from '#lib/components/admin/StageIcon.svelte';
+	import { stageLabels, stageOf, type Stage } from '#lib/job-stage.js';
 	import { api, feedback } from '#lib/components/admin/feedback.svelte.js';
 	import { formatMoney } from '#lib/money.js';
 	import type { Booking } from '#lib/types.js';
-	import { formatJobDate, invoiceLabel } from '#lib/utils.js';
+	import { formatJobDate, invoiceLabel, matchesSearch, plural } from '#lib/utils.js';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
 
-	// So the back links on a job's page return to this filter.
+	// So the back links on a job's page return to this filter and search.
 	$effect(() => rememberList('jobs', page.url.search));
 	let pending = $state<string | null>(null);
+	let query = $state(page.url.searchParams.get('q') ?? '');
+
+	const matching = $derived(
+		data.bookings.filter((b) =>
+			matchesSearch(
+				query,
+				b.title,
+				b.client,
+				b.location,
+				b.billingLabel,
+				b.notes,
+				...b.invoices.map((invoice) => invoice.number),
+				...b.albums.map((album) => album.title)
+			)
+		)
+	);
 
 	type Filter = 'active' | 'upcoming' | 'deliver' | 'invoice' | 'unpaid' | 'all';
 
@@ -59,37 +77,17 @@
 	);
 	// Date order, earliest first. “All” runs newest first so years of history don’t bury this term.
 	const shown = $derived.by(() => {
-		const list = data.bookings.filter(filter.test);
+		const list = matching.filter(filter.test);
 		if (filter.id !== 'all') return list;
 		const dated = list.filter((b) => b.startsAt).reverse();
 		return [...list.filter((b) => !b.startsAt), ...dated];
 	});
 	const counts = $derived(
-		Object.fromEntries(filters.map((f) => [f.id, data.bookings.filter(f.test).length]))
+		Object.fromEntries(filters.map((f) => [f.id, matching.filter(f.test).length]))
 	);
 
-	// In the order the key shows them.
-	const stageLabels: Record<Stage, string> = {
-		overdue: 'Overdue',
-		deliver: 'To deliver',
-		invoice: 'To invoice',
-		awaiting: 'Awaiting payment',
-		upcoming: 'Upcoming',
-		tentative: 'Tentative',
-		done: 'Done'
-	};
-
-	/** Where a job is in the process, most pressing first. Cancelled jobs have no stage. */
-	function stageOf(b: Booking): Stage | null {
-		if (b.status === 'cancelled') return null;
-		if (b.payment === 'overdue') return 'overdue';
-		if (b.status === 'tentative') return 'tentative';
-		if (b.upcoming) return 'upcoming';
-		if (!b.delivered) return 'deliver';
-		if (b.payment === 'not-invoiced' || b.payment === 'draft') return 'invoice';
-		if (b.payment !== 'paid') return 'awaiting';
-		return 'done';
-	}
+	// Matches the current chip hides, so a search on “Active” can still find an old job.
+	const elsewhere = $derived(query.trim() ? matching.length - shown.length : 0);
 
 	const shownStages = $derived(
 		(Object.keys(stageLabels) as Stage[]).filter((stage) => shown.some((b) => stageOf(b) === stage))
@@ -143,12 +141,17 @@
 
 <section class="ui-panel">
 	<div class="ui-panel-head">
+		<SearchBox
+			bind:value={query}
+			label="Search jobs"
+			placeholder="Search jobs, clients, invoices"
+		/>
 		<nav class="ui-chips" aria-label="Filter jobs">
 			{#each filters as item (item.id)}
 				<a
 					class="ui-chip"
 					class:active={filter.id === item.id}
-					href={item.id === 'active' ? '/admin/jobs' : `?show=${item.id}`}
+					href={chipHref('/admin/jobs', item.id === 'active' ? null : item.id, query)}
 					data-sveltekit-noscroll
 					data-sveltekit-replacestate
 				>
@@ -296,7 +299,11 @@
 	{:else if data.bookings.length}
 		<div class="ui-empty">
 			<h3>Nothing here</h3>
-			<p>No jobs match “{filter.label}”.</p>
+			{#if query.trim()}
+				<p>No {filter.id === 'all' ? '' : `“${filter.label}” `}jobs match “{query.trim()}”.</p>
+			{:else}
+				<p>No jobs match “{filter.label}”.</p>
+			{/if}
 		</div>
 	{:else}
 		<div class="ui-empty">
@@ -309,30 +316,15 @@
 			</div>
 		</div>
 	{/if}
+	{#if elsewhere > 0}
+		<p class="ui-elsewhere">
+			{plural(elsewhere, 'more match', 'more matches')} in other filters.
+			<a href={chipHref('/admin/jobs', 'all', query)} data-sveltekit-noscroll>Search all jobs</a>
+		</p>
+	{/if}
 </section>
 
 <style>
-	/* Each stage's colour (theme tokens, falling back to the semantic colours) for stripe and icon. */
-	.stage-overdue {
-		--stage: var(--stage-overdue, var(--danger));
-	}
-	.stage-deliver {
-		--stage: var(--stage-deliver, var(--warning));
-	}
-	.stage-invoice {
-		--stage: var(--stage-invoice, var(--highlight, var(--text)));
-	}
-	.stage-awaiting {
-		--stage: var(--stage-awaiting, var(--text-muted));
-	}
-	.stage-upcoming,
-	.stage-tentative {
-		--stage: var(--stage-upcoming, var(--border-strong));
-	}
-	.stage-done {
-		--stage: var(--stage-done, var(--success));
-	}
-
 	tr:not(.stage-none) .date {
 		box-shadow: inset 4px 0 0 var(--stage);
 	}
@@ -348,13 +340,6 @@
 		display: flex;
 		align-items: flex-start;
 		gap: 0.6rem;
-	}
-
-	.stage-icon {
-		display: inline-flex;
-		flex: none;
-		margin-top: 0.1rem;
-		color: var(--stage);
 	}
 
 	.key {

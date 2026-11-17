@@ -1,9 +1,5 @@
-<script lang="ts" module>
-	export type Stage =
-		'overdue' | 'deliver' | 'invoice' | 'awaiting' | 'upcoming' | 'tentative' | 'done';
-</script>
-
 <script lang="ts">
+	import type { Stage } from '#lib/job-stage.js';
 	import CircleAlert from '@lucide/svelte/icons/circle-alert';
 	import ImageUp from '@lucide/svelte/icons/image-up';
 	import Receipt from '@lucide/svelte/icons/receipt';

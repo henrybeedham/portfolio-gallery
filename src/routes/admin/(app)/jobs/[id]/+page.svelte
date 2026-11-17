@@ -10,6 +10,7 @@
 	import Images from '@lucide/svelte/icons/images';
 	import BookingForm from '#lib/components/admin/BookingForm.svelte';
 	import StateBadge from '#lib/components/admin/StateBadge.svelte';
+	import SearchSelect from '#lib/components/admin/SearchSelect.svelte';
 	import { api, feedback } from '#lib/components/admin/feedback.svelte.js';
 	import { formatMoney, moneyInput, parseMoney } from '#lib/money.js';
 	import { formatJobDate, formatShortDay, invoiceLabel, todayIso } from '#lib/utils.js';
@@ -25,8 +26,6 @@
 	const unlinkedInvoices = $derived(
 		data.invoices.filter((option) => !booking.invoices.some((linked) => linked.id === option.id))
 	);
-	let albumToLink = $state('');
-	let invoiceToLink = $state('');
 	let busy = $state(false);
 
 	function album(action: 'link-album' | 'unlink-album', albumId: number) {
@@ -45,8 +44,6 @@
 		try {
 			await api(`/admin/api/bookings/${booking.id}`, body);
 			await invalidate('admin:booking');
-			albumToLink = '';
-			invoiceToLink = '';
 			feedback.toast(message);
 		} catch (error) {
 			feedback.toast((error as Error).message, 'error');
@@ -233,21 +230,17 @@
 				{/if}
 				{#if unlinkedInvoices.length}
 					<div class="link-row">
-						<select class="select" bind:value={invoiceToLink} aria-label="Invoice to link">
-							<option value="">Link an existing invoice…</option>
-							{#each unlinkedInvoices as option (option.id)}
-								<option value={String(option.id)}>
-									{invoiceLabel(option.number)} — {option.billToName || 'No client'} — {formatMoney(
-										option.total
-									)}
-								</option>
-							{/each}
-						</select>
-						<button
-							class="btn btn-sm btn-quiet"
-							disabled={!invoiceToLink || busy}
-							onclick={() => linkedInvoice('link-invoice', Number(invoiceToLink))}>Link</button
-						>
+						<SearchSelect
+							label="Link an existing invoice"
+							placeholder="Link an existing invoice…"
+							disabled={busy}
+							options={unlinkedInvoices.map((option) => ({
+								value: String(option.id),
+								label: `${invoiceLabel(option.number)} — ${option.billToName || 'No client'}`,
+								detail: formatMoney(option.total)
+							}))}
+							onselect={(id) => linkedInvoice('link-invoice', Number(id))}
+						/>
 					</div>
 				{/if}
 				<div class="elsewhere">
@@ -342,17 +335,17 @@
 				{/if}
 				{#if unlinked.length}
 					<div class="link-row">
-						<select class="select" bind:value={albumToLink} aria-label="Album to link">
-							<option value="">Link an existing album…</option>
-							{#each unlinked as option (option.id)}
-								<option value={String(option.id)}>{option.title}</option>
-							{/each}
-						</select>
-						<button
-							class="btn btn-sm btn-quiet"
-							disabled={!albumToLink || busy}
-							onclick={() => album('link-album', Number(albumToLink))}>Link</button
-						>
+						<SearchSelect
+							label="Link an existing album"
+							placeholder="Link an existing album…"
+							disabled={busy}
+							options={unlinked.map((option) => ({
+								value: String(option.id),
+								label: option.title,
+								detail: `/${option.slug}`
+							}))}
+							onselect={(id) => album('link-album', Number(id))}
+						/>
 					</div>
 				{/if}
 			</section>
@@ -449,7 +442,7 @@
 		border-top: 1px solid var(--border);
 	}
 
-	.link-row .select {
+	.link-row :global(.input) {
 		min-height: 36px;
 		padding-block: 0.4rem;
 		font-size: 0.88rem;
