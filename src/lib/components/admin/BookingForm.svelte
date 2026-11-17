@@ -8,7 +8,6 @@
 		time: string;
 		endTime: string;
 		status: import('#lib/types.js').BookingStatus;
-		shot: boolean;
 		delivered: boolean;
 		notes: string;
 	}
@@ -51,7 +50,6 @@
 	let time = $state(start.time);
 	let endTime = $state(start.endTime);
 	let status = $state<BookingStatus>(start.status);
-	let shot = $state(start.shot);
 	let delivered = $state(start.delivered);
 	let saving = $state(false);
 
@@ -250,7 +248,6 @@
 			</div>
 		</div>
 		<div class="toggles">
-			<Toggle name="shot" label="Shot" bind:checked={shot} />
 			<Toggle
 				name="delivered"
 				label="Delivered"

@@ -136,7 +136,6 @@
 			<div class="ui-badges badges">
 				{#if booking.status !== 'confirmed'}<StateBadge state={booking.status} />{/if}
 				<StateBadge state={booking.payment} />
-				{#if booking.shot}<span class="ui-badge ok">Shot</span>{/if}
 				{#if booking.delivered}<span class="ui-badge ok">Delivered</span>{/if}
 				{#if booking.invoices.length}
 					<span class="subtle">{formatMoney(booking.total)}</span>

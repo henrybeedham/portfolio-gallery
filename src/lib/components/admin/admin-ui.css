@@ -363,7 +363,7 @@ a.ui-badge:hover {
 	gap: 0.25rem;
 }
 
-/* A square check used for the shot / delivered / paid columns. */
+/* A square check used for the delivered / paid columns. */
 .ui-check {
 	display: inline-grid;
 	place-items: center;

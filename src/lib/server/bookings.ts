@@ -25,7 +25,6 @@ interface BookingRow {
 	starts_at: string | null;
 	ends_at: string | null;
 	status: string;
-	shot: number;
 	delivered: number;
 	notes: string;
 }
@@ -167,7 +166,6 @@ function hydrate(rows: BookingRow[]): Booking[] {
 			startsAt: row.starts_at,
 			endsAt: row.ends_at,
 			status,
-			shot: !!row.shot,
 			delivered: !!row.delivered,
 			notes: row.notes,
 			total: own.reduce((sum, invoice) => sum + invoice.share, 0),
@@ -179,16 +177,11 @@ function hydrate(rows: BookingRow[]): Booking[] {
 	});
 }
 
-/** Upcoming jobs first (soonest first, undated last), then past jobs (most recent first). */
+/** In date order, earliest first; undated jobs last. */
 export function listBookings(): Booking[] {
-	const bookings = hydrate(all<BookingRow>(SELECT));
-	const upcoming = bookings
-		.filter((booking) => booking.upcoming)
-		.sort((a, b) => (a.startsAt ?? '9999').localeCompare(b.startsAt ?? '9999'));
-	const past = bookings
-		.filter((booking) => !booking.upcoming)
-		.sort((a, b) => (b.startsAt ?? '').localeCompare(a.startsAt ?? ''));
-	return [...upcoming, ...past];
+	return hydrate(all<BookingRow>(SELECT)).sort((a, b) =>
+		(a.startsAt ?? '9999').localeCompare(b.startsAt ?? '9999')
+	);
 }
 
 export function getBooking(id: number): Booking | undefined {
@@ -212,7 +205,6 @@ export interface BookingInput {
 	startsAt: string | null;
 	endsAt: string | null;
 	status: BookingStatus;
-	shot: boolean;
 	delivered: boolean;
 	notes: string;
 }
@@ -220,8 +212,8 @@ export interface BookingInput {
 export function createBooking(input: BookingInput): number {
 	return run(
 		`INSERT INTO bookings (title, client, billing_address_id, location, starts_at, ends_at, status,
-			shot, delivered, notes)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			delivered, notes)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		input.title,
 		input.client,
 		input.billingAddressId,
@@ -229,7 +221,6 @@ export function createBooking(input: BookingInput): number {
 		input.startsAt,
 		input.endsAt,
 		input.status,
-		input.shot,
 		input.delivered,
 		input.notes
 	).lastInsertRowid;
@@ -238,7 +229,7 @@ export function createBooking(input: BookingInput): number {
 export function updateBooking(id: number, input: BookingInput) {
 	run(
 		`UPDATE bookings SET title = ?, client = ?, billing_address_id = ?, location = ?, starts_at = ?,
-			ends_at = ?, status = ?, shot = ?, delivered = ?, notes = ?,
+			ends_at = ?, status = ?, delivered = ?, notes = ?,
 			updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
 		 WHERE id = ?`,
 		input.title,
@@ -248,7 +239,6 @@ export function updateBooking(id: number, input: BookingInput) {
 		input.startsAt,
 		input.endsAt,
 		input.status,
-		input.shot,
 		input.delivered,
 		input.notes,
 		id
@@ -263,10 +253,10 @@ export function setBookingNotes(id: number, notes: string) {
 	);
 }
 
-export type BookingFlag = 'shot' | 'delivered';
+export type BookingFlag = 'delivered';
 
 export function setBookingFlag(id: number, flag: BookingFlag, value: boolean) {
-	const column = { shot: 'shot', delivered: 'delivered' }[flag];
+	const column = { delivered: 'delivered' }[flag];
 	run(
 		`UPDATE bookings SET ${column} = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?`,
 		value,
@@ -308,9 +298,12 @@ export function albumOptions(): AlbumRef[] {
 	return all<AlbumRef>('SELECT id, title, slug FROM albums ORDER BY created_at DESC, id DESC');
 }
 
-/** Jobs for the invoice editor's picker, with what's needed to fill in an invoice. */
+/** Jobs for the invoice editor's picker: upcoming first, then past jobs, most recent first. */
 export function bookingOptions() {
-	return listBookings().map((booking) => ({
+	const bookings = listBookings();
+	const upcoming = bookings.filter((booking) => booking.upcoming);
+	const past = bookings.filter((booking) => !booking.upcoming).reverse();
+	return [...upcoming, ...past].map((booking) => ({
 		id: booking.id,
 		title: booking.title,
 		client: booking.client,
@@ -349,8 +342,7 @@ export function bookingStats(bookings = listBookings()) {
 			.total;
 	return {
 		upcoming: active.filter((booking) => booking.upcoming).length,
-		toDeliver: active.filter((booking) => !booking.delivered && (booking.shot || !booking.upcoming))
-			.length,
+		toDeliver: active.filter((booking) => !booking.delivered && !booking.upcoming).length,
 		// Nothing sent yet: no invoices, or only drafts.
 		toInvoice: active.filter(
 			(booking) => booking.payment === 'not-invoiced' || booking.payment === 'draft'

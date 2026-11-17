@@ -41,7 +41,6 @@ export const load: PageServerLoad = ({ params, locals, depends }) => {
 			time: booking.startsAt?.slice(11, 16) ?? '',
 			endTime: booking.endsAt?.slice(11, 16) ?? '',
 			status: booking.status,
-			shot: booking.shot,
 			delivered: booking.delivered,
 			notes: booking.notes
 		}

@@ -77,7 +77,7 @@
 	<p class="muted intro">
 		In Google Sheets, select your jobs <strong>including the header row</strong>, copy, and paste
 		them below. Columns are matched by name: Job description, Invoice #, Location, Mine, Date and
-		time, Hours, Rate, Paid, Shot and Delivered. “Mine” becomes the booking status (yes → confirmed,
+		time, Hours, Rate, Paid and Delivered. “Mine” becomes the booking status (yes → confirmed,
 		maybe → tentative, no → cancelled).
 	</p>
 	<p class="muted intro">
@@ -191,7 +191,6 @@
 									{#if row.duplicate}<span class="ui-badge warn">Already here</span>{/if}
 									{#if row.status !== 'confirmed'}<StateBadge state={row.status} />{/if}
 									{#if row.paid}<span class="ui-badge ok">Paid</span>{/if}
-									{#if row.shot}<span class="ui-badge ok">Shot</span>{/if}
 									{#if row.delivered}<span class="ui-badge ok">Delivered</span>{/if}
 								</div>
 							</td>
