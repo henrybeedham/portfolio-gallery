@@ -1,0 +1,720 @@
+/*
+ * “Index” admin: dense and data-forward. Panels become ruled sections numbered 01, 02, 03 …,
+ * stat strips are flat and ruled, and every figure is set in tabular mono. These rules restyle
+ * the shared admin pages and components; all are scoped to :root[data-design='index'].
+ */
+
+:root[data-design='index'] {
+	--admin-brand-h: 48px;
+	--admin-tabs-h: 40px;
+	/* Height of the sticky top bar, for anything else that sticks below it. */
+	--admin-top: calc(var(--admin-brand-h) + var(--admin-tabs-h) + 2px);
+}
+
+/* ================================================================== shell */
+/* AdminShell.svelte draws the bar; things that stick to the top of a page sit below it. */
+
+:root[data-design='index'] .admin :is(.aside, .preview) {
+	top: calc(var(--admin-top) + 1rem);
+}
+
+:root[data-design='index'] .admin .toolbar {
+	top: var(--admin-top);
+}
+
+/* ============================================================ page heads */
+
+:root[data-design='index'] .ui-head {
+	align-items: end;
+	gap: 1rem 2rem;
+	margin-bottom: clamp(1.5rem, 3vw, 2.5rem);
+	padding-top: 0.6rem;
+	border-top: var(--rule);
+}
+
+:root[data-design='index'] .ui-head h1,
+:root[data-design='index'] .admin .content > header h1 {
+	margin-top: 0.6rem;
+	font-size: clamp(2.4rem, 6vw, 5rem);
+	font-weight: 650;
+	line-height: 0.9;
+	letter-spacing: -0.05em;
+	margin-left: -0.03em;
+}
+
+/* ============================================================ stat strips */
+/* Flat cells ruled by 1px gaps; the strip opens with the strong rule. */
+
+:root[data-design='index'] .ui-stats {
+	grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
+	gap: 1px;
+	background: var(--border);
+	border: 0;
+	border-top: var(--rule);
+	border-bottom: 1px solid var(--border);
+	margin-bottom: clamp(2rem, 4vw, 3rem);
+}
+
+:root[data-design='index'] .ui-stat {
+	gap: 0.5rem;
+	padding: 0.75rem 1rem 1rem;
+	background: var(--bg);
+	transition:
+		background-color var(--fast) var(--ease),
+		color var(--fast) var(--ease);
+}
+
+:root[data-design='index'] a.ui-stat:hover {
+	background: var(--ink);
+	color: var(--bg);
+}
+
+:root[data-design='index'] a.ui-stat:hover :is(.eyebrow, .ui-note, strong) {
+	color: inherit;
+}
+
+:root[data-design='index'] .ui-stat strong {
+	font-family: var(--font-mono);
+	font-size: clamp(1.4rem, 2.4vw, 2.1rem);
+	font-weight: 500;
+	letter-spacing: -0.04em;
+	font-variant-numeric: tabular-nums;
+	overflow-wrap: anywhere;
+}
+
+:root[data-design='index'] .ui-stat .ui-note {
+	font-family: var(--font-mono);
+	font-size: 0.7rem;
+}
+
+/* ======================================================== panels & cards */
+/* No boxes: a strong rule opens each section, numbered automatically. */
+
+:root[data-design='index'] :is(.ui-panel, .ui-card) {
+	border: 0;
+	border-top: var(--rule);
+	background: none;
+}
+
+:root[data-design='index'] .ui-panel + .ui-panel {
+	margin-top: clamp(2rem, 4vw, 3rem);
+}
+
+:root[data-design='index'] .ui-panel-head {
+	align-items: baseline;
+	padding: 0.6rem 0 0.9rem;
+	border-bottom: 1px solid var(--border);
+}
+
+:root[data-design='index'] :is(.ui-panel-head, .ui-card-head) h2 {
+	display: flex;
+	align-items: baseline;
+	gap: 0.85rem;
+	font-size: clamp(1.35rem, 2.2vw, 1.75rem);
+	font-weight: 600;
+	letter-spacing: -0.035em;
+}
+
+:root[data-design='index'] :is(.ui-panel-head, .ui-card-head) h2::before {
+	counter-increment: section;
+	content: counter(section, decimal-leading-zero);
+	flex: none;
+	font-family: var(--font-mono);
+	font-size: 0.72rem;
+	font-weight: 450;
+	letter-spacing: 0;
+	color: var(--highlight, var(--text-muted));
+}
+
+:root[data-design='index'] .ui-panel-body {
+	padding: 1rem 0 1.25rem;
+}
+
+:root[data-design='index'] .ui-card {
+	padding: 0.6rem 0 clamp(1.5rem, 3vw, 2.25rem);
+	gap: 1.25rem;
+}
+
+:root[data-design='index'] .ui-card-head {
+	padding-bottom: 0.9rem;
+}
+
+:root[data-design='index'] .ui-elsewhere {
+	padding: 0.75rem 0;
+	font-family: var(--font-mono);
+	font-size: 0.75rem;
+}
+
+:root[data-design='index'] .ui-optional {
+	font-family: var(--font-mono);
+}
+
+:root[data-design='index'] .ui-money-input::before {
+	font-family: var(--font-mono);
+}
+
+/* ================================================================= chips */
+
+:root[data-design='index'] .ui-chips {
+	gap: 0;
+}
+
+:root[data-design='index'] .ui-chip {
+	min-height: 32px;
+	margin-right: -1px;
+	padding: 0.3rem 0.7rem;
+	font-family: var(--font-mono);
+	font-size: 0.68rem;
+	letter-spacing: 0.02em;
+}
+
+:root[data-design='index'] .ui-chip:hover {
+	position: relative;
+	z-index: 1;
+}
+
+:root[data-design='index'] .ui-chip.active {
+	position: relative;
+	z-index: 2;
+}
+
+:root[data-design='index'] .ui-chip .ui-count {
+	opacity: 0.6;
+}
+
+/* ================================================================ tables */
+
+:root[data-design='index'] .ui-table {
+	font-size: 0.875rem;
+}
+
+:root[data-design='index'] .ui-table th {
+	padding: 0.55rem 0.75rem;
+	border-bottom: var(--rule);
+	font-family: var(--font-mono);
+	font-size: 0.66rem;
+	font-weight: 450;
+	letter-spacing: 0.02em;
+	color: var(--text-subtle);
+}
+
+:root[data-design='index'] .ui-table td {
+	padding: 0.6rem 0.75rem;
+}
+
+:root[data-design='index'] .ui-table :is(th, td):first-child {
+	padding-left: 0;
+}
+
+:root[data-design='index'] .ui-table :is(th, td):last-child {
+	padding-right: 0;
+}
+
+:root[data-design='index'] .ui-table tbody tr:hover {
+	background: color-mix(in srgb, var(--surface) 70%, transparent);
+}
+
+:root[data-design='index'] .ui-table .ui-num {
+	font-family: var(--font-mono);
+	font-size: 0.82rem;
+	font-variant-numeric: tabular-nums;
+	letter-spacing: -0.01em;
+}
+
+:root[data-design='index'] .ui-title {
+	font-family: var(--font-sans);
+	font-size: 1rem;
+	font-weight: 550;
+	letter-spacing: -0.015em;
+}
+
+:root[data-design='index'] .ui-sub {
+	font-family: var(--font-mono);
+	font-size: 0.72rem;
+	letter-spacing: 0;
+}
+
+/* ================================================================ badges */
+
+:root[data-design='index'] .ui-badge {
+	padding: 0.1rem 0.4rem;
+	font-family: var(--font-mono);
+	font-size: 0.66rem;
+	letter-spacing: 0.02em;
+	text-transform: uppercase;
+}
+
+:root[data-design='index'] .ui-badge.ok {
+	background: var(--success-soft);
+}
+
+:root[data-design='index'] .ui-badge.warn {
+	background: var(--warning-soft);
+}
+
+:root[data-design='index'] .ui-badge.danger {
+	background: var(--danger-soft);
+}
+
+/* =============================================================== buttons */
+
+:root[data-design='index'] .ui-icon-btn {
+	transition:
+		background-color var(--fast) var(--ease),
+		color var(--fast) var(--ease),
+		border-color var(--fast) var(--ease);
+}
+
+:root[data-design='index'] .ui-icon-btn:hover:not(:disabled) {
+	background: var(--ink);
+	border-color: var(--ink);
+	color: var(--bg);
+}
+
+:root[data-design='index'] .ui-icon-btn.danger:hover:not(:disabled) {
+	background: var(--danger);
+	border-color: var(--danger);
+	color: var(--bg);
+}
+
+:root[data-design='index'] .ui-check.on {
+	background: var(--ink);
+	border-color: var(--ink);
+}
+
+:root[data-design='index'] .ui-empty {
+	justify-items: start;
+	padding: 2.5rem 0;
+	text-align: left;
+}
+
+:root[data-design='index'] .ui-empty h3 {
+	font-size: clamp(1.4rem, 2.5vw, 2rem);
+	letter-spacing: -0.035em;
+}
+
+/* ================================================================ charts */
+
+:root[data-design='index'] .viz text {
+	font-family: var(--font-mono);
+	font-size: 10px;
+}
+
+:root[data-design='index'] .viz .swatch {
+	border-radius: 0;
+}
+
+:root[data-design='index'] .viz .line-key {
+	border-radius: 0;
+}
+
+:root[data-design='index'] .viz .bar {
+	border-radius: 0;
+	height: 12px;
+}
+
+:root[data-design='index'] .viz .line {
+	stroke-width: 1.5;
+	stroke-linejoin: miter;
+	stroke-linecap: square;
+}
+
+:root[data-design='index'] .viz .legend,
+:root[data-design='index'] .viz .bar-value,
+:root[data-design='index'] .viz .bar-note,
+:root[data-design='index'] .viz .tip {
+	font-family: var(--font-mono);
+	font-size: 0.72rem;
+}
+
+:root[data-design='index'] .viz .tip {
+	border-color: var(--text);
+	box-shadow: none;
+}
+
+:root[data-design='index'] .viz :is(.tip-title, .table-view summary) {
+	font-family: var(--font-mono);
+	letter-spacing: 0.02em;
+}
+
+:root[data-design='index'] .viz .bar-list li {
+	border-bottom: 1px solid var(--border);
+}
+
+:root[data-design='index'] .viz .bar-label {
+	font-weight: 500;
+}
+
+:root[data-design='index'] .stage-icon {
+	margin-top: 0;
+}
+
+/* ============================================================= dashboard */
+/* The two stacked columns are dissolved onto the 12-column grid: attention (7) beside
+   the schedule (5), then gallery activity full width with its parts side by side. */
+
+:root[data-design='index'] .admin .board {
+	display: grid;
+	grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+	gap: clamp(2rem, 4vw, 3rem) var(--col-gap);
+}
+
+:root[data-design='index'] .admin .board > .column {
+	display: contents;
+}
+
+:root[data-design='index'] .admin .board .ui-panel {
+	grid-column: 1 / -1;
+	margin: 0;
+}
+
+@media (min-width: 1100px) {
+	:root[data-design='index'] .admin .board > .column:first-child > .ui-panel:first-child {
+		grid-column: 1 / span 7;
+	}
+
+	:root[data-design='index'] .admin .board > .column:first-child > .ui-panel:nth-child(2) {
+		grid-column: 8 / -1;
+	}
+}
+
+/* Needs attention */
+:root[data-design='index'] .admin .board .group-head {
+	padding: 0.85rem 0 0.35rem;
+}
+
+:root[data-design='index'] .admin .board .group-head h3,
+:root[data-design='index'] .admin .board .all,
+:root[data-design='index'] .admin .board .action {
+	font-family: var(--font-mono);
+	font-weight: 450;
+	letter-spacing: 0.02em;
+}
+
+:root[data-design='index'] .admin .board .group-head h3 {
+	color: var(--text);
+}
+
+:root[data-design='index'] .admin .board .ui-count {
+	font-family: var(--font-mono);
+	padding: 0 0.3rem;
+	background: var(--stage);
+	color: var(--bg);
+}
+
+:root[data-design='index'] .admin .board .items {
+	padding-bottom: 0.5rem;
+	counter-reset: item;
+}
+
+:root[data-design='index'] .admin .board .items li {
+	margin-left: 0;
+	padding: 0.5rem 0 0.5rem 0.75rem;
+	border-left-width: 2px;
+	border-bottom: 1px solid var(--border);
+}
+
+:root[data-design='index'] .admin .board .items li:last-child {
+	border-bottom: 0;
+}
+
+:root[data-design='index'] .admin .board .items li + li {
+	margin-top: 0;
+}
+
+:root[data-design='index'] .admin .board :is(.item-title, .recent-title, .top a) {
+	font-family: var(--font-sans);
+	font-weight: 550;
+	letter-spacing: -0.015em;
+}
+
+:root[data-design='index'] .admin .board .amount {
+	font-family: var(--font-mono);
+	font-size: 0.85rem;
+}
+
+:root[data-design='index'] .admin .board .action {
+	padding: 0.2rem 0.45rem;
+	border: 1px solid var(--text);
+	color: var(--text);
+}
+
+:root[data-design='index'] .admin .board .action:hover {
+	background: var(--ink);
+	border-color: var(--ink);
+	color: var(--bg);
+}
+
+/* Coming up: a timetable with the date set in mono */
+:root[data-design='index'] .admin .board .upcoming li {
+	padding: 0.7rem 0;
+	gap: 0.9rem;
+}
+
+:root[data-design='index'] .admin .board .tile {
+	display: grid;
+	grid-template-columns: auto auto;
+	grid-template-areas: 'day weekday' 'day month';
+	align-items: baseline;
+	column-gap: 0.4rem;
+	width: 5.25rem;
+	padding: 0;
+	border: 0;
+	font-family: var(--font-mono);
+	font-size: 0.62rem;
+	letter-spacing: 0;
+}
+
+:root[data-design='index'] .admin .board .tile strong {
+	grid-area: day;
+	font-family: var(--font-mono);
+	font-size: 1.85rem;
+	font-weight: 500;
+	letter-spacing: -0.05em;
+	line-height: 1;
+	font-variant-numeric: tabular-nums;
+}
+
+:root[data-design='index'] .admin .board .tile span:first-child {
+	grid-area: weekday;
+}
+
+:root[data-design='index'] .admin .board .tile span:last-child {
+	grid-area: month;
+	color: var(--text);
+}
+
+:root[data-design='index'] .admin .board .tentative .tile {
+	opacity: 0.6;
+}
+
+/* Gallery activity: week strip, then ranked list and recent covers side by side */
+:root[data-design='index'] .admin .board .column:last-child > .ui-panel {
+	display: grid;
+	grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+	column-gap: var(--col-gap);
+}
+
+:root[data-design='index'] .admin .board .column:last-child > .ui-panel > * {
+	grid-column: 1 / -1;
+}
+
+:root[data-design='index'] .admin .board .week {
+	gap: 1px;
+	background: var(--border);
+	border-bottom: 1px solid var(--border);
+}
+
+:root[data-design='index'] .admin .board .week-stat {
+	padding: 0.85rem 1rem 1rem;
+	background: var(--bg);
+}
+
+:root[data-design='index'] .admin .board .week-stat strong {
+	font-family: var(--font-mono);
+	font-size: clamp(1.6rem, 3vw, 2.4rem);
+	font-weight: 500;
+	letter-spacing: -0.05em;
+	font-variant-numeric: tabular-nums;
+}
+
+:root[data-design='index'] .admin .board .sub-section {
+	padding: 0.9rem 0 1.25rem;
+	border-bottom: 0;
+	align-content: start;
+}
+
+:root[data-design='index'] .admin .board .sub-section h3 {
+	font-family: var(--font-mono);
+	font-size: 0.7rem;
+	font-weight: 450;
+	letter-spacing: 0.02em;
+}
+
+@media (min-width: 960px) {
+	:root[data-design='index'] .admin .board .column:last-child .sub-section:nth-child(3) {
+		grid-column: 1 / span 5;
+	}
+
+	:root[data-design='index'] .admin .board .column:last-child .sub-section:nth-child(4) {
+		grid-column: 6 / -1;
+	}
+}
+
+:root[data-design='index'] .admin .board .top {
+	gap: 0;
+}
+
+:root[data-design='index'] .admin .board .top li {
+	grid-template-columns: 2rem minmax(0, 1fr) auto;
+	align-items: baseline;
+	padding: 0.45rem 0;
+	border-bottom: 1px solid var(--border);
+}
+
+:root[data-design='index'] .admin .board .top li::before {
+	content: counter(top, decimal-leading-zero);
+	grid-row: auto;
+	font-family: var(--font-mono);
+	font-size: 0.72rem;
+}
+
+:root[data-design='index'] .admin .board .top .ui-sub {
+	text-align: right;
+}
+
+:root[data-design='index'] .admin .board .recent {
+	grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+	gap: 1rem var(--col-gap);
+}
+
+:root[data-design='index'] .admin .board .recent .cover {
+	aspect-ratio: 1;
+}
+
+:root[data-design='index'] .admin .board .recent a:hover img {
+	transform: none;
+}
+
+:root[data-design='index'] .admin .board .recent a:hover .recent-title {
+	text-decoration: underline;
+	text-underline-offset: 3px;
+}
+
+:root[data-design='index'] .admin .board .totals {
+	padding: 0.75rem 0;
+	border-top: 1px solid var(--border);
+	font-family: var(--font-mono);
+	font-size: 0.72rem;
+}
+
+/* ======================================================== page sweeps */
+/* Small-caps labels on shared pages become mono labels; big figures become mono numerals. */
+
+:root[data-design='index']
+	.admin
+	.content
+	:is(.jump a, .key, .create, .tab, .chart-title, .fresh label, .tags-head h3, .item-head span),
+:root[data-design='index'] .group-label,
+:root[data-design='index'] .file::file-selector-button {
+	font-family: var(--font-mono);
+	font-weight: 450;
+	letter-spacing: 0.02em;
+}
+
+:root[data-design='index'] .admin .content :is(.metrics strong, .total) {
+	font-family: var(--font-mono);
+	font-weight: 500;
+	letter-spacing: -0.03em;
+	font-variant-numeric: tabular-nums;
+}
+
+/* Titles that asked for the serif (now the grotesk) get the grotesk’s weight. */
+:root[data-design='index'] .admin .content :is(h1, h2, h3) {
+	font-weight: 600;
+}
+
+/* ============================================================== login */
+
+:root[data-design='index'] .login {
+	grid-template-columns: minmax(0, 560px);
+	place-content: end start;
+	justify-items: start;
+	padding: 3rem var(--gutter) clamp(2rem, 8vw, 6rem);
+}
+
+:root[data-design='index'] .login .card {
+	width: min(100%, 560px);
+	padding: 0.75rem 0 0;
+	border: 0;
+	border-top: var(--rule);
+	background: none;
+}
+
+:root[data-design='index'] .login h1 {
+	font-size: clamp(3rem, 10vw, 6.5rem);
+	font-weight: 650;
+	line-height: 0.88;
+	letter-spacing: -0.055em;
+	margin-left: -0.04em;
+	animation: index-wipe 0.45s var(--ease) both;
+}
+
+:root[data-design='index'] .login .back {
+	order: -1;
+}
+
+/* ===================================================== page-level boxes */
+/* Settings sections, album detail cards, maintenance tasks and the tag block lose their boxes
+   too: strong rule above, numbered heading, no fill. */
+
+:root[data-design='index'] .admin .content :is(.card, .tasks, .tags-block) {
+	border: 0;
+	border-top: var(--rule);
+	background: none;
+	padding-inline: 0;
+	scroll-margin-top: calc(var(--admin-top) + 1rem);
+}
+
+:root[data-design='index'] .admin .content .card {
+	padding-top: 0.6rem;
+}
+
+:root[data-design='index'] .admin .content .card-head {
+	padding-bottom: 0.9rem;
+}
+
+:root[data-design='index'] .admin .content .card-head h2 {
+	display: flex;
+	align-items: baseline;
+	gap: 0.85rem;
+	font-size: clamp(1.35rem, 2.2vw, 1.75rem);
+	letter-spacing: -0.035em;
+}
+
+:root[data-design='index'] .admin .content .card-head h2::before {
+	counter-increment: section;
+	content: counter(section, decimal-leading-zero);
+	flex: none;
+	font-family: var(--font-mono);
+	font-size: 0.72rem;
+	font-weight: 450;
+	letter-spacing: 0;
+	color: var(--highlight, var(--text-muted));
+}
+
+:root[data-design='index'] .admin .content .card + .card {
+	margin-top: clamp(1rem, 2vw, 1.5rem);
+}
+
+/* The settings jump links */
+:root[data-design='index'] .admin .content .jump a {
+	padding: 0.3rem 0.5rem;
+	text-decoration: none;
+	transition:
+		background-color var(--fast) var(--ease),
+		color var(--fast) var(--ease);
+}
+
+:root[data-design='index'] .admin .content .jump a:hover {
+	background: var(--ink);
+	color: var(--bg);
+}
+
+/* =================================================== floating layers */
+
+:root[data-design='index'] :is(.dialog, .palette) {
+	border: 1px solid var(--text);
+	box-shadow: 8px 8px 0 color-mix(in srgb, var(--text) 12%, transparent);
+}
+
+:root[data-design='index'] .dialog h2 {
+	font-size: 1.5rem;
+	letter-spacing: -0.03em;
+}
+
+:root[data-design='index'] .toast {
+	font-family: var(--font-mono);
+	font-size: 0.78rem;
+	box-shadow: 6px 6px 0 color-mix(in srgb, var(--text) 14%, transparent);
+}
