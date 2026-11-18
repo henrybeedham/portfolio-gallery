@@ -151,7 +151,7 @@
 				>{data.current.heroTitle}</textarea
 			>
 			<p class="hint">
-				Each line becomes a line of the headline; alternate lines are set in italics.
+				Each line becomes a line of the headline. Some designs set alternate lines in italics.
 			</p>
 		</div>
 		<div class="field">
