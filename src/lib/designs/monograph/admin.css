@@ -1,0 +1,475 @@
+/*
+ * Monograph — the admin as a studio ledger.
+ *
+ * Loaded after admin-ui.css and overrides it, plus the page-scoped label styles that still speak
+ * the old voice (tracked uppercase sans). Every rule starts with `:root[data-design='monograph']` so it outranks Svelte's scoped
+ * selectors without editing each page.
+ */
+
+/* ------------------------------------------------------------ page heads */
+
+/* Every admin page opens with a centred title, its section's roman numeral above. */
+:root[data-design='monograph']
+	:is(.admin-content > header:is(.ui-head, .head), .admin-content > .page > header) {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr);
+	justify-content: stretch;
+	align-items: center;
+	justify-items: center;
+	gap: 1.1rem;
+	max-width: none;
+	margin: 0 0 clamp(2.25rem, 4vw, 3.25rem);
+	text-align: center;
+}
+
+:root[data-design='monograph']
+	:is(.admin-content > header:is(.ui-head, .head), .admin-content > .page > header)::before {
+	content: var(--section-numeral, none);
+	font-family: var(--font-display);
+	font-size: 1.1rem;
+	font-weight: 500;
+	letter-spacing: 0.18em;
+	margin-right: -0.18em;
+	color: var(--highlight, var(--text-muted));
+	font-variant-numeric: lining-nums;
+}
+
+:root[data-design='monograph']
+	:is(.admin-content > header:is(.ui-head, .head), .admin-content > .page > header)::after {
+	content: '';
+	order: 5;
+	width: 208px;
+	max-width: 100%;
+	height: 11px;
+	background: color-mix(in srgb, var(--highlight, var(--text-muted)) 70%, transparent);
+	-webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='208' height='11' viewBox='0 0 208 11'%3E%3Cg fill='none' stroke='%23000'%3E%3Cpath d='M0 5.5h86M122 5.5h86'/%3E%3Cpath d='M104 1.2l4.3 4.3-4.3 4.3-4.3-4.3z'/%3E%3C/g%3E%3Ccircle cx='92' cy='5.5' r='1' fill='%23000'/%3E%3Ccircle cx='116' cy='5.5' r='1' fill='%23000'/%3E%3C/svg%3E")
+		center / contain no-repeat;
+	mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='208' height='11' viewBox='0 0 208 11'%3E%3Cg fill='none' stroke='%23000'%3E%3Cpath d='M0 5.5h86M122 5.5h86'/%3E%3Cpath d='M104 1.2l4.3 4.3-4.3 4.3-4.3-4.3z'/%3E%3C/g%3E%3Ccircle cx='92' cy='5.5' r='1' fill='%23000'/%3E%3Ccircle cx='116' cy='5.5' r='1' fill='%23000'/%3E%3C/svg%3E")
+		center / contain no-repeat;
+}
+
+:root[data-design='monograph']
+	:is(.admin-content > header:is(.ui-head, .head), .admin-content > .page > header)
+	> * {
+	order: 1;
+}
+
+:root[data-design='monograph']
+	.admin-content
+	> header:is(.ui-head, .head)
+	> :is(.ui-actions, .head-actions, .jump) {
+	order: 6;
+}
+
+:root[data-design='monograph']
+	:is(.admin-content > header:is(.ui-head, .head), .admin-content > .page > header)
+	> div:first-of-type {
+	display: grid;
+	justify-items: center;
+	gap: 0.35rem;
+}
+
+:root[data-design='monograph']
+	:is(.admin-content > header:is(.ui-head, .head), .admin-content > .page > header)
+	h1 {
+	margin: 0;
+	max-width: 22ch;
+	font-family: var(--font-display);
+	font-size: clamp(2.4rem, 5vw, 3.6rem);
+	font-weight: 400;
+	line-height: 1.05;
+	overflow-wrap: anywhere;
+}
+
+:root[data-design='monograph']
+	.admin-content
+	> header:is(.ui-head, .head)
+	:is(.ui-badges, .badges) {
+	justify-content: center;
+}
+
+:root[data-design='monograph']
+	.admin-content
+	> header:is(.ui-head, .head)
+	:is(.ui-actions, .head-actions) {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	gap: 0.6rem;
+}
+
+:root[data-design='monograph']
+	.admin-content
+	> header:is(.ui-head, .head)
+	:is(.intro, .muted, p:not(.eyebrow)) {
+	max-width: 38rem;
+	margin-inline: auto;
+	font-style: italic;
+}
+
+/* Narrow single-column pages (forms, settings, guides) sit centred under their centred title. */
+:root[data-design='monograph'] .admin-content > :is(.page, .steps, .card, .paste, .notice, form) {
+	margin-inline: auto;
+}
+
+:root[data-design='monograph'] .admin-content > .page {
+	max-width: 820px;
+}
+
+/* The back link above detail pages sits centred too. */
+:root[data-design='monograph'] .admin-content > .link:first-child,
+:root[data-design='monograph'] .admin-content > .page > .link:first-child {
+	display: flex;
+	width: fit-content;
+	margin-inline: auto;
+}
+
+/* --------------------------------------------------------------- stats */
+
+/* A ruled ledger strip, centred figures. */
+:root[data-design='monograph'] .admin-content .ui-stats {
+	gap: 0;
+	background: none;
+	border: 0;
+	border-block: 3px double var(--border-strong);
+	margin-bottom: 2.5rem;
+}
+
+:root[data-design='monograph'] .admin-content .ui-stat {
+	justify-items: center;
+	gap: 0.3rem;
+	padding: 1.4rem 1rem 1.3rem;
+	background: none;
+	text-align: center;
+	transition: background-color 0.5s var(--ease);
+}
+
+:root[data-design='monograph'] .admin-content .ui-stat + .ui-stat {
+	border-left: 1px solid var(--border);
+}
+
+:root[data-design='monograph'] .admin-content a.ui-stat:hover {
+	background: color-mix(in srgb, var(--surface) 55%, transparent);
+}
+
+:root[data-design='monograph'] .admin-content .ui-stat strong {
+	font-family: var(--font-display);
+	font-size: 2.5rem;
+	font-weight: 400;
+	font-variant-numeric: lining-nums proportional-nums;
+}
+
+:root[data-design='monograph'] .admin-content .ui-stat .ui-note {
+	font-size: 0.92rem;
+	font-style: italic;
+}
+
+@media (max-width: 560px) {
+	:root .admin-content .ui-stat + .ui-stat {
+		border-left: 0;
+		border-top: 1px solid var(--border);
+	}
+}
+
+/* --------------------------------------------------------------- panels */
+
+:root[data-design='monograph'] .admin-content :is(.ui-panel, .ui-card) {
+	background: var(--bg-elevated);
+	border: 1px solid var(--border);
+}
+
+:root[data-design='monograph'] .admin-content .ui-panel + .ui-panel {
+	margin-top: 2rem;
+}
+
+:root[data-design='monograph'] .admin-content .ui-panel-head {
+	padding: 1.1rem 1.5rem 0.9rem;
+	border-bottom: 3px double var(--border);
+}
+
+:root[data-design='monograph'] .admin-content :is(.ui-panel-head, .ui-card-head) h2 {
+	font-family: var(--font-display);
+	font-size: 1.7rem;
+	font-weight: 500;
+}
+
+:root[data-design='monograph'] .admin-content .ui-card-head {
+	border-bottom: 3px double var(--border);
+	padding-bottom: 0.9rem;
+}
+
+:root[data-design='monograph'] .admin-content .ui-card {
+	gap: 1.5rem;
+	padding: clamp(1.25rem, 3vw, 2.25rem);
+}
+
+:root[data-design='monograph'] .admin-content .ui-optional {
+	font-family: var(--font-serif);
+	font-style: italic;
+	font-weight: 400;
+	letter-spacing: 0;
+}
+
+/* --------------------------------------------------------------- chips */
+
+/* Filters read as an index of small capitals; the current one is underlined. */
+:root[data-design='monograph'] .admin-content .ui-chips {
+	gap: 0.15rem 0.35rem;
+}
+
+:root[data-design='monograph'] .admin-content .ui-chip {
+	min-height: 36px;
+	padding: 0.25rem 0.6rem 0.35rem;
+	border: 1px solid transparent;
+	background: none;
+	font-family: var(--font-sc);
+	font-size: 1rem;
+	font-weight: 600;
+	letter-spacing: 0.05em;
+	text-transform: none;
+	color: var(--text-muted);
+	text-decoration: underline;
+	text-decoration-color: transparent;
+	text-underline-offset: 6px;
+	text-decoration-thickness: 1px;
+	transition:
+		color 0.4s var(--ease),
+		text-decoration-color 0.4s var(--ease),
+		border-color 0.4s var(--ease);
+}
+
+:root[data-design='monograph'] .admin-content .ui-chip:hover {
+	border-color: transparent;
+	color: var(--text);
+}
+
+:root[data-design='monograph'] .admin-content .ui-chip.active {
+	background: none;
+	border-color: transparent;
+	color: var(--text);
+	text-decoration-color: var(--highlight, currentColor);
+}
+
+:root[data-design='monograph'] .admin-content .ui-chip .ui-count {
+	font-family: var(--font-serif);
+	font-style: italic;
+	font-weight: 400;
+	letter-spacing: 0;
+}
+
+/* --------------------------------------------------------------- tables */
+
+/* Ledger: small-caps heads over a double rule, hairline rows, old-style tabular figures. */
+:root[data-design='monograph'] .admin-content .ui-table {
+	font-size: 1.02rem;
+	font-variant-numeric: oldstyle-nums tabular-nums;
+}
+
+:root[data-design='monograph'] .admin-content .ui-table th {
+	font-family: var(--font-sc);
+	font-size: 0.98rem;
+	font-weight: 600;
+	letter-spacing: 0.05em;
+	text-transform: none;
+	color: var(--text-subtle);
+	padding: 0.75rem 1rem 0.6rem;
+	border-bottom: 3px double var(--border-strong);
+}
+
+:root[data-design='monograph'] .admin-content .ui-table td {
+	padding: 0.8rem 1rem;
+}
+
+:root[data-design='monograph'] .admin-content .ui-table tbody tr:hover {
+	background: color-mix(in srgb, var(--surface) 45%, transparent);
+}
+
+:root[data-design='monograph'] .admin-content .ui-title {
+	font-family: var(--font-serif);
+	font-size: 1.12rem;
+}
+
+:root[data-design='monograph'] .admin-content a.ui-title:hover {
+	font-style: italic;
+	text-decoration: none;
+}
+
+:root[data-design='monograph'] .admin-content .ui-sub {
+	font-size: 0.92rem;
+	font-style: italic;
+}
+
+:root[data-design='monograph'] .admin-content .ui-elsewhere {
+	font-style: italic;
+}
+
+/* --------------------------------------------------------------- badges */
+
+:root[data-design='monograph'] .ui-badge {
+	padding: 0 0.5rem 0.1rem;
+	font-family: var(--font-sc);
+	font-size: 0.92rem;
+	font-weight: 600;
+	letter-spacing: 0.05em;
+	line-height: 1.5;
+}
+
+:root[data-design='monograph'] .ui-check {
+	transform: rotate(45deg) scale(0.82);
+}
+
+:root[data-design='monograph'] .ui-check > * {
+	transform: rotate(-45deg);
+}
+
+/* --------------------------------------------------------------- empty */
+
+:root[data-design='monograph'] .admin-content .ui-empty {
+	font-style: italic;
+}
+
+:root[data-design='monograph'] .admin-content .ui-empty h3 {
+	font-family: var(--font-display);
+	font-size: 1.8rem;
+	font-weight: 400;
+	font-style: normal;
+}
+
+/* --------------------------------------------------------------- charts */
+
+:root[data-design='monograph'] .viz text {
+	font-family: var(--font-sans);
+}
+
+:root[data-design='monograph'] .viz .legend {
+	font-size: 0.95rem;
+	font-style: italic;
+}
+
+:root[data-design='monograph'] .viz .swatch {
+	border-radius: 0;
+	transform: rotate(45deg) scale(0.85);
+}
+
+:root[data-design='monograph'] .viz .bar {
+	border-radius: 0;
+}
+
+:root[data-design='monograph'] .viz .line-key {
+	border-radius: 0;
+}
+
+:root[data-design='monograph'] .viz .tip {
+	border: 3px double var(--border-strong);
+	box-shadow: 0 14px 40px color-mix(in srgb, var(--text) 14%, transparent);
+	font-size: 0.95rem;
+}
+
+:root[data-design='monograph'] .viz :is(.tip-title, .table-view summary) {
+	font-family: var(--font-sc);
+	font-size: 0.95rem;
+	font-weight: 600;
+	letter-spacing: 0.05em;
+	text-transform: none;
+}
+
+:root[data-design='monograph'] .viz .bar-label {
+	font-size: 1rem;
+}
+
+:root[data-design='monograph'] .viz .bar-value {
+	font-size: 0.95rem;
+}
+
+/* ---------------------------------------------- page-scoped label styles */
+
+/* Labels that pages and components style themselves, in the old tracked-uppercase voice. */
+:root[data-design='monograph']
+	:is(
+		.admin-content .all,
+		.admin-content .action,
+		.admin-content .group-head h3,
+		.admin-content .key,
+		.admin-content .create,
+		.admin-content .jump a,
+		.admin-content .chart-title,
+		.admin-content .fresh label,
+		.admin-content .tags-head h3,
+		.admin-content .flag,
+		.admin-content .item-head span,
+		.admin-content .tile span,
+		.admin-content .file::file-selector-button,
+		.palette .group-label
+	) {
+	font-family: var(--font-sc);
+	font-size: 0.98rem;
+	font-weight: 600;
+	letter-spacing: 0.05em;
+	text-transform: none;
+}
+
+:root[data-design='monograph'] .admin-content .tile strong,
+:root[data-design='monograph'] .admin-content .week-stat strong,
+:root[data-design='monograph'] .admin-content .metrics strong,
+:root[data-design='monograph'] .admin-content .total {
+	font-family: var(--font-display);
+	font-weight: 500;
+	font-variant-numeric: lining-nums;
+}
+
+:root[data-design='monograph'] .admin-content :is(.item-title, .recent-title, .top a) {
+	font-family: var(--font-serif);
+}
+
+:root[data-design='monograph'] .admin-content .jump {
+	justify-content: center;
+}
+
+:root[data-design='monograph'] .admin-content :is(h2, h3, h4):not(.eyebrow) {
+	font-weight: 500;
+}
+
+/* Toggle and form text, at Garamond's larger reading size. */
+:root[data-design='monograph'] .admin-content .toggle-label {
+	font-size: 1.05rem;
+}
+
+:root[data-design='monograph'] .admin-content .toggle .description {
+	font-size: 0.92rem;
+	font-style: italic;
+}
+
+/* --------------------------------------------------------------- overlays */
+
+:root[data-design='monograph'] .toast {
+	border: 3px double color-mix(in srgb, var(--bg) 40%, transparent);
+	font-size: 1rem;
+}
+
+:root[data-design='monograph'] .dialog {
+	border: 3px double var(--border-strong) !important;
+	text-align: center;
+}
+
+:root[data-design='monograph'] .dialog h2 {
+	font-family: var(--font-display);
+	font-size: 1.8rem;
+}
+
+:root[data-design='monograph'] .dialog p {
+	font-size: 1.02rem;
+	font-style: italic;
+}
+
+:root[data-design='monograph'] .dialog .buttons {
+	justify-content: center;
+}
+
+:root[data-design='monograph'] .palette {
+	border: 3px double var(--border-strong);
+}
+
+:root[data-design='monograph'] .palette .field input {
+	font-size: 1.15rem;
+	font-style: italic;
+}
