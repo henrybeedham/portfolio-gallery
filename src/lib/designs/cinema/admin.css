@@ -1,0 +1,1295 @@
+/*
+ * Cinema, admin: the shared `ui-*` building blocks restyled (6px cards, condensed display titles,
+ * soft pill badges and chips), plus shared admin components and page-scoped styles that would
+ * otherwise keep Editorial's voice. Scoped under :root[data-design='cinema'], which outranks a
+ * component's own hashed class.
+ */
+
+:root[data-design='cinema'] {
+	.ui-head {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: flex-end;
+		justify-content: space-between;
+		gap: 1.25rem;
+		margin-bottom: clamp(1.75rem, 3vw, 2.5rem);
+	}
+
+	/* Big condensed page titles, like a title card. */
+	.ui-head h1 {
+		font-size: clamp(2.8rem, 6vw, 5.2rem);
+		line-height: 0.88;
+		margin-top: 0.45rem;
+	}
+
+	.ui-head .ui-actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+	}
+
+	/* ---------------------------------------------------------------- stats */
+
+	.ui-stats {
+		background: none;
+		border: 0;
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr));
+		gap: 0.75rem;
+		margin-bottom: 1.75rem;
+	}
+
+	.ui-stat {
+		display: grid;
+		align-content: start;
+		gap: 0.55rem;
+		padding: 1.2rem 1.35rem 1.3rem;
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		background: var(--bg-elevated);
+		text-decoration: none;
+		transition:
+			border-color 0.3s var(--ease),
+			background-color 0.3s var(--ease);
+	}
+
+	a.ui-stat:hover {
+		border-color: var(--border-strong);
+		background: color-mix(in srgb, var(--surface) 60%, var(--bg-elevated));
+	}
+
+	.ui-stat strong {
+		font-family: var(--font-display);
+		font-size: clamp(2rem, 3vw, 2.6rem);
+		font-weight: 400;
+		line-height: 1;
+		letter-spacing: 0;
+		/* Proportional figures for standalone numbers; lining so money doesn't use old-style digits. */
+		font-variant-numeric: lining-nums proportional-nums;
+	}
+
+	.ui-stat .ui-note {
+		font-size: 0.8rem;
+		color: var(--text-subtle);
+	}
+
+	/* ---------------------------------------------------------------- panels */
+
+	.ui-panel {
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		background: var(--bg-elevated);
+	}
+
+	.ui-panel + .ui-panel {
+		margin-top: 1.25rem;
+	}
+
+	.ui-panel-head {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.75rem 1rem;
+		padding: 1rem 1.35rem;
+		border-bottom: 1px solid var(--border);
+	}
+
+	.ui-panel-head h2 {
+		font-size: 1.65rem;
+	}
+
+	.ui-panel-body {
+		display: grid;
+		gap: 1.25rem;
+		padding: 1.25rem 1.35rem 1.5rem;
+	}
+
+	/* A form section, as on the settings page. */
+	.ui-card {
+		display: grid;
+		gap: 1.4rem;
+		padding: clamp(1.25rem, 3vw, 2rem);
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		background: var(--bg-elevated);
+		scroll-margin-top: 1.5rem;
+	}
+
+	.ui-card-head {
+		display: grid;
+		gap: 0.4rem;
+		padding-bottom: 1rem;
+		border-bottom: 1px solid var(--border);
+	}
+
+	.ui-card-head h2 {
+		font-size: 1.75rem;
+	}
+
+	.ui-grid-2,
+	.ui-grid-3 {
+		display: grid;
+		gap: 1.25rem;
+	}
+
+	@media (min-width: 720px) {
+		.ui-grid-2 {
+			grid-template-columns: 1fr 1fr;
+		}
+
+		.ui-grid-3 {
+			grid-template-columns: repeat(3, 1fr);
+		}
+	}
+
+	.ui-optional {
+		font-weight: 500;
+		color: var(--text-subtle);
+		margin-left: 0.3rem;
+	}
+
+	.ui-textarea-short {
+		min-height: 84px !important;
+	}
+
+	/* ---------------------------------------------------------------- filters */
+
+	.ui-chips {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.35rem;
+	}
+
+	.ui-chip {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.45rem;
+		min-height: 34px;
+		padding: 0.35rem 0.9rem;
+		border: 1px solid var(--border);
+		border-radius: var(--pill);
+		background: none;
+		color: var(--text-muted);
+		font-size: 0.82rem;
+		font-weight: 600;
+		letter-spacing: 0;
+		text-transform: none;
+		text-decoration: none;
+		cursor: pointer;
+		transition:
+			border-color 0.2s var(--ease),
+			color 0.2s var(--ease),
+			background-color 0.2s var(--ease);
+	}
+
+	.ui-chip:hover {
+		border-color: var(--border-strong);
+		color: var(--text);
+		background: color-mix(in srgb, var(--text) 5%, transparent);
+	}
+
+	.ui-chip.active {
+		background: var(--accent);
+		border-color: var(--accent);
+		color: var(--accent-text);
+	}
+
+	.ui-chip:has(input:focus-visible) {
+		outline: 2px solid var(--emphasis);
+		outline-offset: 3px;
+	}
+
+	.ui-chip .ui-count {
+		opacity: 0.7;
+		font-variant-numeric: tabular-nums;
+	}
+
+	/* Under a filtered list: “3 more matches in other filters. Search all”. */
+	.ui-elsewhere {
+		margin: 0;
+		padding: 0.85rem 1.35rem;
+		border-top: 1px solid var(--border);
+		font-size: 0.85rem;
+		color: var(--text-muted);
+	}
+
+	.ui-elsewhere a {
+		color: var(--text);
+		text-underline-offset: 3px;
+	}
+
+	/* ---------------------------------------------------------------- tables */
+
+	/*
+	 * Positioned so absolutely positioned children (the visually hidden "Actions" headings) are
+	 * contained by the scroller. Otherwise they sit at the table's far edge, outside it, and widen the
+	 * whole page on phones.
+	 */
+	.ui-table-wrap {
+		position: relative;
+		overflow-x: auto;
+	}
+
+	.ui-table {
+		width: 100%;
+		border-collapse: collapse;
+		font-size: 0.88rem;
+	}
+
+	.ui-table th {
+		letter-spacing: 0;
+		text-transform: none;
+		text-align: left;
+		font-size: 0.76rem;
+		font-weight: 600;
+		color: var(--text-subtle);
+		padding: 0.8rem 1rem;
+		border-bottom: 1px solid var(--border);
+		white-space: nowrap;
+	}
+
+	.ui-table td {
+		padding: 0.8rem 1rem;
+		border-bottom: 1px solid var(--border);
+		vertical-align: middle;
+	}
+
+	.ui-table tbody tr:last-child td {
+		border-bottom: 0;
+	}
+
+	.ui-table tbody tr {
+		transition: background-color 0.2s;
+	}
+
+	.ui-table tbody tr:hover {
+		background: color-mix(in srgb, var(--surface) 60%, transparent);
+	}
+
+	.ui-table .ui-num {
+		text-align: right;
+		font-variant-numeric: tabular-nums;
+		white-space: nowrap;
+	}
+
+	.ui-table .ui-center {
+		text-align: center;
+	}
+
+	.ui-table .ui-shrink {
+		width: 1%;
+		white-space: nowrap;
+	}
+
+	.ui-title {
+		font-family: var(--font-sans);
+		display: block;
+		font-size: 0.98rem;
+		font-weight: 650;
+		line-height: 1.35;
+		letter-spacing: -0.005em;
+		text-decoration: none;
+	}
+
+	a.ui-title:hover {
+		text-decoration: none;
+		color: var(--emphasis);
+	}
+
+	.ui-sub {
+		display: block;
+		font-size: 0.8rem;
+		color: var(--text-subtle);
+		line-height: 1.5;
+	}
+
+	.ui-faded {
+		opacity: 0.55;
+	}
+
+	/* ---------------------------------------------------------------- badges */
+
+	.ui-badges {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.3rem;
+	}
+
+	/* Soft pills tinted from their own colour. */
+	.ui-badge {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.3rem;
+		padding: 0.12rem 0.55rem;
+		border: 0;
+		border-radius: var(--pill);
+		background: color-mix(in srgb, currentColor 11%, transparent);
+		font-size: 0.74rem;
+		font-weight: 600;
+		letter-spacing: 0;
+		color: var(--text-muted);
+		white-space: nowrap;
+		text-decoration: none;
+		line-height: 1.6;
+	}
+
+	a.ui-badge:hover {
+		color: var(--text);
+	}
+
+	.ui-badge.ok {
+		color: var(--success);
+	}
+
+	.ui-badge.warn {
+		color: var(--warning);
+	}
+
+	.ui-badge.danger {
+		color: var(--danger);
+	}
+
+	.ui-badge.solid {
+		background: var(--accent);
+		color: var(--accent-text);
+	}
+
+	/* ---------------------------------------------------------------- buttons */
+
+	.ui-icon-btn {
+		display: inline-grid;
+		place-items: center;
+		width: 36px;
+		height: 36px;
+		border: 0;
+		border-radius: 50%;
+		background: none;
+		color: var(--text-muted);
+		cursor: pointer;
+		text-decoration: none;
+		transition:
+			background-color 0.2s,
+			color 0.2s;
+	}
+
+	.ui-icon-btn:hover:not(:disabled) {
+		background: color-mix(in srgb, var(--text) 8%, transparent);
+		color: var(--text);
+	}
+
+	.ui-icon-btn.danger:hover:not(:disabled) {
+		background: var(--danger-soft);
+		color: var(--danger);
+	}
+
+	.ui-icon-btn:disabled {
+		opacity: 0.4;
+		cursor: not-allowed;
+	}
+
+	.ui-row-actions {
+		display: flex;
+		justify-content: flex-end;
+		gap: 0.15rem;
+	}
+
+	/* A rounded check used for the delivered / paid columns. */
+	.ui-check {
+		display: inline-grid;
+		place-items: center;
+		width: 26px;
+		height: 26px;
+		padding: 0;
+		border: 1.5px solid var(--border-strong);
+		border-radius: var(--radius-sm);
+		background: none;
+		color: var(--bg);
+		cursor: pointer;
+		transition:
+			background-color 0.2s var(--ease),
+			border-color 0.2s var(--ease);
+	}
+
+	.ui-check:hover:not(:disabled) {
+		border-color: var(--text);
+	}
+
+	.ui-check.on {
+		background: var(--emphasis);
+		border-color: var(--emphasis);
+	}
+
+	.ui-check:disabled {
+		cursor: default;
+		opacity: 0.5;
+	}
+
+	/* ---------------------------------------------------------------- empty */
+
+	.ui-empty {
+		display: grid;
+		justify-items: center;
+		gap: 0.85rem;
+		padding: 4rem 1rem;
+		text-align: center;
+		color: var(--text-muted);
+	}
+
+	.ui-empty h3 {
+		font-size: 2rem;
+		color: var(--text);
+	}
+
+	.ui-empty .btn {
+		margin-top: 0.75rem;
+	}
+
+	.ui-inline {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.ui-money-input {
+		position: relative;
+	}
+
+	.ui-money-input::before {
+		content: '£';
+		position: absolute;
+		left: 0.9rem;
+		top: 50%;
+		transform: translateY(-50%);
+		color: var(--text-subtle);
+		font-size: 0.95rem;
+		pointer-events: none;
+	}
+
+	.ui-money-input .input {
+		padding-left: 1.75rem;
+	}
+
+	/* ---------------------------------------------------------------- charts */
+
+	/*
+	 * Chart colours come from the active theme. A theme can set chart-1…chart-4 itself; otherwise
+	 * chart-1 is its highlight (or ink) and the rest are steps of it towards the panel colour — an
+	 * ordinal ramp (paid → invoiced → booked → tentative) validated for contrast in every built-in theme.
+	 */
+	.viz {
+		--viz-surface: var(--bg-elevated);
+		--viz-1: var(--chart-1, var(--highlight, var(--text)));
+		--viz-2: var(--chart-2, color-mix(in srgb, var(--viz-1) 72%, var(--viz-surface)));
+		--viz-3: var(--chart-3, color-mix(in srgb, var(--viz-1) 52%, var(--viz-surface)));
+		--viz-4: var(--chart-4, color-mix(in srgb, var(--viz-1) 36%, var(--viz-surface)));
+		--viz-grid: color-mix(in srgb, var(--border) 70%, var(--viz-surface));
+		--viz-axis: var(--border-strong);
+		margin: 0;
+		min-width: 0;
+	}
+
+	.viz .legend {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.4rem 1.1rem;
+		margin-bottom: 0.9rem;
+		font-size: 0.78rem;
+		color: var(--text-muted);
+	}
+
+	.viz .key {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.45rem;
+	}
+
+	.viz .swatch {
+		width: 10px;
+		height: 10px;
+		border-radius: 2px;
+	}
+
+	.viz .plot {
+		position: relative;
+		width: 100%;
+		outline-offset: 4px;
+	}
+
+	.viz svg {
+		display: block;
+		overflow: visible;
+	}
+
+	.viz .grid {
+		stroke: var(--viz-grid);
+		stroke-width: 1;
+		shape-rendering: crispEdges;
+	}
+
+	.viz .baseline {
+		stroke: var(--viz-axis);
+		stroke-width: 1;
+		shape-rendering: crispEdges;
+	}
+
+	.viz text {
+		font-family: var(--font-sans);
+		font-size: 11px;
+		fill: var(--text-subtle);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.viz text.x {
+		fill: var(--text-muted);
+	}
+
+	.viz text.x.muted,
+	.viz text.sub {
+		fill: var(--text-subtle);
+	}
+
+	.viz text.peak,
+	.viz text.end {
+		fill: var(--text-muted);
+		font-weight: 500;
+	}
+
+	.viz .column {
+		transition: opacity 0.15s var(--ease);
+	}
+
+	.viz .column.dim {
+		opacity: 0.45;
+	}
+
+	.viz .hit {
+		fill: transparent;
+	}
+
+	.viz .line {
+		fill: none;
+		stroke-width: 2;
+		stroke-linejoin: round;
+		stroke-linecap: round;
+	}
+
+	.viz .area {
+		opacity: 0.1;
+	}
+
+	.viz .dot {
+		stroke: var(--viz-surface);
+		stroke-width: 2;
+	}
+
+	.viz .crosshair {
+		stroke: var(--viz-axis);
+		stroke-width: 1;
+		shape-rendering: crispEdges;
+	}
+
+	.viz .tip {
+		position: absolute;
+		z-index: 5;
+		transform: translate(-50%, -100%);
+		min-width: 150px;
+		padding: 0.65rem 0.8rem;
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		background: var(--bg-elevated);
+		box-shadow: var(--shadow-float);
+		pointer-events: none;
+		font-size: 0.8rem;
+		white-space: nowrap;
+	}
+
+	.viz .tip-title {
+		margin-bottom: 0.35rem;
+		font-family: var(--font-display);
+		font-size: 0.86rem;
+		font-weight: 500;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		color: var(--text-muted);
+	}
+
+	.viz .tip-row {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		color: var(--text-muted);
+		line-height: 1.7;
+	}
+
+	.viz .tip-row.zero {
+		opacity: 0.55;
+	}
+
+	.viz .tip-row strong,
+	.viz .tip-total strong {
+		color: var(--text);
+		font-weight: 600;
+		font-variant-numeric: tabular-nums;
+	}
+
+	.viz .line-key {
+		width: 12px;
+		height: 2px;
+		border-radius: 1px;
+	}
+
+	.viz .tip-total {
+		margin-top: 0.35rem;
+		padding-top: 0.35rem;
+		border-top: 1px solid var(--border);
+		color: var(--text-muted);
+	}
+
+	.viz .empty {
+		padding: 2.5rem 0;
+		text-align: center;
+		color: var(--text-subtle);
+		font-size: 0.88rem;
+	}
+
+	.viz .table-view {
+		margin-top: 0.75rem;
+	}
+
+	.viz .table-view summary {
+		letter-spacing: 0;
+		text-transform: none;
+		display: inline-block;
+		cursor: pointer;
+		font-size: 0.78rem;
+		font-weight: 600;
+		color: var(--text-subtle);
+	}
+
+	.viz .table-view summary:hover {
+		color: var(--text);
+	}
+
+	.viz .table-view[open] summary {
+		margin-bottom: 0.5rem;
+	}
+
+	.viz .table-view th[scope='row'] {
+		font-weight: 400;
+		text-transform: none;
+		letter-spacing: 0;
+		font-size: 0.86rem;
+		color: var(--text);
+	}
+
+	/* Ranked bars */
+
+	.viz .bar-list {
+		display: grid;
+		gap: 0.15rem;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.viz .bar-list li {
+		display: grid;
+		grid-template-columns: minmax(90px, 34%) minmax(0, 1fr);
+		align-items: center;
+		gap: 0.2rem 1rem;
+		padding: 0.45rem 0;
+		transition: opacity 0.15s var(--ease);
+	}
+
+	.viz .bar-list li.dim {
+		opacity: 0.5;
+	}
+
+	.viz .bar-label {
+		font-size: 0.86rem;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.viz .bar-label a {
+		text-decoration: none;
+	}
+
+	.viz .bar-label a:hover {
+		text-decoration: underline;
+		text-underline-offset: 3px;
+	}
+
+	.viz .bar-track {
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+		min-width: 0;
+	}
+
+	.viz .bar {
+		flex: none;
+		height: 10px;
+		border-radius: 0 var(--pill) var(--pill) 0;
+	}
+
+	.viz .bar-value {
+		font-size: 0.82rem;
+		font-variant-numeric: tabular-nums;
+		white-space: nowrap;
+	}
+
+	.viz .bar-share {
+		margin-left: 0.3rem;
+		color: var(--text-subtle);
+	}
+
+	.viz .bar-note {
+		grid-column: 2;
+		font-size: 0.74rem;
+		color: var(--text-subtle);
+	}
+
+	/* ---------------------------------------------------------------- job stages */
+
+	/* Each stage's colour (theme tokens, falling back to the semantic colours) for stripe and icon. */
+	.stage-overdue {
+		--stage: var(--stage-overdue, var(--danger));
+	}
+	.stage-deliver {
+		--stage: var(--stage-deliver, var(--warning));
+	}
+	.stage-invoice {
+		--stage: var(--stage-invoice, var(--highlight, var(--text)));
+	}
+	.stage-awaiting {
+		--stage: var(--stage-awaiting, var(--text-muted));
+	}
+	.stage-upcoming,
+	.stage-tentative {
+		--stage: var(--stage-upcoming, var(--border-strong));
+	}
+	.stage-done {
+		--stage: var(--stage-done, var(--success));
+	}
+
+	.stage-icon {
+		display: inline-flex;
+		flex: none;
+		margin-top: 0.1rem;
+		color: var(--stage);
+	}
+
+	/* ======================================================= shared components and pages */
+
+	/* ---------------------------------------------------------------- overlays */
+
+	.backdrop:has(> .dialog),
+	.backdrop:has(> .palette) {
+		background: color-mix(in srgb, var(--lightbox-bg) 45%, transparent);
+	}
+
+	.dialog {
+		border-radius: var(--radius);
+		box-shadow: var(--shadow-float);
+		padding: 1.75rem 1.75rem 1.5rem;
+	}
+
+	.dialog h2 {
+		font-size: 2rem;
+	}
+
+	.toast {
+		border-radius: 16px;
+		padding: 0.75rem 0.9rem 0.75rem 1.1rem;
+		box-shadow: var(--shadow-float);
+		font-weight: 600;
+	}
+
+	.toast.error {
+		background: var(--danger);
+		color: var(--bg);
+	}
+
+	.palette {
+		border-radius: 10px;
+		overflow: hidden;
+		box-shadow: var(--shadow-float);
+	}
+
+	.palette kbd {
+		border-radius: var(--radius-sm);
+		letter-spacing: 0;
+	}
+
+	.palette .group-label {
+		font-family: var(--font-display);
+		font-size: 0.82rem;
+		letter-spacing: 0.06em;
+		color: var(--text-muted);
+	}
+
+	.palette .result {
+		margin: 0 0.4rem;
+		padding-inline: 0.7rem;
+		border-left: 0;
+		border-radius: var(--radius);
+	}
+
+	.palette .result.active {
+		background: color-mix(in srgb, var(--emphasis) 12%, transparent);
+	}
+
+	.palette .icon {
+		border: 0;
+		border-radius: var(--radius-sm);
+		background: var(--surface);
+	}
+
+	.palette .title {
+		font-weight: 600;
+	}
+
+	/* ---------------------------------------------------------------- form controls */
+
+	.toggle .track {
+		width: 38px;
+		height: 22px;
+		border-radius: var(--pill);
+	}
+
+	.toggle .thumb {
+		top: 3px;
+		left: 3px;
+		width: 14px;
+		height: 14px;
+		border-radius: 50%;
+	}
+
+	.toggle input:checked + .track {
+		background: var(--emphasis);
+		border-color: var(--emphasis);
+	}
+
+	.toggle input:focus-visible + .track {
+		outline: 2px solid var(--emphasis);
+	}
+
+	.toggle .toggle-label {
+		font-weight: 600;
+	}
+
+	.search .input {
+		border-radius: var(--pill);
+	}
+
+	.search .clear {
+		border-radius: 50%;
+	}
+
+	.picker .options {
+		border-radius: var(--radius);
+		overflow: hidden;
+	}
+
+	.dropzone {
+		border-radius: var(--radius);
+	}
+
+	/* Progress bars (uploads, maintenance tasks). */
+	div.bar:has(> span:only-child:empty) {
+		height: 4px;
+		border-radius: var(--pill);
+		overflow: hidden;
+	}
+
+	div.bar:has(> span:only-child:empty) > span {
+		border-radius: var(--pill);
+		background: var(--emphasis);
+	}
+
+	/* ---------------------------------------------------------------- photo manager */
+
+	.tags-head h3 {
+		font-family: var(--font-display);
+		font-size: 1rem;
+		font-weight: 500;
+		letter-spacing: 0.05em;
+	}
+
+	.pick .check {
+		border-color: color-mix(in srgb, var(--bg) 90%, transparent);
+		border-radius: 50%;
+		background: color-mix(in srgb, var(--lightbox-bg) 30%, transparent);
+	}
+
+	.selected .pick .check,
+	.selected .check {
+		background: var(--accent);
+		border-color: var(--accent);
+		color: var(--accent-text);
+	}
+
+	.tile .flags .flag {
+		border-radius: var(--pill);
+		background: var(--glass);
+		color: var(--text);
+		backdrop-filter: blur(8px);
+		-webkit-backdrop-filter: blur(8px);
+		font-size: 0.7rem;
+		font-weight: 700;
+		letter-spacing: 0;
+		text-transform: none;
+	}
+
+	.hover-actions {
+		gap: 4px;
+	}
+
+	.hover-actions button {
+		border-radius: 50%;
+		background: var(--glass);
+		color: var(--text);
+		backdrop-filter: blur(8px);
+		-webkit-backdrop-filter: blur(8px);
+	}
+
+	.hover-actions button:hover:not(:disabled) {
+		background: var(--bg-elevated);
+	}
+
+	.hover-actions button.danger:hover:not(:disabled) {
+		background: var(--danger);
+		color: var(--bg);
+	}
+
+	/* ---------------------------------------------------------------- page-scoped labels */
+
+	/* Old tracked-uppercase labels become Manrope 600 in sentence case. */
+	.item-head span,
+	.key,
+	.create,
+	.jump a,
+	.chart-title,
+	.fresh label,
+	.tabs .tab {
+		font-family: var(--font-sans);
+		font-size: 0.8rem;
+		font-weight: 600;
+		letter-spacing: 0;
+		text-transform: none;
+	}
+
+	.chart-title {
+		font-family: var(--font-display);
+		font-size: 0.95rem;
+		font-weight: 500;
+		letter-spacing: 0.05em;
+		text-transform: uppercase;
+		color: var(--text-muted);
+	}
+
+	.tabs .tab {
+		font-size: 0.88rem;
+		border-bottom-width: 3px;
+	}
+
+	.tabs .tab[aria-selected='true'] {
+		border-bottom-color: var(--emphasis);
+	}
+
+	.create {
+		padding: 0.2rem 0.7rem;
+		border: 0;
+		border-radius: var(--pill);
+		background: color-mix(in srgb, var(--text) 7%, transparent);
+		color: var(--text);
+	}
+
+	.create:hover {
+		background: color-mix(in srgb, var(--text) 13%, transparent);
+	}
+
+	.jump a {
+		padding: 0.3rem 0.8rem;
+		border-radius: var(--pill);
+		background: color-mix(in srgb, var(--text) 6%, transparent);
+	}
+
+	.jump a:hover {
+		background: color-mix(in srgb, var(--text) 12%, transparent);
+	}
+
+	.file::file-selector-button {
+		border-radius: var(--pill);
+		border-color: color-mix(in srgb, var(--text) 38%, transparent);
+		font-size: 0.8rem;
+		font-weight: 600;
+		letter-spacing: 0;
+		text-transform: none;
+	}
+
+	.ui-badge.draft {
+		border: 1px dashed currentColor;
+		background: none;
+	}
+
+	/* Serif numerals and totals from the old design take the display face. */
+	.metrics strong,
+	.items-foot .total {
+		font-family: var(--font-display);
+		font-weight: 400;
+	}
+
+	.metrics {
+		gap: 0;
+		border-radius: var(--radius);
+		overflow: hidden;
+	}
+
+	.tokens,
+	.fresh,
+	.themes .theme,
+	.manager .list,
+	.tasks .task,
+	.job-card,
+	.preview-frame {
+		border-radius: var(--radius);
+	}
+
+	/* ---------------------------------------------------------------- admin galleries list */
+
+	/* Grid view: cover tiles with the title and badges laid over the photo. */
+	.ui-panel > ul.grid:has(> li.card) {
+		grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
+		gap: var(--tile-gap);
+		padding: var(--tile-gap);
+		background: none;
+
+		> li.card {
+			position: relative;
+			display: block;
+			aspect-ratio: 4 / 3;
+			overflow: hidden;
+			border-radius: var(--radius-sm);
+			background: var(--placeholder);
+			isolation: isolate;
+		}
+
+		> li.card::after {
+			content: '';
+			position: absolute;
+			inset: 0;
+			z-index: -1;
+			background:
+				linear-gradient(to top, var(--scrim-strong) 0%, transparent 62%),
+				linear-gradient(to bottom, var(--scrim-soft) 0%, transparent 30%);
+			pointer-events: none;
+		}
+
+		.cover {
+			position: absolute;
+			inset: 0;
+			z-index: -2;
+			aspect-ratio: auto;
+		}
+
+		.cover img {
+			transition: transform 1.6s var(--ease-slow);
+		}
+
+		li.card:hover .cover img,
+		li.card:focus-within .cover img {
+			transform: scale(1.05);
+		}
+
+		.card-body {
+			position: absolute;
+			left: 0;
+			right: 0;
+			bottom: 0;
+			display: flex;
+			flex-direction: column;
+			gap: 0.3rem;
+			padding: 1rem 1.1rem;
+			pointer-events: none;
+		}
+
+		.card-body a {
+			pointer-events: auto;
+		}
+
+		.card-body .ui-title {
+			overflow: hidden;
+			text-overflow: ellipsis;
+			white-space: nowrap;
+			font-family: var(--font-display);
+			font-size: 1.5rem;
+			font-weight: 500;
+			line-height: 1.05;
+			text-transform: uppercase;
+		}
+
+		/* The whole tile opens the album. */
+		.card-body .ui-title::after {
+			content: '';
+			position: absolute;
+			inset: -100vh 0 0;
+		}
+
+		.card-body .ui-sub {
+			color: var(--text-muted);
+		}
+
+		.card-body .ui-badges {
+			order: -1;
+			margin-top: 0;
+		}
+
+		.card-body .ui-badge {
+			background: var(--glass);
+			backdrop-filter: blur(8px);
+			-webkit-backdrop-filter: blur(8px);
+		}
+
+		.card-actions {
+			position: absolute;
+			top: 0.5rem;
+			right: 0.5rem;
+			z-index: 1;
+			padding: 0;
+			border-radius: var(--pill);
+			background: var(--glass);
+			backdrop-filter: blur(10px);
+			-webkit-backdrop-filter: blur(10px);
+			opacity: 0;
+			transition: opacity 0.3s var(--ease);
+		}
+
+		li.card:hover .card-actions,
+		li.card:focus-within .card-actions {
+			opacity: 1;
+		}
+
+		@media (hover: none) {
+			.card-actions {
+				opacity: 1;
+			}
+		}
+	}
+
+	/* Table view: wider thumbnails. */
+	.ui-table td.cover-col {
+		width: 84px;
+	}
+
+	.ui-table .cover-col .thumb {
+		width: 68px;
+		height: 50px;
+		border-radius: var(--radius-sm);
+	}
+
+	/* Table / grid switch as a segmented pill. */
+	.toggle[role='group']:has(> .ui-icon-btn) {
+		gap: 0.15rem;
+		padding: 0.2rem;
+		border-radius: var(--pill);
+		background: color-mix(in srgb, var(--text) 6%, transparent);
+
+		.ui-icon-btn.on {
+			border-color: transparent;
+			background: var(--bg-elevated);
+			color: var(--text);
+		}
+	}
+
+	/* ---------------------------------------------------------------- local control sizes */
+
+	/*
+	 * Shared components that resize the global controls locally. The scoped .input/.select/.btn
+	 * rules above outrank their hashed classes, so their adjustments are restated here.
+	 */
+	.search .input {
+		min-height: 38px;
+		padding: 0.4rem 2.2rem;
+		border-radius: var(--pill);
+		font-size: 0.88rem;
+	}
+
+	.picker .input {
+		padding-left: 2.3rem;
+	}
+
+	.custom .input,
+	.link-row .input,
+	.new-tag .input {
+		min-height: 36px;
+		padding-block: 0.35rem;
+		font-size: 0.88rem;
+	}
+
+	.custom .input {
+		width: auto;
+	}
+
+	.new-tag .input {
+		width: 220px;
+		max-width: 100%;
+	}
+
+	.select.compact {
+		min-height: 36px;
+		width: auto;
+		padding-block: 0.3rem;
+		font-size: 0.84rem;
+	}
+
+	.textarea.short {
+		min-height: 80px;
+	}
+
+	.input[aria-invalid='true'] {
+		border-color: var(--danger);
+	}
+
+	.link.danger {
+		color: var(--danger);
+	}
+
+	/* ---------------------------------------------------------------- settings */
+
+	.head > h1 {
+		font-size: clamp(2.8rem, 6vw, 5.2rem);
+		line-height: 0.88;
+		margin: 0.45rem 0 1.25rem;
+	}
+
+	form > .card {
+		border-radius: var(--radius);
+	}
+
+	form > .card .card-head h2 {
+		font-size: 1.75rem;
+	}
+
+	.hero-preview {
+		border-radius: var(--radius);
+	}
+
+	.designs .design {
+		border-radius: var(--radius);
+		background: var(--bg-elevated);
+	}
+
+	.designs .design.checked {
+		border-color: var(--emphasis);
+		background: color-mix(in srgb, var(--emphasis) 8%, var(--bg-elevated));
+	}
+
+	.designs .preview {
+		border-radius: 0 var(--radius) var(--radius) 0;
+	}
+}
