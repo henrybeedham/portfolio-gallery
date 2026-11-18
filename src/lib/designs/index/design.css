@@ -1,0 +1,539 @@
+/*
+ * “Index” — a Swiss / International Typographic Style design. See DESIGN.md in this folder.
+ *
+ * Two layers, both scoped to this design:
+ * - Base rules (elements and shared utility classes such as .btn) use
+ *   `html:where([data-design='index'])`, so they replace app.css but stay weak enough for
+ *   component styles to adjust them.
+ * - Override rules use `:root[data-design='index']`, strong enough to restyle the Svelte-scoped
+ *   styles of shared components and pages that this design doesn't replace.
+ * Colours come only from the theme tokens.
+ */
+
+:root[data-design='index'] {
+	--font-sans:
+		'Inter Tight Variable', 'Inter Tight', 'Inter Variable', Inter, ui-sans-serif, system-ui,
+		-apple-system, 'Segoe UI', sans-serif;
+	/* Shared pages that ask for the serif get the grotesk. */
+	--font-serif: var(--font-sans);
+	--font-mono:
+		'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+	/* The 12-column grid every layout snaps to. */
+	--cols: 12;
+	--gutter: clamp(1rem, 3vw, 2.5rem);
+	--col-gap: clamp(0.75rem, 1.6vw, 1.5rem);
+	--max-width: 1600px;
+	--header-height: 56px;
+
+	/* The strong rule opens a section; the hairline separates rows. */
+	--rule: 1px solid var(--text);
+	--hairline: 1px solid var(--border);
+
+	/* Crisp, quick, never bouncy. */
+	--ease: cubic-bezier(0.2, 0, 0, 1);
+	--fast: 150ms;
+	--base: 200ms;
+	--slow: 250ms;
+
+	/* Emphasis: the theme’s highlight, or ink. */
+	--ink: var(--highlight, var(--text));
+}
+
+:root[data-design='index'] body {
+	font-family: var(--font-sans);
+	font-size: 15px;
+	line-height: 1.5;
+	font-feature-settings: 'ss01', 'cv11';
+}
+
+html:where([data-design='index']) :is(h1, h2, h3, h4) {
+	font-family: var(--font-sans);
+	font-weight: 600;
+	line-height: 1;
+	letter-spacing: -0.03em;
+	text-wrap: balance;
+}
+
+html:where([data-design='index']) :is(code, kbd, samp) {
+	font-family: var(--font-mono);
+}
+
+:root[data-design='index'] ::selection {
+	background: var(--ink);
+	color: var(--bg);
+}
+
+:root[data-design='index'] :focus-visible {
+	outline: 2px solid var(--ink);
+	outline-offset: 2px;
+}
+
+/* ------------------------------------------------------------------- grid */
+
+html:where([data-design='index']) .container {
+	max-width: var(--max-width);
+}
+
+/* Twelve columns; children place themselves with grid-column. */
+html:where([data-design='index']) .grid-12 {
+	display: grid;
+	grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+	column-gap: var(--col-gap);
+}
+
+html:where([data-design='index']) .grid-12 > * {
+	grid-column: 1 / -1;
+	min-width: 0;
+}
+
+/* Faint column guides behind a section, so the grid is visible. */
+html:where([data-design='index']) .grid-guides {
+	position: absolute;
+	inset: 0;
+	display: grid;
+	grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+	column-gap: var(--col-gap);
+	pointer-events: none;
+}
+
+html:where([data-design='index']) .grid-guides > span {
+	border-inline: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
+}
+
+@media (max-width: 719px) {
+	html:where([data-design='index']) .grid-guides {
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+	}
+
+	html:where([data-design='index']) .grid-guides > span:nth-child(n + 5) {
+		display: none;
+	}
+}
+
+/* ----------------------------------------------------------------- labels */
+
+/* The mono label: metadata, counts, dates, section numbers, table heads. */
+html:where([data-design='index']) :is(.eyebrow, .label, .mono-label, .field > label) {
+	font-family: var(--font-mono);
+	font-size: 0.7rem;
+	font-weight: 450;
+	line-height: 1.4;
+	letter-spacing: 0.02em;
+	text-transform: uppercase;
+	color: var(--text-muted);
+}
+
+html:where([data-design='index']) .eyebrow {
+	color: var(--highlight, var(--text-muted));
+}
+
+html:where([data-design='index']) :is(.num, .mono) {
+	font-family: var(--font-mono);
+	font-variant-numeric: tabular-nums;
+	letter-spacing: 0;
+}
+
+/* The numbered section head: a full-width rule, the number in mono, then the title. */
+html:where([data-design='index']) .sec-head {
+	display: grid;
+	grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+	column-gap: var(--col-gap);
+	row-gap: 0.75rem;
+	align-items: start;
+	padding-top: 0.75rem;
+	border-top: var(--rule);
+	margin-bottom: clamp(1.5rem, 3.5vw, 3rem);
+}
+
+html:where([data-design='index']) .sec-head > .sec-no {
+	grid-column: 1 / span 2;
+}
+
+html:where([data-design='index']) .sec-head > h2 {
+	grid-column: 3 / span 7;
+	font-size: clamp(2rem, 4.6vw, 4.25rem);
+	letter-spacing: -0.045em;
+	line-height: 0.92;
+}
+
+html:where([data-design='index']) .sec-head > .sec-aside {
+	grid-column: 10 / -1;
+	justify-self: end;
+	text-align: right;
+}
+
+@media (max-width: 719px) {
+	html:where([data-design='index']) .sec-head > :is(.sec-no, h2, .sec-aside) {
+		grid-column: 1 / -1;
+		justify-self: start;
+		text-align: left;
+	}
+}
+
+html:where([data-design='index']) .sec-no {
+	font-family: var(--font-mono);
+	font-size: 0.75rem;
+	font-variant-numeric: tabular-nums;
+	color: var(--highlight, var(--text));
+}
+
+/* ---------------------------------------------------------------- buttons */
+
+html:where([data-design='index']) .btn {
+	min-height: 44px;
+	padding: 0.7rem 1.1rem;
+	font-family: var(--font-mono);
+	font-size: 0.72rem;
+	font-weight: 500;
+	letter-spacing: 0.02em;
+	transition:
+		background-color var(--fast) var(--ease),
+		color var(--fast) var(--ease),
+		border-color var(--fast) var(--ease),
+		opacity var(--fast) var(--ease);
+}
+
+html:where([data-design='index']) .btn:hover:not(:disabled) {
+	--btn-bg: var(--ink);
+	--btn-fg: var(--bg);
+	--btn-border: var(--ink);
+}
+
+html:where([data-design='index']) .btn:disabled {
+	opacity: 0.4;
+}
+
+html:where([data-design='index']) .btn-solid {
+	--btn-bg: var(--ink);
+	--btn-fg: var(--bg);
+	--btn-border: var(--ink);
+}
+
+html:where([data-design='index']) .btn-danger:hover:not(:disabled) {
+	--btn-fg: var(--bg);
+}
+
+html:where([data-design='index']) .btn-sm {
+	min-height: 36px;
+	padding: 0.45rem 0.8rem;
+	font-size: 0.68rem;
+	letter-spacing: 0.02em;
+}
+
+/* A text link whose underline appears on hover. */
+html:where([data-design='index']) .link {
+	gap: 0.45rem;
+	font-family: var(--font-mono);
+	font-size: 0.72rem;
+	font-weight: 450;
+	letter-spacing: 0.02em;
+	text-decoration: underline;
+	text-decoration-color: transparent;
+	text-decoration-thickness: 1px;
+	text-underline-offset: 4px;
+	transition:
+		color var(--fast) var(--ease),
+		text-decoration-color var(--fast) var(--ease);
+}
+
+html:where([data-design='index']) .link:hover {
+	text-decoration-color: currentColor;
+}
+
+/* ------------------------------------------------------------------ forms */
+
+html:where([data-design='index']) .field {
+	gap: 0.4rem;
+}
+
+html:where([data-design='index']) .field > label,
+html:where([data-design='index']) .label {
+	font-size: 0.68rem;
+}
+
+html:where([data-design='index']) .hint {
+	line-height: 1.45;
+}
+
+html:where([data-design='index']) :is(.input, .textarea, .select) {
+	padding: 0.6rem 0.75rem;
+	border-color: var(--border-strong);
+	transition:
+		border-color var(--fast) var(--ease),
+		box-shadow var(--fast) var(--ease);
+}
+
+html:where([data-design='index']) :is(.input, .textarea, .select):hover {
+	border-color: var(--text-muted);
+}
+
+html:where([data-design='index']) :is(.input, .textarea, .select):focus {
+	border-color: var(--ink);
+	box-shadow: inset 0 0 0 1px var(--ink);
+}
+
+html:where([data-design='index']) :is(.input, .textarea)::placeholder {
+	color: var(--text-subtle);
+}
+
+html:where([data-design='index']) .select {
+	background-image:
+		linear-gradient(45deg, transparent 50%, var(--text) 50%),
+		linear-gradient(135deg, var(--text) 50%, transparent 50%);
+}
+
+html:where([data-design='index']) .alert {
+	padding: 0.75rem 0.9rem;
+	border-left-width: 4px;
+}
+
+/* --------------------------------------------------------------- markdown */
+
+html:where([data-design='index']) .prose {
+	line-height: 1.6;
+	max-width: 62ch;
+}
+
+html:where([data-design='index']) .prose :is(h1, h2, h3) {
+	font-size: 1.35rem;
+	letter-spacing: -0.02em;
+}
+
+html:where([data-design='index']) .prose blockquote {
+	padding-left: 1rem;
+	border-left: 2px solid var(--ink);
+	font-family: var(--font-sans);
+	font-style: normal;
+	font-weight: 500;
+	letter-spacing: -0.01em;
+	color: var(--text);
+}
+
+/* ---------------------------------------------------------------- motion */
+
+@keyframes index-rise {
+	from {
+		opacity: 0;
+		transform: translateY(6px);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+/* A horizontal wipe for type, rules and images. */
+@keyframes index-wipe {
+	/* Negative insets so descenders and overshoots aren’t clipped when it ends. */
+	from {
+		clip-path: inset(-25% 100% -25% -5%);
+	}
+	to {
+		clip-path: inset(-25% -5% -25% -5%);
+	}
+}
+
+:root[data-design='index'] .fade-up {
+	animation: index-rise var(--slow) var(--ease) both;
+}
+
+/* Images fade in quickly and never zoom. */
+:root[data-design='index'] .img {
+	transition: opacity var(--slow) var(--ease);
+}
+
+/* The route-change bar fills in twelve column steps. */
+:root[data-design='index'] .nav-progress {
+	height: 3px;
+	background: var(--ink);
+	animation-duration: 1.2s;
+	animation-timing-function: steps(12, end);
+	animation-delay: 0.12s;
+}
+
+/* ================================================================ lightbox */
+/* The viewer’s chrome is fixed light-on-dark whatever the theme (the one allowed exception). */
+
+:root[data-design='index'] .lightbox {
+	backdrop-filter: none;
+	-webkit-backdrop-filter: none;
+	font-family: var(--font-mono);
+}
+
+:root[data-design='index'] .lightbox .bar {
+	margin-inline: clamp(1rem, 3vw, 2rem);
+	padding: 0.6rem 0;
+	border-bottom: 1px solid rgba(243, 238, 230, 0.35);
+}
+
+:root[data-design='index'] .lightbox .meta {
+	gap: 1.5rem;
+	font-size: 0.72rem;
+	letter-spacing: 0;
+	text-transform: uppercase;
+}
+
+:root[data-design='index'] .lightbox .counter {
+	letter-spacing: 0;
+	padding: 0.1rem 0.4rem;
+	background: #f3eee6;
+	color: #151412;
+}
+
+:root[data-design='index'] .lightbox .name {
+	text-transform: none;
+}
+
+:root[data-design='index'] .lightbox .icon {
+	opacity: 1;
+	transition:
+		background-color var(--fast) var(--ease),
+		color var(--fast) var(--ease);
+}
+
+:root[data-design='index'] .lightbox .icon:hover {
+	background: #f3eee6;
+	color: #151412;
+}
+
+:root[data-design='index'] .lightbox .stage {
+	padding-top: clamp(0.75rem, 2vw, 1.5rem);
+}
+
+:root[data-design='index'] .lightbox .stage img,
+:root[data-design='index'] .lightbox .stage video {
+	box-shadow: none;
+}
+
+:root[data-design='index'] .lightbox .nav {
+	width: 48px;
+	height: 48px;
+	border: 1px solid rgba(243, 238, 230, 0.4);
+	opacity: 1;
+	transition:
+		background-color var(--fast) var(--ease),
+		color var(--fast) var(--ease),
+		border-color var(--fast) var(--ease);
+}
+
+:root[data-design='index'] .lightbox .nav:hover:not(:disabled) {
+	transform: none;
+	background: #f3eee6;
+	border-color: #f3eee6;
+	color: #151412;
+}
+
+:root[data-design='index'] .lightbox .prev {
+	left: clamp(0.5rem, 2vw, 2rem);
+}
+
+:root[data-design='index'] .lightbox .next {
+	right: clamp(0.5rem, 2vw, 2rem);
+}
+
+/* ======================================================= gate, expiry, error */
+/* Set flush-left on the grid: a rule, a mono label, a big headline, then the form. */
+
+:root[data-design='index'] :is(.gate, .expired, .error-page) {
+	min-height: 100svh;
+	display: grid;
+	grid-template-columns: minmax(0, 720px);
+	place-items: end start;
+	place-content: end start;
+	padding: 5rem var(--gutter) clamp(2rem, 8vw, 6rem);
+	text-align: left;
+}
+
+:root[data-design='index'] .gate .back {
+	top: 1.1rem;
+}
+
+:root[data-design='index'] :is(.gate, .expired) .card {
+	justify-items: start;
+	gap: 1.1rem;
+	width: min(100%, 720px);
+	padding: 0.75rem 0 0;
+	border: 0;
+	border-top: var(--rule);
+	background: none;
+	text-align: left;
+}
+
+:root[data-design='index'] :is(.gate, .expired) .icon {
+	width: auto;
+	height: auto;
+	margin: 0;
+	border: 0;
+	color: var(--highlight, var(--text));
+}
+
+:root[data-design='index'] :is(.gate, .expired, .error-page) h1 {
+	max-width: 14ch;
+	font-size: clamp(2.6rem, 9vw, 7rem);
+	font-weight: 650;
+	line-height: 0.88;
+	letter-spacing: -0.055em;
+	margin-left: -0.04em;
+	animation: index-wipe 0.45s var(--ease) both;
+}
+
+:root[data-design='index'] :is(.gate, .expired) .muted,
+:root[data-design='index'] .error-page p.muted {
+	max-width: 46ch;
+	font-size: 1rem;
+}
+
+:root[data-design='index'] .gate form {
+	grid-template-columns: minmax(0, 1fr) auto;
+	max-width: 520px;
+	gap: 0;
+}
+
+:root[data-design='index'] .gate form .input {
+	border-right: 0;
+	min-height: 48px;
+	font-family: var(--font-mono);
+}
+
+:root[data-design='index'] .gate form .btn {
+	min-height: 48px;
+}
+
+@media (max-width: 420px) {
+	:root[data-design='index'] .gate form {
+		grid-template-columns: minmax(0, 1fr);
+		gap: 0.5rem;
+	}
+
+	:root[data-design='index'] .gate form .input {
+		border-right: 1px solid var(--border-strong);
+	}
+}
+
+:root[data-design='index'] .gate .alert {
+	max-width: 520px;
+}
+
+:root[data-design='index'] .expired .contact {
+	border-block: 0;
+	border-top: 1px solid var(--border);
+	padding-bottom: 0;
+}
+
+:root[data-design='index'] .expired ul {
+	justify-items: start;
+	font-family: var(--font-mono);
+	font-size: 0.85rem;
+}
+
+:root[data-design='index'] .error-page {
+	justify-items: start;
+	gap: 1.25rem;
+}
+
+:root[data-design='index'] .error-page .eyebrow {
+	width: min(100%, 720px);
+	padding-top: 0.75rem;
+	border-top: var(--rule);
+}
