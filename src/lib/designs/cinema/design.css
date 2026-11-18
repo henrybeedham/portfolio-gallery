@@ -1,0 +1,479 @@
+/*
+ * “Cinema” — immersive, image-first, edge to edge. See ./DESIGN.md.
+ *
+ * Everything is scoped under :root[data-design='cinema'], so nothing here reaches another design.
+ * Colours come only from the theme tokens; tints are color-mix() of them.
+ */
+
+:root[data-design='cinema'] {
+	--font-display:
+		'Oswald Variable', Oswald, 'Arial Narrow', 'Roboto Condensed', 'Helvetica Neue', sans-serif;
+	--font-sans:
+		'Manrope Variable', Manrope, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+	--gutter: clamp(1rem, 4vw, 3rem);
+	--max-width: 1560px;
+	--header-height: 72px;
+	--radius: 6px;
+	--radius-sm: 4px;
+	--pill: 999px;
+	--tile-gap: 3px;
+	--ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+	--ease-slow: cubic-bezier(0.16, 1, 0.3, 1);
+
+	/* The emphasis colour: the theme's highlight where it has one, otherwise ink. */
+	--emphasis: var(--highlight, var(--text));
+	/* Shared pages that still ask for the serif get the display face. */
+	--font-serif: var(--font-display);
+
+	/* Legibility scrims for text laid over photographs. */
+	--scrim-strong: color-mix(in srgb, var(--bg) 92%, transparent);
+	--scrim-soft: color-mix(in srgb, var(--bg) 55%, transparent);
+	/* Floating chrome (pill toolbars, the header once scrolled). */
+	--glass: color-mix(in srgb, var(--bg-elevated) 72%, transparent);
+	--glass-border: color-mix(in srgb, var(--text) 12%, transparent);
+	--shadow-float: 0 18px 50px color-mix(in srgb, var(--lightbox-bg) 28%, transparent);
+
+	body {
+		margin: 0;
+		background: var(--bg);
+		color: var(--text);
+		font-family: var(--font-sans);
+		font-size: 15px;
+		line-height: 1.6;
+		-webkit-font-smoothing: antialiased;
+		-moz-osx-font-smoothing: grayscale;
+		text-rendering: optimizeLegibility;
+		overflow-x: clip;
+	}
+
+	img {
+		display: block;
+		max-width: 100%;
+	}
+
+	a {
+		color: inherit;
+	}
+
+	/* Condensed display face, set large and uppercase, like a title card. */
+	h1,
+	h2,
+	h3 {
+		font-family: var(--font-display);
+		font-style: normal;
+		font-weight: 500;
+		line-height: 0.98;
+		letter-spacing: 0.005em;
+		text-transform: uppercase;
+		margin: 0;
+		text-wrap: balance;
+	}
+
+	h4 {
+		font-family: var(--font-sans);
+		font-weight: 700;
+		font-size: 1rem;
+		line-height: 1.3;
+		letter-spacing: 0;
+		margin: 0;
+	}
+
+	p {
+		margin: 0;
+	}
+
+	button {
+		font: inherit;
+		color: inherit;
+	}
+
+	::selection {
+		background: var(--emphasis);
+		color: var(--bg);
+	}
+
+	:focus-visible {
+		outline: 2px solid var(--emphasis);
+		outline-offset: 3px;
+	}
+
+	.container {
+		width: 100%;
+		max-width: var(--max-width);
+		margin: 0 auto;
+		padding-inline: var(--gutter);
+	}
+
+	/* A title-card credit: the display face, small and uppercase. */
+	.eyebrow {
+		font-family: var(--font-display);
+		font-size: 0.82rem;
+		font-weight: 500;
+		letter-spacing: 0.08em;
+		line-height: 1.2;
+		text-transform: uppercase;
+		color: var(--highlight, var(--text-muted));
+	}
+
+	/* Big condensed numbers (stats, money, counters). */
+	.figure {
+		font-family: var(--font-display);
+		font-weight: 400;
+		line-height: 1;
+		font-variant-numeric: lining-nums tabular-nums;
+		letter-spacing: 0;
+	}
+
+	.muted {
+		color: var(--text-muted);
+	}
+
+	.subtle {
+		color: var(--text-subtle);
+	}
+
+	.visually-hidden {
+		position: absolute !important;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
+		clip: rect(0 0 0 0);
+		white-space: nowrap;
+	}
+
+	/* ------------------------------------------------------------------ buttons */
+
+	/* Pills. Solid by default is reserved for the main action; most buttons are outline or glass. */
+	.btn {
+		--btn-bg: transparent;
+		--btn-fg: var(--text);
+		--btn-border: color-mix(in srgb, var(--text) 38%, transparent);
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.55rem;
+		min-height: 44px;
+		padding: 0.65rem 1.35rem;
+		border: 1px solid var(--btn-border);
+		border-radius: var(--pill);
+		background: var(--btn-bg);
+		color: var(--btn-fg);
+		font-family: var(--font-sans);
+		font-size: 0.86rem;
+		font-weight: 600;
+		letter-spacing: 0.005em;
+		line-height: 1.1;
+		text-transform: none;
+		text-decoration: none;
+		white-space: nowrap;
+		cursor: pointer;
+		transition:
+			background-color 0.3s var(--ease),
+			color 0.3s var(--ease),
+			border-color 0.3s var(--ease),
+			opacity 0.3s var(--ease);
+	}
+
+	.btn:hover:not(:disabled) {
+		--btn-bg: color-mix(in srgb, var(--text) 8%, transparent);
+		--btn-border: var(--text);
+	}
+
+	.btn:disabled {
+		opacity: 0.45;
+		cursor: not-allowed;
+	}
+
+	.btn-solid {
+		--btn-bg: var(--emphasis);
+		--btn-fg: var(--bg);
+		--btn-border: var(--emphasis);
+	}
+
+	.btn-solid:hover:not(:disabled) {
+		--btn-bg: color-mix(in srgb, var(--emphasis) 84%, var(--bg));
+		--btn-fg: var(--bg);
+		--btn-border: color-mix(in srgb, var(--emphasis) 84%, var(--bg));
+	}
+
+	.btn-accent {
+		--btn-bg: var(--accent);
+		--btn-fg: var(--accent-text);
+		--btn-border: var(--accent);
+	}
+
+	.btn-accent:hover:not(:disabled) {
+		--btn-bg: color-mix(in srgb, var(--accent) 84%, var(--bg));
+		--btn-fg: var(--accent-text);
+		--btn-border: color-mix(in srgb, var(--accent) 84%, var(--bg));
+	}
+
+	.btn-quiet {
+		--btn-bg: color-mix(in srgb, var(--text) 5%, transparent);
+		--btn-border: transparent;
+	}
+
+	.btn-quiet:hover:not(:disabled) {
+		--btn-bg: color-mix(in srgb, var(--text) 11%, transparent);
+		--btn-fg: var(--text);
+		--btn-border: transparent;
+	}
+
+	/* Frosted, for buttons laid over photographs. */
+	.btn-glass {
+		--btn-bg: var(--glass);
+		--btn-border: var(--glass-border);
+		backdrop-filter: blur(14px) saturate(1.2);
+		-webkit-backdrop-filter: blur(14px) saturate(1.2);
+	}
+
+	.btn-glass:hover:not(:disabled) {
+		--btn-bg: var(--bg-elevated);
+		--btn-border: var(--glass-border);
+	}
+
+	.btn-danger {
+		--btn-fg: var(--danger);
+		--btn-border: color-mix(in srgb, var(--danger) 55%, transparent);
+	}
+
+	.btn-danger:hover:not(:disabled) {
+		--btn-bg: var(--danger-soft);
+		--btn-fg: var(--danger);
+		--btn-border: var(--danger);
+	}
+
+	.btn-sm {
+		letter-spacing: 0.005em;
+		min-height: 36px;
+		padding: 0.45rem 0.95rem;
+		font-size: 0.8rem;
+		gap: 0.45rem;
+	}
+
+	.link {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.45rem;
+		font-size: 0.86rem;
+		font-weight: 600;
+		letter-spacing: 0;
+		text-transform: none;
+		text-decoration: none;
+		color: var(--text-muted);
+		transition: color 0.25s var(--ease);
+		background: none;
+		border: 0;
+		padding: 0;
+		cursor: pointer;
+	}
+
+	.link:hover {
+		color: var(--text);
+	}
+
+	/* ------------------------------------------------------------------- forms */
+
+	.field {
+		display: grid;
+		gap: 0.4rem;
+	}
+
+	.field > label,
+	.label {
+		font-size: 0.8rem;
+		font-weight: 600;
+		letter-spacing: 0.01em;
+		text-transform: none;
+		color: var(--text-muted);
+	}
+
+	.hint {
+		font-size: 0.8rem;
+		color: var(--text-subtle);
+		line-height: 1.5;
+	}
+
+	.input,
+	.textarea,
+	.select {
+		width: 100%;
+		min-height: 44px;
+		padding: 0.65rem 0.9rem;
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		background: var(--bg-elevated);
+		color: var(--text);
+		font: inherit;
+		font-size: 0.95rem;
+		transition:
+			border-color 0.2s var(--ease),
+			background-color 0.2s var(--ease),
+			box-shadow 0.2s var(--ease);
+	}
+
+	.input:hover,
+	.textarea:hover,
+	.select:hover {
+		border-color: var(--border-strong);
+	}
+
+	.input:focus,
+	.textarea:focus,
+	.select:focus {
+		outline: none;
+		border-color: var(--emphasis);
+		box-shadow: 0 0 0 3px color-mix(in srgb, var(--emphasis) 18%, transparent);
+	}
+
+	.textarea {
+		min-height: 120px;
+		resize: vertical;
+		line-height: 1.6;
+	}
+
+	.select {
+		appearance: none;
+		padding-right: 2.25rem;
+		background-image:
+			linear-gradient(45deg, transparent 50%, var(--text-muted) 50%),
+			linear-gradient(135deg, var(--text-muted) 50%, transparent 50%);
+		background-position:
+			calc(100% - 18px) 52%,
+			calc(100% - 13px) 52%;
+		background-size:
+			5px 5px,
+			5px 5px;
+		background-repeat: no-repeat;
+	}
+
+	.error-text {
+		color: var(--danger);
+		font-size: 0.85rem;
+	}
+
+	.alert {
+		padding: 0.8rem 1rem;
+		border: 1px solid color-mix(in srgb, currentColor 40%, transparent);
+		border-radius: var(--radius);
+		font-size: 0.88rem;
+	}
+
+	.alert-error {
+		color: var(--danger);
+		background: var(--danger-soft);
+	}
+
+	/* --------------------------------------------------------------- markdown */
+
+	.prose {
+		color: var(--text-muted);
+		font-size: 1rem;
+		line-height: 1.75;
+		max-width: 66ch;
+	}
+
+	.prose > * + * {
+		margin-top: 1em;
+	}
+
+	.prose a {
+		color: var(--text);
+		text-underline-offset: 3px;
+	}
+
+	.prose h1,
+	.prose h2,
+	.prose h3 {
+		color: var(--text);
+		font-size: 1.5rem;
+		margin-top: 1.5em;
+	}
+
+	.prose blockquote {
+		margin: 0;
+		padding-left: 1.1rem;
+		border-left: 3px solid var(--emphasis);
+		color: var(--text);
+		font-family: var(--font-sans);
+		font-style: normal;
+		font-size: 1.1rem;
+	}
+
+	.prose ul,
+	.prose ol {
+		padding-left: 1.25rem;
+	}
+
+	.prose code {
+		font-size: 0.88em;
+		background: var(--surface);
+		padding: 0.1em 0.35em;
+		border-radius: var(--radius-sm);
+	}
+
+	.prose img {
+		margin-block: 1.5rem;
+	}
+
+	/* --------------------------------------------------------------- spinner */
+
+	.spinner {
+		display: inline-block;
+		width: 14px;
+		height: 14px;
+		border: 1.5px solid currentColor;
+		border-right-color: transparent;
+		border-radius: 50%;
+		animation: spin 0.8s linear infinite;
+		flex: none;
+	}
+
+	.fade-up {
+		animation: cinema-fade-up 1.1s var(--ease-slow) both;
+	}
+
+	.fade-in {
+		animation: cinema-fade-in 1.2s var(--ease) both;
+	}
+
+	/* The page-load progress bar in the root layout. */
+	.nav-progress {
+		background: var(--emphasis);
+	}
+
+	/* The album route's blurred page backdrop: Cinema shows the photo in the cover band instead. */
+	.album > .backdrop {
+		display: none;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	:root[data-design='cinema'] *,
+	:root[data-design='cinema'] *::before,
+	:root[data-design='cinema'] *::after {
+		animation-iteration-count: 1 !important;
+	}
+}
+
+/* Slow cross-fade with a slight rise: the only entrance motion. */
+@keyframes cinema-fade-up {
+	from {
+		opacity: 0;
+		transform: translateY(18px);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+@keyframes cinema-fade-in {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
