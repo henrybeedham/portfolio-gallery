@@ -1,0 +1,445 @@
+/*
+ * Studio: soft, rounded, friendly. Colours come only from the theme tokens. See DESIGN.md here.
+ *
+ * Scoping: tokens sit on <html data-design='studio'>. Base rules use
+ * `:where(:root[data-design='studio']) body …` (specificity 0,1,1 for a class), which beats the
+ * Editorial globals in app.css (0,1,0) but still lets component-scoped styles (0,2,0) win, so
+ * shared pages keep their local tweaks.
+ */
+
+:root[data-design='studio'] {
+	--font-sans:
+		'Plus Jakarta Sans Variable', 'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system,
+		'Segoe UI', sans-serif;
+	/* One family does everything. The old serif token points at it so nothing falls back. */
+	--font-display: var(--font-sans);
+	--font-serif: var(--font-sans);
+
+	--gutter: clamp(1rem, 4vw, 2.5rem);
+	--max-width: 1360px;
+	--header-height: 76px;
+
+	/* Geometry */
+	--radius-xs: 6px;
+	--radius-sm: 10px;
+	--radius: 16px;
+	--radius-lg: 24px;
+	--radius-xl: 32px;
+	--radius-pill: 999px;
+
+	/* Depth: layered shadows tinted from the theme's ink, so they read in light, dark and green. */
+	--shadow-ink: var(--text);
+	--shadow-sm:
+		0 1px 2px color-mix(in srgb, var(--shadow-ink) 6%, transparent),
+		0 2px 8px -2px color-mix(in srgb, var(--shadow-ink) 6%, transparent);
+	--shadow:
+		0 1px 2px color-mix(in srgb, var(--shadow-ink) 5%, transparent),
+		0 6px 16px -4px color-mix(in srgb, var(--shadow-ink) 9%, transparent),
+		0 16px 32px -12px color-mix(in srgb, var(--shadow-ink) 8%, transparent);
+	--shadow-lg:
+		0 2px 4px color-mix(in srgb, var(--shadow-ink) 5%, transparent),
+		0 12px 28px -8px color-mix(in srgb, var(--shadow-ink) 14%, transparent),
+		0 32px 64px -24px color-mix(in srgb, var(--shadow-ink) 18%, transparent);
+	/* Hairline that softens card edges without looking like a rule. */
+	--edge: color-mix(in srgb, var(--border) 75%, transparent);
+	/* Emphasis colour: gold in themes that define a highlight, ink otherwise. */
+	--ink: var(--highlight, var(--text));
+	--ring: color-mix(in srgb, var(--ink) 22%, transparent);
+
+	/* Motion: quick out-curve that feels sprung but never overshoots. */
+	--ease: cubic-bezier(0.22, 1, 0.36, 1);
+	--ease-soft: cubic-bezier(0.4, 0, 0.2, 1);
+	--dur: 240ms;
+	--dur-fast: 180ms;
+}
+
+:root[data-design='studio'] body {
+	margin: 0;
+	background: var(--bg);
+	color: var(--text);
+	font-family: var(--font-sans);
+	font-size: 15px;
+	line-height: 1.6;
+	font-feature-settings: 'ss01';
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+	text-rendering: optimizeLegibility;
+}
+
+:where(:root[data-design='studio']) body {
+	h1,
+	h2,
+	h3,
+	h4 {
+		font-family: var(--font-display);
+		font-weight: 700;
+		line-height: 1.12;
+		letter-spacing: -0.025em;
+		margin: 0;
+		text-wrap: balance;
+	}
+
+	::selection {
+		background: var(--ink);
+		color: var(--bg);
+	}
+
+	:focus-visible {
+		outline: 2px solid var(--ink);
+		outline-offset: 3px;
+		border-radius: var(--radius-xs);
+	}
+
+	.container {
+		width: 100%;
+		max-width: var(--max-width);
+		margin: 0 auto;
+		padding-inline: var(--gutter);
+	}
+
+	/* A small, friendly label above a heading. Sentence case; no tracking. */
+	.eyebrow {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.45rem;
+		font-family: var(--font-sans);
+		font-size: 0.82rem;
+		font-weight: 600;
+		letter-spacing: 0;
+		text-transform: none;
+		color: var(--highlight, var(--text-muted));
+	}
+
+	/* The pill version of an eyebrow, for public sections and hero cards. */
+	.kicker {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.45rem;
+		min-height: 30px;
+		padding: 0.25rem 0.8rem;
+		border-radius: var(--radius-pill);
+		background: color-mix(in srgb, var(--ink) 10%, transparent);
+		color: var(--highlight, var(--text));
+		font-size: 0.8rem;
+		font-weight: 600;
+		line-height: 1.2;
+	}
+
+	/* ------------------------------------------------------------------ buttons */
+
+	.btn {
+		--btn-bg: var(--surface);
+		--btn-fg: var(--text);
+		--btn-border: transparent;
+		--btn-shadow: none;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.5rem;
+		min-height: 44px;
+		padding: 0.6rem 1.3rem;
+		border: 1px solid var(--btn-border);
+		border-radius: var(--radius-pill);
+		background: var(--btn-bg);
+		color: var(--btn-fg);
+		box-shadow: var(--btn-shadow);
+		font-family: var(--font-sans);
+		font-size: 0.9rem;
+		font-weight: 600;
+		letter-spacing: -0.005em;
+		text-transform: none;
+		line-height: 1.2;
+		text-decoration: none;
+		white-space: nowrap;
+		cursor: pointer;
+		transition:
+			background-color var(--dur) var(--ease),
+			color var(--dur) var(--ease),
+			border-color var(--dur) var(--ease),
+			box-shadow var(--dur) var(--ease),
+			transform var(--dur) var(--ease),
+			opacity var(--dur) var(--ease);
+	}
+
+	.btn:hover:not(:disabled) {
+		--btn-bg: var(--surface-strong);
+		--btn-fg: var(--text);
+		--btn-border: transparent;
+		transform: translateY(-1px);
+	}
+
+	.btn:active:not(:disabled) {
+		transform: translateY(0) scale(0.98);
+		transition-duration: 80ms;
+	}
+
+	.btn:disabled {
+		opacity: 0.45;
+		cursor: not-allowed;
+	}
+
+	.btn-solid {
+		--btn-bg: var(--ink);
+		--btn-fg: var(--bg);
+		--btn-shadow: var(--shadow-sm);
+	}
+
+	.btn-solid:hover:not(:disabled) {
+		--btn-bg: color-mix(in srgb, var(--ink) 88%, var(--bg));
+		--btn-fg: var(--bg);
+		--btn-border: transparent;
+		--btn-shadow: var(--shadow);
+	}
+
+	.btn-accent {
+		--btn-bg: var(--accent);
+		--btn-fg: var(--accent-text);
+		--btn-shadow: var(--shadow-sm);
+	}
+
+	.btn-accent:hover:not(:disabled) {
+		--btn-bg: color-mix(in srgb, var(--accent) 88%, var(--bg));
+		--btn-fg: var(--accent-text);
+		--btn-border: transparent;
+		--btn-shadow: var(--shadow);
+	}
+
+	.btn-quiet {
+		--btn-bg: transparent;
+		--btn-border: var(--border);
+	}
+
+	.btn-quiet:hover:not(:disabled) {
+		--btn-bg: var(--surface);
+		--btn-fg: var(--text);
+		--btn-border: var(--border-strong);
+	}
+
+	.btn-danger {
+		--btn-bg: var(--danger-soft);
+		--btn-fg: var(--danger);
+	}
+
+	.btn-danger:hover:not(:disabled) {
+		--btn-border: transparent;
+		--btn-bg: var(--danger);
+		--btn-fg: var(--bg);
+	}
+
+	.btn-sm {
+		min-height: 36px;
+		padding: 0.4rem 0.95rem;
+		font-size: 0.82rem;
+		letter-spacing: -0.005em;
+		gap: 0.4rem;
+	}
+
+	.link {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.4rem;
+		font-size: 0.88rem;
+		font-weight: 600;
+		letter-spacing: 0;
+		text-transform: none;
+		text-decoration: none;
+		color: var(--text-muted);
+		transition: color var(--dur-fast) var(--ease);
+		background: none;
+		border: 0;
+		padding: 0;
+		cursor: pointer;
+	}
+
+	.link:hover {
+		color: var(--text);
+	}
+
+	/* ------------------------------------------------------------------- forms */
+
+	.field {
+		display: grid;
+		gap: 0.45rem;
+	}
+
+	.field > label,
+	.label {
+		font-size: 0.85rem;
+		font-weight: 600;
+		letter-spacing: 0;
+		text-transform: none;
+		color: var(--text);
+	}
+
+	.hint {
+		font-size: 0.8rem;
+		color: var(--text-subtle);
+		line-height: 1.5;
+	}
+
+	.input,
+	.textarea,
+	.select {
+		width: 100%;
+		min-height: 44px;
+		padding: 0.6rem 0.95rem;
+		border: 1px solid var(--border);
+		border-radius: var(--radius-sm);
+		background: var(--bg-elevated);
+		color: var(--text);
+		font: inherit;
+		font-size: 0.95rem;
+		box-shadow: inset 0 1px 2px color-mix(in srgb, var(--shadow-ink) 4%, transparent);
+		transition:
+			border-color var(--dur-fast) var(--ease),
+			box-shadow var(--dur-fast) var(--ease),
+			background-color var(--dur-fast) var(--ease);
+	}
+
+	.input::placeholder,
+	.textarea::placeholder {
+		color: var(--text-subtle);
+	}
+
+	.input:hover,
+	.textarea:hover,
+	.select:hover {
+		border-color: var(--border-strong);
+	}
+
+	.input:focus,
+	.textarea:focus,
+	.select:focus {
+		outline: none;
+		border-color: var(--ink);
+		box-shadow: 0 0 0 4px var(--ring);
+	}
+
+	.textarea {
+		min-height: 120px;
+		resize: vertical;
+		line-height: 1.6;
+	}
+
+	.select {
+		appearance: none;
+		padding-right: 2.4rem;
+		background-image:
+			linear-gradient(45deg, transparent 50%, var(--text-muted) 50%),
+			linear-gradient(135deg, var(--text-muted) 50%, transparent 50%);
+		background-position:
+			calc(100% - 19px) 52%,
+			calc(100% - 14px) 52%;
+		background-size:
+			5px 5px,
+			5px 5px;
+		background-repeat: no-repeat;
+	}
+
+	.error-text {
+		color: var(--danger);
+		font-size: 0.85rem;
+	}
+
+	.alert {
+		padding: 0.8rem 1rem;
+		border: 1px solid color-mix(in srgb, currentColor 22%, transparent);
+		border-radius: var(--radius-sm);
+		font-size: 0.88rem;
+	}
+
+	.alert-error {
+		color: var(--danger);
+		background: var(--danger-soft);
+	}
+
+	.alert-success {
+		color: var(--success);
+		background: var(--success-soft);
+	}
+
+	/* --------------------------------------------------------------- markdown */
+
+	.prose {
+		color: var(--text-muted);
+		font-size: 1rem;
+		line-height: 1.7;
+		max-width: 66ch;
+	}
+
+	.prose > * + * {
+		margin-top: 1em;
+	}
+
+	.prose a {
+		color: var(--text);
+		text-decoration-color: color-mix(in srgb, var(--ink) 45%, transparent);
+		text-decoration-thickness: 2px;
+		text-underline-offset: 3px;
+	}
+
+	.prose h1,
+	.prose h2,
+	.prose h3 {
+		color: var(--text);
+		font-size: 1.3rem;
+		margin-top: 1.5em;
+	}
+
+	.prose blockquote {
+		margin: 0;
+		padding: 0.9rem 1.2rem;
+		border-radius: var(--radius);
+		background: var(--surface);
+		color: var(--text);
+		font-size: 1.05rem;
+		font-style: normal;
+		font-weight: 500;
+	}
+
+	.prose ul,
+	.prose ol {
+		padding-left: 1.25rem;
+	}
+
+	.prose code {
+		font-size: 0.88em;
+		background: var(--surface);
+		padding: 0.1em 0.4em;
+		border-radius: var(--radius-xs);
+	}
+
+	.prose img {
+		margin-block: 1.5rem;
+		border-radius: var(--radius);
+	}
+
+	/* --------------------------------------------------------------- spinner */
+
+	.spinner {
+		display: inline-block;
+		width: 14px;
+		height: 14px;
+		border: 2px solid currentColor;
+		border-right-color: transparent;
+		border-radius: 50%;
+		animation: spin 0.7s linear infinite;
+		flex: none;
+	}
+
+	.fade-up {
+		animation: fade-up 0.6s var(--ease) both;
+	}
+
+	/* Icons are drawn a touch heavier than Editorial's, to sit with the bolder type. */
+	svg.lucide-icon {
+		stroke-width: 2;
+	}
+
+	.img {
+		transition:
+			opacity 0.5s var(--ease-soft),
+			transform 0.5s var(--ease),
+			filter 0.4s var(--ease);
+	}
+}
