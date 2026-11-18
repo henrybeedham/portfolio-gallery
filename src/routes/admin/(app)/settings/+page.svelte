@@ -3,6 +3,7 @@
 	import { enhance } from '$app/forms';
 	import ImageIcon from '@lucide/svelte/icons/image';
 	import ThemePicker from '#lib/components/admin/ThemePicker.svelte';
+	import DesignPicker from '#lib/components/admin/DesignPicker.svelte';
 	import ThemeManager from '#lib/components/admin/ThemeManager.svelte';
 	import Toggle from '#lib/components/admin/Toggle.svelte';
 	import { feedback } from '#lib/components/admin/feedback.svelte.js';
@@ -13,6 +14,7 @@
 
 	const initial = untrack(() => data.current);
 	let theme = $state(initial.theme);
+	let design = $state(initial.design);
 	let albumTheme = $state(initial.defaultAlbumTheme);
 	let layout = $state<Layout>(initial.defaultLayout);
 	let sort = $state<SortOrder>(initial.defaultSort);
@@ -149,7 +151,7 @@
 				>{data.current.heroTitle}</textarea
 			>
 			<p class="hint">
-				Each line becomes a line of the headline; alternate lines are set in italics.
+				Each line becomes a line of the headline. Some designs set alternate lines in italics.
 			</p>
 		</div>
 		<div class="field">
@@ -236,7 +238,18 @@
 			<h2>Appearance</h2>
 			<p class="hint">Applies to the public site and this dashboard.</p>
 		</div>
-		<ThemePicker themes={data.themes} name="theme" bind:value={theme} />
+		<div class="field">
+			<span class="label">Design</span>
+			<DesignPicker name="design" bind:value={design} />
+			<p class="hint">
+				Layout and typography. Every design works with every colour theme. Use the arrow to preview
+				one in a new tab before saving.
+			</p>
+		</div>
+		<div class="field">
+			<span class="label">Colour theme</span>
+			<ThemePicker themes={data.themes} name="theme" bind:value={theme} />
+		</div>
 		<p class="hint">
 			Invoices have their own style setting under
 			<a href="/admin/invoices/settings">Invoices → Settings</a>.

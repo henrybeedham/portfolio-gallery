@@ -1,0 +1,566 @@
+/*
+ * Contact Sheet — the design's global layer. See DESIGN.md in this folder.
+ *
+ * Every rule is scoped to <html data-design="contact-sheet">. Base rules use
+ * `html:where([data-design=…])` so they beat src/app.css (one extra element of specificity) but
+ * still lose to component-scoped Svelte styles. Colours come only from theme tokens.
+ */
+
+:root[data-design='contact-sheet'] {
+	--font-mono:
+		'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'Liberation Mono', monospace;
+	--font-sans: 'IBM Plex Sans Variable', 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+	/* Big titles: Plex Sans on its width axis, condensed like a film-box label. */
+	--font-display: var(--font-sans);
+	--display-stretch: 78%;
+	/* Shared pages that still ask for the Editorial serif get the display face instead. */
+	--font-serif: var(--font-display);
+
+	--gutter: clamp(1rem, 4vw, 3rem);
+	--max-width: 1440px;
+	--header-height: 64px;
+
+	/* Rules: 2px for structure (sections, panels, the label box), 1px hairlines inside. */
+	--rule: 2px;
+	--rule-color: var(--text);
+
+	/* Film base and the edge print along it. */
+	--film: color-mix(in srgb, var(--surface-strong) 55%, var(--border-strong));
+	--film-hole: var(--bg);
+	--edge-print: var(--highlight, color-mix(in srgb, var(--text) 45%, var(--text-muted)));
+
+	/* Grease pencil: the selection mark on frames. */
+	--grease: var(--highlight, var(--accent));
+
+	/* Mechanical motion: short and linear-ish, no overshoot. */
+	--ease: cubic-bezier(0.4, 0, 0.2, 1);
+	--fast: 0.12s;
+	--slow: 0.24s;
+}
+
+html:where([data-design='contact-sheet']) body {
+	margin: 0;
+	background: var(--bg);
+	color: var(--text);
+	font-family: var(--font-mono);
+	font-size: 14px;
+	line-height: 1.6;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+	text-rendering: optimizeLegibility;
+	font-variant-numeric: tabular-nums;
+}
+
+html:where([data-design='contact-sheet']) h1,
+html:where([data-design='contact-sheet']) h2,
+html:where([data-design='contact-sheet']) h3,
+html:where([data-design='contact-sheet']) h4 {
+	font-family: var(--font-display);
+	font-stretch: var(--display-stretch);
+	font-weight: 600;
+	line-height: 0.98;
+	letter-spacing: -0.005em;
+	text-transform: uppercase;
+	margin: 0;
+}
+
+html:where([data-design='contact-sheet']) kbd,
+html:where([data-design='contact-sheet']) code,
+html:where([data-design='contact-sheet']) samp {
+	font-family: var(--font-mono);
+}
+
+html:where([data-design='contact-sheet']) ::selection {
+	background: var(--highlight, var(--text));
+	color: var(--bg);
+}
+
+html:where([data-design='contact-sheet']) :focus-visible {
+	outline: 2px solid var(--highlight, var(--text));
+	outline-offset: 2px;
+}
+
+html:where([data-design='contact-sheet']) .container {
+	width: 100%;
+	max-width: var(--max-width);
+	margin: 0 auto;
+	padding-inline: var(--gutter);
+}
+
+/* A small mono label: section kickers, field names, edge print. */
+
+html:where([data-design='contact-sheet']) .eyebrow {
+	font-family: var(--font-mono);
+	font-size: 0.68rem;
+	font-weight: 500;
+	letter-spacing: 0.08em;
+	line-height: 1.4;
+	text-transform: uppercase;
+	color: var(--highlight, var(--text-muted));
+}
+
+html:where([data-design='contact-sheet']) .muted {
+	color: var(--text-muted);
+}
+
+html:where([data-design='contact-sheet']) .subtle {
+	color: var(--text-subtle);
+}
+
+html:where([data-design='contact-sheet']) .visually-hidden {
+	position: absolute !important;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	white-space: nowrap;
+}
+
+/* ------------------------------------------------------------- film parts */
+
+/* A horizontal band of sprocket holes. Put it above and below a strip of frames. */
+
+html:where([data-design='contact-sheet']) .sprockets {
+	display: block;
+	height: 12px;
+	background:
+		repeating-linear-gradient(
+				to right,
+				transparent 0 5px,
+				var(--film-hole) 5px 12px,
+				transparent 12px 18px
+			)
+			center / 100% 6px no-repeat,
+		var(--film);
+}
+
+/* The same along the sides of a vertical strip. */
+
+html:where([data-design='contact-sheet']) .sprockets-y {
+	background:
+		repeating-linear-gradient(
+				to bottom,
+				transparent 0 5px,
+				var(--film-hole) 5px 12px,
+				transparent 12px 18px
+			)
+			left 3px top 0 / 6px 100% no-repeat,
+		repeating-linear-gradient(
+				to bottom,
+				transparent 0 5px,
+				var(--film-hole) 5px 12px,
+				transparent 12px 18px
+			)
+			right 3px top 0 / 6px 100% no-repeat,
+		var(--film);
+}
+
+/* Edge print: the tiny numbers and arrows printed along a film's rebate. */
+
+html:where([data-design='contact-sheet']) .edge {
+	font-family: var(--font-mono);
+	font-size: 0.6rem;
+	font-weight: 500;
+	letter-spacing: 0.06em;
+	line-height: 1;
+	text-transform: uppercase;
+	color: var(--edge-print);
+	white-space: nowrap;
+}
+
+/* Crop marks at the four corners of a card. The element needs room around it (a gap or margin). */
+
+html:where([data-design='contact-sheet']) .crop-marks {
+	position: relative;
+}
+
+html:where([data-design='contact-sheet']) .crop-marks::before {
+	--m: var(--border-strong);
+	--l: 10px;
+	content: '';
+	position: absolute;
+	inset: -7px;
+	pointer-events: none;
+	background:
+		linear-gradient(var(--m), var(--m)) left top / var(--l) 1px no-repeat,
+		linear-gradient(var(--m), var(--m)) left top / 1px var(--l) no-repeat,
+		linear-gradient(var(--m), var(--m)) right top / var(--l) 1px no-repeat,
+		linear-gradient(var(--m), var(--m)) right top / 1px var(--l) no-repeat,
+		linear-gradient(var(--m), var(--m)) left bottom / var(--l) 1px no-repeat,
+		linear-gradient(var(--m), var(--m)) left bottom / 1px var(--l) no-repeat,
+		linear-gradient(var(--m), var(--m)) right bottom / var(--l) 1px no-repeat,
+		linear-gradient(var(--m), var(--m)) right bottom / 1px var(--l) no-repeat;
+}
+
+/* A registration target: ring and cross hairs. Decorative; give it aria-hidden. */
+
+html:where([data-design='contact-sheet']) .reg-mark {
+	--m: var(--text-subtle);
+	display: inline-block;
+	flex: none;
+	width: 18px;
+	height: 18px;
+	border-radius: 50%;
+	background:
+		radial-gradient(circle, transparent 0 4px, var(--m) 4px 5px, transparent 5px),
+		linear-gradient(var(--m), var(--m)) center / 1px 100% no-repeat,
+		linear-gradient(var(--m), var(--m)) center / 100% 1px no-repeat;
+}
+
+/* A rubber stamp: bordered, mono, uppercase. Add .tilt only to decorative stamps. */
+
+html:where([data-design='contact-sheet']) .stamp {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+	padding: 0.2rem 0.55rem;
+	border: 2px solid currentColor;
+	font-family: var(--font-mono);
+	font-size: 0.66rem;
+	font-weight: 600;
+	letter-spacing: 0.12em;
+	line-height: 1.3;
+	text-transform: uppercase;
+	white-space: nowrap;
+}
+
+html:where([data-design='contact-sheet']) .stamp.tilt {
+	transform: rotate(-3deg);
+}
+
+html:where([data-design='contact-sheet']) .stamp.warn {
+	color: var(--warning);
+}
+
+html:where([data-design='contact-sheet']) .stamp.danger {
+	color: var(--danger);
+}
+
+html:where([data-design='contact-sheet']) .stamp.ok {
+	color: var(--success);
+}
+
+/* A section heading with its sheet number: a 2px rule above, number, kicker and title. */
+
+html:where([data-design='contact-sheet']) .sheet-head {
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr);
+	align-items: end;
+	gap: 0.35rem 1.25rem;
+	padding-top: 0.85rem;
+	border-top: var(--rule) solid var(--rule-color);
+}
+
+html:where([data-design='contact-sheet']) .sheet-head .sheet-no {
+	grid-row: span 2;
+	font-family: var(--font-display);
+	font-stretch: var(--display-stretch);
+	font-weight: 300;
+	font-size: clamp(3rem, 7vw, 5.5rem);
+	line-height: 0.8;
+	color: var(--text-subtle);
+}
+
+/* ------------------------------------------------------------------ buttons */
+
+html:where([data-design='contact-sheet']) .btn {
+	--btn-bg: transparent;
+	--btn-fg: var(--text);
+	--btn-border: var(--text);
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.55rem;
+	min-height: 44px;
+	padding: 0.7rem 1.25rem;
+	border: 1px solid var(--btn-border);
+	border-radius: 0;
+	background: var(--btn-bg);
+	color: var(--btn-fg);
+	font-family: var(--font-mono);
+	font-size: 0.74rem;
+	font-weight: 500;
+	letter-spacing: 0.06em;
+	line-height: 1;
+	text-transform: uppercase;
+	text-decoration: none;
+	white-space: nowrap;
+	cursor: pointer;
+	transition:
+		background-color var(--fast) linear,
+		color var(--fast) linear,
+		border-color var(--fast) linear,
+		opacity var(--fast) linear;
+}
+
+html:where([data-design='contact-sheet']) .btn:hover:not(:disabled) {
+	--btn-bg: var(--highlight, var(--text));
+	--btn-fg: var(--bg);
+	--btn-border: var(--highlight, var(--text));
+}
+
+html:where([data-design='contact-sheet']) .btn:disabled {
+	opacity: 0.45;
+	cursor: not-allowed;
+}
+
+html:where([data-design='contact-sheet']) .btn-solid {
+	--btn-bg: var(--highlight, var(--text));
+	--btn-fg: var(--bg);
+	--btn-border: var(--highlight, var(--text));
+}
+
+html:where([data-design='contact-sheet']) .btn-solid:hover:not(:disabled) {
+	--btn-bg: transparent;
+	--btn-fg: var(--text);
+}
+
+html:where([data-design='contact-sheet']) .btn-accent {
+	--btn-bg: var(--accent);
+	--btn-fg: var(--accent-text);
+	--btn-border: var(--accent);
+}
+
+html:where([data-design='contact-sheet']) .btn-accent:hover:not(:disabled) {
+	--btn-bg: transparent;
+	--btn-fg: var(--text);
+	--btn-border: var(--accent);
+}
+
+html:where([data-design='contact-sheet']) .btn-quiet {
+	--btn-border: var(--border-strong);
+}
+
+html:where([data-design='contact-sheet']) .btn-quiet:hover:not(:disabled) {
+	--btn-bg: var(--surface);
+	--btn-fg: var(--text);
+	--btn-border: var(--text);
+}
+
+html:where([data-design='contact-sheet']) .btn-danger {
+	--btn-fg: var(--danger);
+	--btn-border: var(--danger);
+}
+
+html:where([data-design='contact-sheet']) .btn-danger:hover:not(:disabled) {
+	--btn-bg: var(--danger);
+	--btn-fg: var(--bg);
+}
+
+html:where([data-design='contact-sheet']) .btn-sm {
+	min-height: 34px;
+	padding: 0.45rem 0.8rem;
+	font-size: 0.68rem;
+}
+
+html:where([data-design='contact-sheet']) .link {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.45rem;
+	font-family: var(--font-mono);
+	font-size: 0.72rem;
+	font-weight: 500;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	text-decoration: none;
+	color: var(--text-muted);
+	transition: color var(--fast) linear;
+	background: none;
+	border: 0;
+	padding: 0;
+	cursor: pointer;
+}
+
+html:where([data-design='contact-sheet']) .link:hover {
+	color: var(--text);
+}
+
+/* ------------------------------------------------------------------- forms */
+
+html:where([data-design='contact-sheet']) .field {
+	display: grid;
+	gap: 0.4rem;
+}
+
+html:where([data-design='contact-sheet']) .field > label,
+html:where([data-design='contact-sheet']) .label {
+	font-family: var(--font-mono);
+	font-size: 0.68rem;
+	font-weight: 500;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--text-muted);
+}
+
+html:where([data-design='contact-sheet']) .hint {
+	font-size: 0.76rem;
+	color: var(--text-subtle);
+	line-height: 1.5;
+}
+
+html:where([data-design='contact-sheet']) .input,
+html:where([data-design='contact-sheet']) .textarea,
+html:where([data-design='contact-sheet']) .select {
+	width: 100%;
+	min-height: 44px;
+	padding: 0.6rem 0.75rem;
+	border: 1px solid var(--border-strong);
+	border-radius: 0;
+	background: var(--bg-elevated);
+	color: var(--text);
+	font: inherit;
+	font-family: var(--font-mono);
+	font-size: 0.88rem;
+	transition:
+		border-color var(--fast) linear,
+		box-shadow var(--fast) linear;
+}
+
+html:where([data-design='contact-sheet']) .input:hover,
+html:where([data-design='contact-sheet']) .textarea:hover,
+html:where([data-design='contact-sheet']) .select:hover {
+	border-color: var(--text-muted);
+}
+
+html:where([data-design='contact-sheet']) .input:focus,
+html:where([data-design='contact-sheet']) .textarea:focus,
+html:where([data-design='contact-sheet']) .select:focus {
+	outline: none;
+	border-color: var(--text);
+	box-shadow: inset 0 -2px 0 var(--highlight, var(--text));
+}
+
+html:where([data-design='contact-sheet']) .textarea {
+	min-height: 120px;
+	resize: vertical;
+	line-height: 1.6;
+}
+
+html:where([data-design='contact-sheet']) .select {
+	appearance: none;
+	padding-right: 2.25rem;
+	background-image:
+		linear-gradient(45deg, transparent 50%, var(--text-muted) 50%),
+		linear-gradient(135deg, var(--text-muted) 50%, transparent 50%);
+	background-position:
+		calc(100% - 17px) 52%,
+		calc(100% - 12px) 52%;
+	background-size:
+		5px 5px,
+		5px 5px;
+	background-repeat: no-repeat;
+}
+
+html:where([data-design='contact-sheet']) .error-text {
+	color: var(--danger);
+	font-size: 0.82rem;
+}
+
+html:where([data-design='contact-sheet']) .alert {
+	padding: 0.8rem 1rem;
+	border: 1px solid currentColor;
+	border-left-width: 4px;
+	font-size: 0.84rem;
+}
+
+html:where([data-design='contact-sheet']) .alert-error {
+	color: var(--danger);
+	background: var(--danger-soft);
+}
+
+/* --------------------------------------------------------------- markdown */
+
+/* Running prose is set in Plex Sans: mono is for labels and data, not paragraphs. */
+
+html:where([data-design='contact-sheet']) .prose {
+	font-family: var(--font-sans);
+	color: var(--text-muted);
+	font-size: 1rem;
+	line-height: 1.7;
+	max-width: 66ch;
+}
+
+html:where([data-design='contact-sheet']) .prose > * + * {
+	margin-top: 1em;
+}
+
+html:where([data-design='contact-sheet']) .prose a {
+	color: var(--text);
+	text-underline-offset: 3px;
+}
+
+html:where([data-design='contact-sheet']) .prose h1,
+html:where([data-design='contact-sheet']) .prose h2,
+html:where([data-design='contact-sheet']) .prose h3 {
+	color: var(--text);
+	font-size: 1.35rem;
+	margin-top: 1.5em;
+}
+
+html:where([data-design='contact-sheet']) .prose blockquote {
+	margin: 0;
+	padding-left: 1rem;
+	border-left: var(--rule) solid var(--text);
+	color: var(--text);
+}
+
+html:where([data-design='contact-sheet']) .prose ul,
+html:where([data-design='contact-sheet']) .prose ol {
+	padding-left: 1.25rem;
+}
+
+html:where([data-design='contact-sheet']) .prose code {
+	font-size: 0.85em;
+	background: var(--surface);
+	padding: 0.1em 0.35em;
+}
+
+html:where([data-design='contact-sheet']) .prose img {
+	margin-block: 1.5rem;
+}
+
+/* --------------------------------------------------------------- spinner */
+
+html:where([data-design='contact-sheet']) .spinner {
+	display: inline-block;
+	width: 14px;
+	height: 14px;
+	border: 2px solid currentColor;
+	border-right-color: transparent;
+	border-radius: 50%;
+	animation: cs-spin 0.8s steps(8) infinite;
+	flex: none;
+}
+
+@keyframes cs-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+/* Entrances: a short stepped exposure, like a frame coming up in the developer. No movement. */
+
+@keyframes cs-fade-up {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+html:where([data-design='contact-sheet']) .fade-up {
+	animation: cs-fade-up 0.36s steps(4, end) both;
+}
+
+/* The route-change progress bar (src/routes/+layout.svelte). */
+:root[data-design='contact-sheet'] .nav-progress {
+	height: 3px;
+	background: var(--highlight, var(--text));
+	animation-timing-function: steps(12, end);
+}
+
+/* Images fade up in short steps; no zoom anywhere. */
+:root[data-design='contact-sheet'] .img {
+	transition: opacity 0.32s steps(4, end);
+}

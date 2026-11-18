@@ -3,6 +3,8 @@
 	import '@fontsource-variable/playfair-display/wght-italic.css';
 	import '@fontsource-variable/inter';
 	import '../app.css';
+	// Each design's fonts and CSS (scoped under :root[data-design='<id>']); see src/lib/designs.
+	import.meta.glob('/src/lib/designs/*/index.ts', { eager: true });
 	import { navigating, page } from '$app/state';
 	import type { LayoutProps } from './$types';
 
@@ -13,6 +15,10 @@
 
 	$effect(() => {
 		document.documentElement.dataset.theme = theme.id;
+	});
+
+	$effect(() => {
+		document.documentElement.dataset.design = data.design;
 	});
 
 	// Themes uploaded or deleted since this page loaded: swap in the new CSS without a reload.
