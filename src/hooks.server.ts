@@ -4,6 +4,7 @@ import { adminCredentials } from '#lib/server/config.js';
 import { getDb } from '#lib/server/db.js';
 import { getSettings } from '#lib/server/settings.js';
 import { getTheme, themeCss, themeVersion } from '#lib/server/themes.js';
+import { DEFAULT_DESIGN, DESIGN_PREVIEW_COOKIE, isDesign } from '#lib/designs/index.js';
 
 export const init: ServerInit = () => {
 	getDb();
@@ -54,11 +55,31 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 	event.locals.isAdmin = isAdminSession(event.cookies);
 
+	// `?design=<id>` previews a design without saving it, and keeps previewing it (by cookie) while
+	// you browse; any other `?design=` value goes back to the site's saved design.
+	const param = event.url.searchParams.get('design');
+	if (param !== null) {
+		if (isDesign(param)) {
+			event.cookies.set(DESIGN_PREVIEW_COOKIE, param, {
+				path: '/',
+				httpOnly: true,
+				sameSite: 'lax',
+				secure: event.url.protocol === 'https:'
+			});
+		} else {
+			event.cookies.delete(DESIGN_PREVIEW_COOKIE, { path: '/' });
+		}
+	}
+	const preview = param === null ? event.cookies.get(DESIGN_PREVIEW_COOKIE) : param;
+	const saved = getSettings().design;
+	event.locals.design = isDesign(preview) ? preview : isDesign(saved) ? saved : DEFAULT_DESIGN;
+
 	const response = await resolve(event, {
 		// Runs after the page's load functions, so an album page's theme (see albumPageTheme) is set.
 		transformPageChunk: ({ html }) =>
 			html
 				.replace('%gallery.theme%', () => event.locals.theme ?? getTheme(getSettings().theme).id)
+				.replace('%gallery.design%', event.locals.design)
 				.replace('%gallery.themesVersion%', themeVersion)
 				.replace('%gallery.themes%', themeCss)
 	});
