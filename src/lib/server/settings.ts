@@ -18,6 +18,7 @@ export const defaultSettings: SiteSettings = {
 	showContactOnHome: true,
 	discordWebhook: '',
 	theme: 'light',
+	design: 'editorial',
 	defaultDescription: '',
 	defaultAlbumTheme: '',
 	defaultLayout: 'grid',

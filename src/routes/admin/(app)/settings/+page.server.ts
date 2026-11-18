@@ -11,6 +11,7 @@ import { getSettings, updateSettings } from '#lib/server/settings.js';
 import { getInvoiceSettings } from '#lib/server/billing.js';
 import { albumThemeCounts } from '#lib/server/albums.js';
 import { getTheme, hasTheme, themeSummaries } from '#lib/server/themes.js';
+import { DESIGN_PREVIEW_COOKIE, isDesign, type DesignId } from '#lib/designs/index.js';
 import {
 	LAYOUTS,
 	SORT_ORDERS,
@@ -70,9 +71,11 @@ function isWebhook(url: string) {
 }
 
 export const actions: Actions = {
-	save: async ({ request, locals }) => {
+	save: async ({ request, locals, cookies }) => {
 		requireAdmin(locals);
 		const data = await request.formData();
+		// Saving shows the saved design, not one being previewed with `?design=`.
+		cookies.delete(DESIGN_PREVIEW_COOKIE, { path: '/' });
 		const current = getSettings();
 
 		const email = text(data, 'contactEmail', 200);
@@ -103,6 +106,7 @@ export const actions: Actions = {
 			showContactOnHome: data.get('showContactOnHome') === 'on',
 			discordWebhook: webhook,
 			theme: hasTheme(text(data, 'theme')) ? text(data, 'theme') : current.theme,
+			design: isDesign(text(data, 'design')) ? (text(data, 'design') as DesignId) : current.design,
 			defaultDescription: text(data, 'defaultDescription', 20000),
 			defaultAlbumTheme: hasTheme(albumTheme) ? albumTheme : '',
 			defaultLayout: LAYOUTS.includes(layout) ? layout : current.defaultLayout,

@@ -1,34 +1,16 @@
 <script lang="ts">
-	import { copyrightText } from '#lib/utils.js';
+	// Renders the current design's SiteFooter (src/lib/designs/<id>/SiteFooter.svelte), or the Editorial one.
+	import type { ComponentProps } from 'svelte';
+	import Editorial from '#lib/designs/editorial/SiteFooter.svelte';
+	import { pick } from '#lib/designs/pick.js';
 
-	let { copyright, isAdmin = false }: { copyright: string; isAdmin?: boolean } = $props();
+	const designs = import.meta.glob<typeof Editorial>('/src/lib/designs/*/SiteFooter.svelte', {
+		eager: true,
+		import: 'default'
+	});
+
+	let props: ComponentProps<typeof Editorial> = $props();
+	const Design = $derived(pick(designs, 'SiteFooter', Editorial));
 </script>
 
-<footer class="footer">
-	<div class="container inner">
-		<p>{copyrightText(copyright)}</p>
-		<a class="link" href={isAdmin ? '/admin' : '/admin/login'}>{isAdmin ? 'Dashboard' : 'Admin'}</a>
-	</div>
-</footer>
-
-<style>
-	.footer {
-		border-top: 1px solid var(--border);
-		margin-top: clamp(4rem, 10vw, 8rem);
-	}
-
-	.inner {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: center;
-		justify-content: space-between;
-		gap: 1rem;
-		padding-block: 2.25rem;
-		font-size: 0.8rem;
-		color: var(--text-muted);
-	}
-
-	.link {
-		font-size: 0.65rem;
-	}
-</style>
+<Design {...props} />

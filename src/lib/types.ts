@@ -43,6 +43,8 @@ export interface SiteSettings {
 	showContactOnHome: boolean;
 	discordWebhook: string;
 	theme: Theme;
+	/** Layout and typography of the site and admin (src/lib/designs), separate from the colour theme. */
+	design: import('#lib/designs/index.js').DesignId;
 	defaultDescription: string;
 	/** Theme for new albums, or '' to follow the site's theme. */
 	defaultAlbumTheme: Theme;
