@@ -1,0 +1,989 @@
+/*
+ * Shared building blocks for admin pages: the lab ledger. Mono tables on ruled lines, readout
+ * counters, stamped badges. The `ui-` prefix keeps them from clashing with page-scoped classes.
+ */
+
+html:where([data-design='contact-sheet']) .ui-head {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	justify-content: space-between;
+	gap: 1rem;
+	margin-bottom: 2rem;
+	padding-bottom: 1rem;
+	border-bottom: var(--rule) solid var(--rule-color);
+}
+
+html:where([data-design='contact-sheet']) .ui-head h1 {
+	font-size: clamp(2.4rem, 5vw, 3.8rem);
+	line-height: 0.9;
+	margin-top: 0.4rem;
+}
+
+html:where([data-design='contact-sheet']) .ui-head .ui-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+}
+
+/* ---------------------------------------------------------------- stats */
+
+/* Readouts: a row of counters, each a cell in a ruled strip. */
+
+html:where([data-design='contact-sheet']) .ui-stats {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+	gap: 1px;
+	background: var(--border-strong);
+	border: 1px solid var(--border-strong);
+	border-top: var(--rule) solid var(--rule-color);
+	margin-bottom: 2rem;
+}
+
+html:where([data-design='contact-sheet']) .ui-stat {
+	display: grid;
+	align-content: start;
+	gap: 0.5rem;
+	padding: 1rem 1.15rem 1.1rem;
+	background: var(--bg-elevated);
+	text-decoration: none;
+	transition: background-color var(--fast) linear;
+}
+
+html:where([data-design='contact-sheet']) a.ui-stat:hover {
+	background: var(--surface);
+}
+
+html:where([data-design='contact-sheet']) .ui-stat strong {
+	font-family: var(--font-mono);
+	font-size: clamp(1.45rem, 2.2vw, 1.9rem);
+	font-weight: 500;
+	line-height: 1;
+	letter-spacing: -0.02em;
+	font-variant-numeric: tabular-nums slashed-zero;
+}
+
+html:where([data-design='contact-sheet']) .ui-stat .ui-note {
+	font-size: 0.72rem;
+	color: var(--text-subtle);
+}
+
+/* ---------------------------------------------------------------- panels */
+
+html:where([data-design='contact-sheet']) .ui-panel {
+	border: 1px solid var(--border-strong);
+	border-top: var(--rule) solid var(--rule-color);
+	background: var(--bg-elevated);
+}
+
+html:where([data-design='contact-sheet']) .ui-panel + .ui-panel {
+	margin-top: 1.5rem;
+}
+
+html:where([data-design='contact-sheet']) .ui-panel-head {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.5rem 1rem;
+	padding: 0.8rem 1.25rem;
+	border-bottom: 1px solid var(--border-strong);
+}
+
+html:where([data-design='contact-sheet']) .ui-panel-head h2 {
+	font-size: 1.35rem;
+}
+
+html:where([data-design='contact-sheet']) .ui-panel-body {
+	display: grid;
+	gap: 1.25rem;
+	padding: 1.25rem;
+}
+
+/* A form section, as on the settings page. */
+
+html:where([data-design='contact-sheet']) .ui-card {
+	display: grid;
+	gap: 1.3rem;
+	padding: clamp(1.1rem, 2.5vw, 1.6rem);
+	border: 1px solid var(--border-strong);
+	border-top: var(--rule) solid var(--rule-color);
+	background: var(--bg-elevated);
+	scroll-margin-top: 7rem;
+}
+
+html:where([data-design='contact-sheet']) .ui-card-head {
+	display: grid;
+	gap: 0.35rem;
+	padding-bottom: 0.9rem;
+	border-bottom: 1px solid var(--border);
+}
+
+html:where([data-design='contact-sheet']) .ui-card-head h2 {
+	font-size: 1.45rem;
+}
+
+html:where([data-design='contact-sheet']) .ui-grid-2,
+html:where([data-design='contact-sheet']) .ui-grid-3 {
+	display: grid;
+	gap: 1.1rem;
+}
+
+@media (min-width: 720px) {
+	html:where([data-design='contact-sheet']) .ui-grid-2 {
+		grid-template-columns: 1fr 1fr;
+	}
+
+	html:where([data-design='contact-sheet']) .ui-grid-3 {
+		grid-template-columns: repeat(3, 1fr);
+	}
+}
+
+html:where([data-design='contact-sheet']) .ui-optional {
+	text-transform: none;
+	letter-spacing: 0;
+	color: var(--text-subtle);
+	margin-left: 0.3rem;
+}
+
+html:where([data-design='contact-sheet']) .ui-textarea-short {
+	min-height: 84px !important;
+}
+
+/* ---------------------------------------------------------------- filters */
+
+html:where([data-design='contact-sheet']) .ui-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.35rem;
+}
+
+html:where([data-design='contact-sheet']) .ui-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+	min-height: 34px;
+	padding: 0.3rem 0.7rem;
+	border: 1px solid var(--border-strong);
+	background: none;
+	color: var(--text-muted);
+	font-family: var(--font-mono);
+	font-size: 0.7rem;
+	font-weight: 500;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	text-decoration: none;
+	cursor: pointer;
+	transition:
+		border-color var(--fast) linear,
+		color var(--fast) linear,
+		background-color var(--fast) linear;
+}
+
+html:where([data-design='contact-sheet']) .ui-chip:hover {
+	border-color: var(--text);
+	color: var(--text);
+}
+
+html:where([data-design='contact-sheet']) .ui-chip.active {
+	background: var(--accent);
+	border-color: var(--accent);
+	color: var(--accent-text);
+}
+
+html:where([data-design='contact-sheet']) .ui-chip:has(input:focus-visible) {
+	outline: 2px solid var(--highlight, var(--text));
+	outline-offset: 2px;
+}
+
+html:where([data-design='contact-sheet']) .ui-chip .ui-count {
+	opacity: 0.7;
+	font-variant-numeric: tabular-nums;
+}
+
+html:where([data-design='contact-sheet']) .ui-chip .ui-count::before {
+	content: '·';
+	margin-right: 0.35rem;
+}
+
+/* Under a filtered list: “3 more matches in other filters. Search all”. */
+
+html:where([data-design='contact-sheet']) .ui-elsewhere {
+	margin: 0;
+	padding: 0.8rem 1.25rem;
+	border-top: 1px solid var(--border);
+	font-size: 0.8rem;
+	color: var(--text-muted);
+}
+
+html:where([data-design='contact-sheet']) .ui-elsewhere a {
+	color: var(--text);
+	text-underline-offset: 3px;
+}
+
+/* ---------------------------------------------------------------- tables */
+
+/*
+ * Positioned so absolutely positioned children (the visually hidden "Actions" headings) are
+ * contained by the scroller. Otherwise they sit at the table's far edge, outside it, and widen the
+ * whole page on phones.
+ */
+
+html:where([data-design='contact-sheet']) .ui-table-wrap {
+	position: relative;
+	overflow-x: auto;
+}
+
+/* A ledger: mono figures on ruled lines, the head underlined in ink. */
+
+html:where([data-design='contact-sheet']) .ui-table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 0.82rem;
+}
+
+html:where([data-design='contact-sheet']) .ui-table th {
+	text-align: left;
+	font-family: var(--font-mono);
+	font-size: 0.62rem;
+	font-weight: 500;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--text-subtle);
+	padding: 0.7rem 0.9rem;
+	border-bottom: var(--rule) solid var(--rule-color);
+	white-space: nowrap;
+}
+
+html:where([data-design='contact-sheet']) .ui-table td {
+	padding: 0.75rem 0.9rem;
+	border-bottom: 1px solid var(--border);
+	vertical-align: middle;
+}
+
+html:where([data-design='contact-sheet']) .ui-table tbody tr:last-child td {
+	border-bottom: 0;
+}
+
+html:where([data-design='contact-sheet']) .ui-table tbody tr {
+	transition: background-color var(--fast) linear;
+}
+
+html:where([data-design='contact-sheet']) .ui-table tbody tr:hover {
+	background: color-mix(in srgb, var(--surface) 70%, transparent);
+}
+
+html:where([data-design='contact-sheet']) .ui-table .ui-num {
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+
+html:where([data-design='contact-sheet']) .ui-table .ui-center {
+	text-align: center;
+}
+
+html:where([data-design='contact-sheet']) .ui-table .ui-shrink {
+	width: 1%;
+	white-space: nowrap;
+}
+
+html:where([data-design='contact-sheet']) .ui-title {
+	display: block;
+	font-family: var(--font-sans);
+	font-size: 0.98rem;
+	font-weight: 500;
+	line-height: 1.3;
+	text-decoration: none;
+}
+
+html:where([data-design='contact-sheet']) a.ui-title:hover {
+	text-decoration: underline;
+	text-underline-offset: 3px;
+}
+
+html:where([data-design='contact-sheet']) .ui-sub {
+	display: block;
+	font-size: 0.72rem;
+	color: var(--text-subtle);
+	line-height: 1.5;
+}
+
+html:where([data-design='contact-sheet']) .ui-faded {
+	opacity: 0.55;
+}
+
+/* ---------------------------------------------------------------- badges */
+
+html:where([data-design='contact-sheet']) .ui-badges {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.35rem;
+}
+
+/* Stamped status: bordered, mono, uppercase. Never rotated here — these are read, not decoration. */
+
+html:where([data-design='contact-sheet']) .ui-badge {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.3rem;
+	padding: 0.1rem 0.4rem;
+	border: 1.5px solid var(--border-strong);
+	font-family: var(--font-mono);
+	font-size: 0.62rem;
+	font-weight: 600;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--text-muted);
+	white-space: nowrap;
+	text-decoration: none;
+	line-height: 1.5;
+}
+
+html:where([data-design='contact-sheet']) a.ui-badge:hover {
+	border-color: var(--text);
+	color: var(--text);
+}
+
+html:where([data-design='contact-sheet']) .ui-badge.ok {
+	color: var(--success);
+	border-color: currentColor;
+}
+
+html:where([data-design='contact-sheet']) .ui-badge.warn {
+	color: var(--warning);
+	border-color: currentColor;
+}
+
+html:where([data-design='contact-sheet']) .ui-badge.danger {
+	color: var(--danger);
+	border-color: currentColor;
+}
+
+html:where([data-design='contact-sheet']) .ui-badge.solid {
+	background: var(--accent);
+	border-color: var(--accent);
+	color: var(--accent-text);
+}
+
+/* ---------------------------------------------------------------- buttons */
+
+html:where([data-design='contact-sheet']) .ui-icon-btn {
+	display: inline-grid;
+	place-items: center;
+	width: 34px;
+	height: 34px;
+	border: 1px solid transparent;
+	background: none;
+	color: var(--text-muted);
+	cursor: pointer;
+	text-decoration: none;
+	transition:
+		border-color var(--fast) linear,
+		color var(--fast) linear;
+}
+
+html:where([data-design='contact-sheet']) .ui-icon-btn:hover:not(:disabled) {
+	border-color: var(--border-strong);
+	color: var(--text);
+}
+
+html:where([data-design='contact-sheet']) .ui-icon-btn.danger:hover:not(:disabled) {
+	border-color: var(--danger);
+	color: var(--danger);
+}
+
+html:where([data-design='contact-sheet']) .ui-icon-btn:disabled {
+	opacity: 0.4;
+	cursor: not-allowed;
+}
+
+html:where([data-design='contact-sheet']) .ui-row-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 0.25rem;
+}
+
+/* A square check used for the delivered / paid columns: a tick box on the ledger. */
+
+html:where([data-design='contact-sheet']) .ui-check {
+	display: inline-grid;
+	place-items: center;
+	width: 26px;
+	height: 26px;
+	padding: 0;
+	border: 1.5px solid var(--border-strong);
+	background: none;
+	color: var(--bg);
+	cursor: pointer;
+	transition:
+		background-color var(--fast) linear,
+		border-color var(--fast) linear;
+}
+
+html:where([data-design='contact-sheet']) .ui-check:hover:not(:disabled) {
+	border-color: var(--text);
+}
+
+html:where([data-design='contact-sheet']) .ui-check.on {
+	background: var(--highlight, var(--text));
+	border-color: var(--highlight, var(--text));
+}
+
+html:where([data-design='contact-sheet']) .ui-check:disabled {
+	cursor: default;
+	opacity: 0.5;
+}
+
+/* ---------------------------------------------------------------- empty */
+
+html:where([data-design='contact-sheet']) .ui-empty {
+	display: grid;
+	justify-items: center;
+	gap: 0.8rem;
+	padding: 3.5rem 1rem;
+	text-align: center;
+	color: var(--text-muted);
+}
+
+html:where([data-design='contact-sheet']) .ui-empty h3 {
+	font-size: 1.5rem;
+	color: var(--text);
+}
+
+html:where([data-design='contact-sheet']) .ui-empty .btn {
+	margin-top: 0.75rem;
+}
+
+html:where([data-design='contact-sheet']) .ui-inline {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+html:where([data-design='contact-sheet']) .ui-money-input {
+	position: relative;
+}
+
+html:where([data-design='contact-sheet']) .ui-money-input::before {
+	content: '£';
+	position: absolute;
+	left: 0.75rem;
+	top: 50%;
+	transform: translateY(-50%);
+	color: var(--text-subtle);
+	font-family: var(--font-mono);
+	font-size: 0.88rem;
+	pointer-events: none;
+}
+
+html:where([data-design='contact-sheet']) .ui-money-input .input {
+	padding-left: 1.6rem;
+}
+
+/* ---------------------------------------------------------------- charts */
+
+/*
+ * Chart colours come from the active theme. A theme can set chart-1…chart-4 itself; otherwise
+ * chart-1 is its highlight (or ink) and the rest are steps of it towards the panel colour — an
+ * ordinal ramp (paid → invoiced → booked → tentative) validated for contrast in every built-in theme.
+ */
+
+html:where([data-design='contact-sheet']) .viz {
+	--viz-surface: var(--bg-elevated);
+	--viz-1: var(--chart-1, var(--highlight, var(--text)));
+	--viz-2: var(--chart-2, color-mix(in srgb, var(--viz-1) 72%, var(--viz-surface)));
+	--viz-3: var(--chart-3, color-mix(in srgb, var(--viz-1) 52%, var(--viz-surface)));
+	--viz-4: var(--chart-4, color-mix(in srgb, var(--viz-1) 36%, var(--viz-surface)));
+	--viz-grid: color-mix(in srgb, var(--border) 70%, var(--viz-surface));
+	--viz-axis: var(--border-strong);
+	margin: 0;
+	min-width: 0;
+}
+
+html:where([data-design='contact-sheet']) .viz .legend {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.4rem 1.1rem;
+	margin-bottom: 0.9rem;
+	font-size: 0.78rem;
+	color: var(--text-muted);
+}
+
+html:where([data-design='contact-sheet']) .viz .key {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.45rem;
+}
+
+html:where([data-design='contact-sheet']) .viz .swatch {
+	width: 10px;
+	height: 10px;
+}
+
+html:where([data-design='contact-sheet']) .viz .plot {
+	position: relative;
+	width: 100%;
+	outline-offset: 4px;
+}
+
+html:where([data-design='contact-sheet']) .viz svg {
+	display: block;
+	overflow: visible;
+}
+
+html:where([data-design='contact-sheet']) .viz .grid {
+	stroke: var(--viz-grid);
+	stroke-width: 1;
+	shape-rendering: crispEdges;
+}
+
+html:where([data-design='contact-sheet']) .viz .baseline {
+	stroke: var(--viz-axis);
+	stroke-width: 1;
+	shape-rendering: crispEdges;
+}
+
+html:where([data-design='contact-sheet']) .viz text {
+	font-family: var(--font-mono);
+	font-size: 10.5px;
+	fill: var(--text-subtle);
+	font-variant-numeric: tabular-nums;
+}
+
+html:where([data-design='contact-sheet']) .viz text.x {
+	fill: var(--text-muted);
+}
+
+html:where([data-design='contact-sheet']) .viz text.x.muted,
+html:where([data-design='contact-sheet']) .viz text.sub {
+	fill: var(--text-subtle);
+}
+
+html:where([data-design='contact-sheet']) .viz text.peak,
+html:where([data-design='contact-sheet']) .viz text.end {
+	fill: var(--text-muted);
+	font-weight: 500;
+}
+
+html:where([data-design='contact-sheet']) .viz .column {
+	transition: opacity 0.15s var(--ease);
+}
+
+html:where([data-design='contact-sheet']) .viz .column.dim {
+	opacity: 0.45;
+}
+
+html:where([data-design='contact-sheet']) .viz .hit {
+	fill: transparent;
+}
+
+html:where([data-design='contact-sheet']) .viz .line {
+	fill: none;
+	stroke-width: 2;
+	stroke-linejoin: miter;
+	stroke-linecap: square;
+}
+
+html:where([data-design='contact-sheet']) .viz .area {
+	opacity: 0.1;
+}
+
+html:where([data-design='contact-sheet']) .viz .dot {
+	stroke: var(--viz-surface);
+	stroke-width: 2;
+}
+
+html:where([data-design='contact-sheet']) .viz .crosshair {
+	stroke: var(--viz-axis);
+	stroke-width: 1;
+	shape-rendering: crispEdges;
+}
+
+html:where([data-design='contact-sheet']) .viz .tip {
+	position: absolute;
+	z-index: 5;
+	transform: translate(-50%, -100%);
+	min-width: 150px;
+	padding: 0.65rem 0.8rem;
+	border: 1px solid var(--border);
+	border-top: var(--rule) solid var(--rule-color);
+	background: var(--bg-elevated);
+	pointer-events: none;
+	font-size: 0.8rem;
+	white-space: nowrap;
+}
+
+html:where([data-design='contact-sheet']) .viz .tip-title {
+	margin-bottom: 0.4rem;
+	font-size: 0.62rem;
+	font-weight: 500;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--text-subtle);
+}
+
+html:where([data-design='contact-sheet']) .viz .tip-row {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	color: var(--text-muted);
+	line-height: 1.7;
+}
+
+html:where([data-design='contact-sheet']) .viz .tip-row.zero {
+	opacity: 0.55;
+}
+
+html:where([data-design='contact-sheet']) .viz .tip-row strong,
+html:where([data-design='contact-sheet']) .viz .tip-total strong {
+	color: var(--text);
+	font-weight: 600;
+	font-variant-numeric: tabular-nums;
+}
+
+html:where([data-design='contact-sheet']) .viz .line-key {
+	width: 12px;
+	height: 2px;
+}
+
+html:where([data-design='contact-sheet']) .viz .tip-total {
+	margin-top: 0.35rem;
+	padding-top: 0.35rem;
+	border-top: 1px solid var(--border);
+	color: var(--text-muted);
+}
+
+html:where([data-design='contact-sheet']) .viz .empty {
+	padding: 2.5rem 0;
+	text-align: center;
+	color: var(--text-subtle);
+	font-size: 0.88rem;
+}
+
+html:where([data-design='contact-sheet']) .viz .table-view {
+	margin-top: 0.75rem;
+}
+
+html:where([data-design='contact-sheet']) .viz .table-view summary {
+	display: inline-block;
+	cursor: pointer;
+	font-size: 0.66rem;
+	font-weight: 500;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--text-subtle);
+}
+
+html:where([data-design='contact-sheet']) .viz .table-view summary:hover {
+	color: var(--text);
+}
+
+html:where([data-design='contact-sheet']) .viz .table-view[open] summary {
+	margin-bottom: 0.5rem;
+}
+
+html:where([data-design='contact-sheet']) .viz .table-view th[scope='row'] {
+	font-weight: 400;
+	text-transform: none;
+	letter-spacing: 0;
+	font-size: 0.82rem;
+	color: var(--text);
+}
+
+/* Ranked bars */
+
+html:where([data-design='contact-sheet']) .viz .bar-list {
+	display: grid;
+	gap: 0.15rem;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+html:where([data-design='contact-sheet']) .viz .bar-list li {
+	display: grid;
+	grid-template-columns: minmax(90px, 34%) minmax(0, 1fr);
+	align-items: center;
+	gap: 0.2rem 1rem;
+	padding: 0.45rem 0;
+	transition: opacity 0.15s var(--ease);
+}
+
+html:where([data-design='contact-sheet']) .viz .bar-list li.dim {
+	opacity: 0.5;
+}
+
+html:where([data-design='contact-sheet']) .viz .bar-label {
+	font-size: 0.86rem;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+html:where([data-design='contact-sheet']) .viz .bar-label a {
+	text-decoration: none;
+}
+
+html:where([data-design='contact-sheet']) .viz .bar-label a:hover {
+	text-decoration: underline;
+	text-underline-offset: 3px;
+}
+
+html:where([data-design='contact-sheet']) .viz .bar-track {
+	display: flex;
+	align-items: center;
+	gap: 0.6rem;
+	min-width: 0;
+}
+
+html:where([data-design='contact-sheet']) .viz .bar {
+	flex: none;
+	height: 10px;
+}
+
+html:where([data-design='contact-sheet']) .viz .bar-value {
+	font-size: 0.82rem;
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+
+html:where([data-design='contact-sheet']) .viz .bar-share {
+	margin-left: 0.3rem;
+	color: var(--text-subtle);
+}
+
+html:where([data-design='contact-sheet']) .viz .bar-note {
+	grid-column: 2;
+	font-size: 0.74rem;
+	color: var(--text-subtle);
+}
+
+/* ---------------------------------------------------------------- job stages */
+
+/* Each stage's colour (theme tokens, falling back to the semantic colours) for stripe and icon. */
+
+html:where([data-design='contact-sheet']) .stage-overdue {
+	--stage: var(--stage-overdue, var(--danger));
+}
+
+html:where([data-design='contact-sheet']) .stage-deliver {
+	--stage: var(--stage-deliver, var(--warning));
+}
+
+html:where([data-design='contact-sheet']) .stage-invoice {
+	--stage: var(--stage-invoice, var(--highlight, var(--text)));
+}
+
+html:where([data-design='contact-sheet']) .stage-awaiting {
+	--stage: var(--stage-awaiting, var(--text-muted));
+}
+
+html:where([data-design='contact-sheet']) .stage-upcoming,
+html:where([data-design='contact-sheet']) .stage-tentative {
+	--stage: var(--stage-upcoming, var(--border-strong));
+}
+
+html:where([data-design='contact-sheet']) .stage-done {
+	--stage: var(--stage-done, var(--success));
+}
+
+html:where([data-design='contact-sheet']) .stage-icon {
+	display: inline-flex;
+	flex: none;
+	margin-top: 0.1rem;
+	color: var(--stage);
+}
+
+/* ======================================================================================
+ * Overrides for shared admin pages and components that aren't slots. These use the full
+ * `:root[data-design=…]` prefix so they beat the components' own scoped styles.
+ * ==================================================================================== */
+
+/* Page titles on the form pages (settings, new job, calendar, import, lightroom…). */
+:root[data-design='contact-sheet'] .cs-content > h1,
+:root[data-design='contact-sheet'] .cs-content > .head h1,
+:root[data-design='contact-sheet'] .cs-content > header h1,
+:root[data-design='contact-sheet'] .cs-content > div > header h1 {
+	font-size: clamp(2.4rem, 5vw, 3.8rem);
+	line-height: 0.9;
+}
+
+/* Tracked uppercase labels: mono, tighter tracking. */
+:root[data-design='contact-sheet']
+	.cs-content
+	:is(.jump a, .key, .create, .chart-title, .fresh label, .item-head span, .tags-head h3),
+:root[data-design='contact-sheet'] .palette .group-label {
+	font-family: var(--font-mono);
+	letter-spacing: 0.06em;
+}
+
+:root[data-design='contact-sheet'] .cs-content .file::file-selector-button {
+	font-family: var(--font-mono);
+	letter-spacing: 0.06em;
+	border-radius: 0;
+}
+
+/* Section cards on the settings and album pages: hairline box, ink rule on top. */
+:root[data-design='contact-sheet'] .cs-content form > .card,
+:root[data-design='contact-sheet'] .cs-content .card:has(> .card-head) {
+	border: 1px solid var(--border-strong);
+	border-top: var(--rule) solid var(--rule-color);
+}
+
+:root[data-design='contact-sheet'] .cs-content .card-head h2 {
+	font-size: 1.45rem;
+}
+
+/* Album page tab strip (Photos / Details / …). */
+:root[data-design='contact-sheet'] .cs-content .tabs button,
+:root[data-design='contact-sheet'] .cs-content .tabs a {
+	font-family: var(--font-mono);
+	letter-spacing: 0.04em;
+}
+
+/* Readout figures on the album page. */
+:root[data-design='contact-sheet'] .cs-content .metrics strong {
+	font-family: var(--font-mono);
+	font-size: 1.8rem;
+	font-weight: 500;
+	letter-spacing: -0.02em;
+}
+
+/* Maintenance tasks: their h4 is an item title, not a heading voice. */
+:root[data-design='contact-sheet'] .cs-content .task h4 {
+	font-stretch: normal;
+	line-height: 1.3;
+	text-transform: none;
+}
+
+/* Admin galleries list: covers framed on film. */
+:root[data-design='contact-sheet'] .cs-content .cover-col .thumb {
+	border: 3px solid var(--film);
+}
+
+:root[data-design='contact-sheet'] .cs-content .grid > .card .cover {
+	border: 6px solid var(--film);
+	border-bottom-width: 14px;
+}
+
+:root[data-design='contact-sheet'] .cs-content .grid > .card:hover .cover img {
+	transform: none;
+	filter: brightness(1.08);
+}
+
+/* Admin photo grid: frames on film, grease pencil on the chosen ones. */
+:root[data-design='contact-sheet'] .cs-content .pick {
+	border: 5px solid var(--film);
+}
+
+:root[data-design='contact-sheet'] .cs-content .pick img {
+	transition: none;
+}
+
+:root[data-design='contact-sheet'] .cs-content .selected .pick {
+	border-color: var(--grease);
+}
+
+:root[data-design='contact-sheet'] .cs-content .selected .pick img {
+	transform: none;
+}
+
+:root[data-design='contact-sheet'] .cs-content .selected .pick::after {
+	inset: 8%;
+	border-color: var(--grease);
+	border-radius: 46% 54% 44% 56% / 55% 45% 55% 45%;
+	transform: rotate(-4deg);
+}
+
+:root[data-design='contact-sheet'] .cs-content .selected .pick .check {
+	background: var(--grease);
+	border-color: var(--grease);
+}
+
+:root[data-design='contact-sheet'] .cs-content .tile-tags span {
+	padding: 0 0.35rem;
+	background: none;
+	border: 1px solid var(--border);
+}
+
+/* The photo toolbar sticks under the 60px bar wherever the masthead sticks. */
+@media (min-width: 960px) and (max-width: 1099px) {
+	:root[data-design='contact-sheet'] .cs-content .toolbar {
+		top: 60px;
+	}
+}
+
+/* Toggles: square switch that fills with ink (gold in green). */
+:root[data-design='contact-sheet'] input:checked + .track {
+	background: var(--highlight, var(--text));
+	border-color: var(--highlight, var(--text));
+}
+
+:root[data-design='contact-sheet'] input:focus-visible + .track {
+	outline: 2px solid var(--highlight, var(--text));
+	outline-offset: 2px;
+}
+
+:root[data-design='contact-sheet'] .toggle .toggle-label {
+	font-family: var(--font-sans);
+	font-weight: 500;
+}
+
+/* Toasts and dialogs (FeedbackHost) and the command palette: ruled, no shadows or blur. */
+:root[data-design='contact-sheet'] .toasts .toast {
+	box-shadow: none;
+	border-left: 4px solid var(--highlight, var(--bg));
+	font-size: 0.8rem;
+}
+
+:root[data-design='contact-sheet'] .toasts .toast.error {
+	color: var(--bg);
+	border-left-color: var(--bg);
+}
+
+:root[data-design='contact-sheet'] .backdrop:has(> .dialog),
+:root[data-design='contact-sheet'] .backdrop:has(> .palette) {
+	background: var(--overlay);
+	backdrop-filter: none;
+	-webkit-backdrop-filter: none;
+}
+
+:root[data-design='contact-sheet'] .backdrop > .dialog,
+:root[data-design='contact-sheet'] .backdrop > .palette {
+	border: var(--rule) solid var(--text);
+	box-shadow: none;
+}
+
+:root[data-design='contact-sheet'] .backdrop > .dialog h2 {
+	padding-bottom: 0.75rem;
+	border-bottom: 1px solid var(--border-strong);
+}
+
+:root[data-design='contact-sheet'] .backdrop > .dialog p {
+	font-family: var(--font-sans);
+	font-size: 0.95rem;
+}
+
+:root[data-design='contact-sheet'] .palette .field {
+	border-bottom: var(--rule) solid var(--text);
+}
+
+:root[data-design='contact-sheet'] .palette kbd {
+	font-family: var(--font-mono);
+}
+
+:root[data-design='contact-sheet'] .palette .result {
+	border-left-width: 3px;
+}
+
+:root[data-design='contact-sheet'] .palette .title {
+	font-family: var(--font-sans);
+	font-weight: 500;
+}
+
+/* Theme picker: a 2px ink frame round the chosen swatch. */
+:root[data-design='contact-sheet'] .theme.checked {
+	outline-width: 2px;
+}
