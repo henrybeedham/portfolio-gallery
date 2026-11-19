@@ -4,10 +4,13 @@ import { adminCredentials } from '#lib/server/config.js';
 import { getDb } from '#lib/server/db.js';
 import { getSettings } from '#lib/server/settings.js';
 import { getTheme, themeCss, themeVersion } from '#lib/server/themes.js';
+import { queueMissingPreviews } from '#lib/server/video-preview.js';
 
 export const init: ServerInit = () => {
 	getDb();
 	adminCredentials();
+	// Videos uploaded before previews existed, or while ffmpeg was missing.
+	queueMissingPreviews();
 };
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);

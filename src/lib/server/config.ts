@@ -17,6 +17,7 @@ export const paths = {
 	originals: path.join(dataDir, 'photos', 'originals'),
 	thumbs: path.join(dataDir, 'photos', 'thumbs'),
 	medium: path.join(dataDir, 'photos', 'medium'),
+	previews: path.join(dataDir, 'photos', 'previews'),
 	site: path.join(dataDir, 'site'),
 	tmp: path.join(dataDir, 'tmp'),
 	backups: path.join(dataDir, 'backups')

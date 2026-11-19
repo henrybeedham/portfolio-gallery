@@ -242,6 +242,11 @@ const MIGRATIONS: Migration[] = [
 		created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
 		last_used_at TEXT
 	);
+	`,
+	// Whether a video has a smaller copy for playing in the browser: NULL not yet decided, 0 plays
+	// the original, 1 has one (video-preview.ts).
+	`
+	ALTER TABLE photos ADD COLUMN preview INTEGER;
 	`
 ];
 

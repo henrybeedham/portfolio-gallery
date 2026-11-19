@@ -12,6 +12,7 @@ import {
 	removePhotoFiles
 } from './images.js';
 import { detectVideo, prepareVideo, probeVideo } from './video.js';
+import { queuePreview } from './video-preview.js';
 import { seededShuffle } from '#lib/sort.js';
 import type { AdminPhoto, PhotoItem, SortOrder, Tag } from '#lib/types.js';
 
@@ -29,6 +30,8 @@ export interface PhotoRow {
 	kind: string;
 	/** Seconds, for videos. */
 	duration: number | null;
+	/** For videos: 1 when there's a smaller copy for the browser, 0 when the original plays. */
+	preview: number | null;
 	downloads: number;
 	version: number;
 	created_at: string;
@@ -77,7 +80,11 @@ export async function detectMedia(file: string): Promise<MediaType | null> {
 }
 
 function toItem(row: PhotoRow): PhotoItem {
-	if (row.kind === 'video') return { ...photoItem(row), kind: 'video', duration: row.duration };
+	if (row.kind === 'video') {
+		const item: PhotoItem = { ...photoItem(row), kind: 'video', duration: row.duration };
+		if (row.preview === 1) item.preview = true;
+		return item;
+	}
 	return photoItem(row);
 }
 
@@ -204,6 +211,7 @@ export async function addPhoto(
 			return result.lastInsertRowid;
 		});
 		const row = getPhoto(photoId)!;
+		if (row.kind === 'video') queuePreview(row.id);
 		return {
 			...toItem(row),
 			tags: all<{ tag_id: number }>('SELECT tag_id FROM photo_tags WHERE photo_id = ?', row.id).map(
@@ -242,7 +250,8 @@ export async function replacePhoto(
 		transaction(() => {
 			run(
 				`UPDATE photos SET key = ?, ext = ?, original_name = ?, mime = ?, size = ?, width = ?,
-					height = ?, taken_at = ?, kind = ?, duration = ?, version = version + 1
+					height = ?, taken_at = ?, kind = ?, duration = ?, preview = NULL,
+					version = version + 1
 				 WHERE id = ?`,
 				key,
 				type.ext,
@@ -263,6 +272,7 @@ export async function replacePhoto(
 		throw error;
 	}
 	await removePhotoFiles(row.key, row.ext);
+	if (type.kind === 'video') queuePreview(row.id);
 	return getPhoto(row.id)!;
 }
 
@@ -302,10 +312,15 @@ export function bumpVersion(photoId: number, fields: { width: number; height: nu
 	);
 }
 
-/** Makes a photo's thumbnails, or a video's poster, again. */
+/**
+ * Makes a photo's thumbnails, or a video's poster, again. A video's preview is made again in the
+ * background.
+ */
 export function regenerateVariants(row: PhotoRow): Promise<{ width: number; height: number }> {
 	const file = originalPath(row.key, row.ext);
-	return row.kind === 'video' ? prepareVideo(file, row.key) : generateVariants(file, row.key);
+	if (row.kind !== 'video') return generateVariants(file, row.key);
+	queuePreview(row.id, { force: true });
+	return prepareVideo(file, row.key);
 }
 
 export async function refreshMetadata(row: PhotoRow) {

@@ -69,6 +69,8 @@ export interface PhotoItem extends ImageRef {
 	kind?: 'video';
 	/** Seconds, for videos. */
 	duration?: number | null;
+	/** Set for videos with a smaller copy for playing in the browser; downloads get the original. */
+	preview?: true;
 }
 
 export interface AdminPhoto extends PhotoItem {

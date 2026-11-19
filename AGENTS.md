@@ -180,7 +180,13 @@ Prettier-formatted, so `bun run lint` reports it; leave it alone unless asked.
   `generateVariants`, so thumbnails, covers and the grid work unchanged. Use `detectMedia` and
   `regenerateVariants` from `photos.ts` rather than the photo-only `detectType` and
   `generateVariants`. ffmpeg comes from the `mwader/static-ffmpeg` image; without it, videos get a
-  plain poster. The lightbox plays the original.
+  plain poster.
+  - **Previews** (`video-preview.ts`): after an upload, a background queue (one at a time) encodes a
+    1080p, 60fps-max H.264/AAC MP4 with faststart to `photos/previews/`, served as the `preview`
+    variant. `photos.preview` is NULL (undecided), 0 (the original already plays well, or encoding
+    failed) or 1. The lightbox plays the preview when `PhotoItem.preview` is set, otherwise the
+    original; downloads always get the original. Undecided videos are queued at startup, and
+    regenerating thumbnails re-encodes.
   - The Dockerfile and `bun run start` set `UV_THREADPOOL_SIZE=16`, so bulk image processing doesn't
     delay file requests, which share libuv's thread pool.
   - Embedded keywords (XMP `dc:subject`, falling back to IPTC) become album tags on upload, folder

@@ -11,7 +11,7 @@ export function slugify(input: string): string {
 		.slice(0, 80);
 }
 
-export function mediaUrl(image: ImageRef, variant: 'thumb' | 'medium' | 'original') {
+export function mediaUrl(image: ImageRef, variant: 'thumb' | 'medium' | 'preview' | 'original') {
 	return `/media/${image.key}/${variant}?v=${image.v}`;
 }
 

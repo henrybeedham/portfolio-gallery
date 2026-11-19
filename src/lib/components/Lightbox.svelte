@@ -141,7 +141,7 @@
 				{#if photo.kind === 'video'}
 					<!-- svelte-ignore a11y_media_has_caption -->
 					<video
-						src={mediaUrl(photo, 'original')}
+						src={mediaUrl(photo, photo.preview ? 'preview' : 'original')}
 						poster={mediaUrl(photo, 'medium')}
 						aria-label={photo.name}
 						controls
