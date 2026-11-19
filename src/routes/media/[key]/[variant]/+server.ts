@@ -4,12 +4,13 @@ import { effectiveCoverId, getAlbumById } from '#lib/server/albums.js';
 import { albumAccess } from '#lib/server/access.js';
 import { recordPhotoDownload } from '#lib/server/analytics.js';
 import { isContinuation, serveFile } from '#lib/server/files.js';
-import { originalPath, variantPath } from '#lib/server/images.js';
+import { originalPath, previewPath, variantPath } from '#lib/server/images.js';
 import { getPhotoByKey, regenerateVariants } from '#lib/server/photos.js';
+import { queuePreview } from '#lib/server/video-preview.js';
 import { contentDisposition } from '#lib/server/zip.js';
 import type { RequestHandler } from './$types';
 
-const VARIANTS = new Set(['thumb', 'medium', 'original']);
+const VARIANTS = new Set(['thumb', 'medium', 'preview', 'original']);
 
 async function exists(file: string) {
 	try {
@@ -33,12 +34,32 @@ export const GET: RequestHandler = async ({ params, request, url, cookies, local
 	if (access !== 'ok') {
 		// Password-protected albums still show their cover on public listings.
 		const coverAllowed =
-			access === 'locked' && variant !== 'original' && effectiveCoverId(album.id) === photo.id;
+			access === 'locked' &&
+			(variant === 'thumb' || variant === 'medium') &&
+			effectiveCoverId(album.id) === photo.id;
 		if (!coverAllowed) error(404, 'Not found');
 	}
 
 	const shareable = album.isPublic && !album.passwordHash && !album.expiresAt;
 	const cacheControl = `${shareable ? 'public' : 'private'}, max-age=31536000, immutable`;
+
+	if (variant === 'preview') {
+		if (photo.kind !== 'video') error(404, 'Not found');
+		// Like originals, never kept by shared caches.
+		const response = await serveFile(request, previewPath(photo.key), {
+			type: 'video/mp4',
+			cacheControl: 'private, max-age=31536000, immutable'
+		});
+		if (response) return response;
+		// Gone missing: make it again, and play the original meanwhile.
+		queuePreview(photo.id, { force: true });
+		const fallback = await serveFile(request, originalPath(photo.key, photo.ext), {
+			type: photo.mime,
+			cacheControl: 'private, no-store'
+		});
+		if (!fallback) error(404, 'Video is missing');
+		return fallback;
+	}
 
 	if (variant === 'original') {
 		const download = url.searchParams.has('download');

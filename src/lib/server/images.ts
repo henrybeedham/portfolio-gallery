@@ -70,6 +70,11 @@ export function variantPath(key: string, variant: Variant) {
 	return path.join(variant === 'thumb' ? paths.thumbs : paths.medium, shard(key), `${key}.webp`);
 }
 
+/** A video's smaller copy for playing in the browser (video-preview.ts). */
+export function previewPath(key: string) {
+	return path.join(paths.previews, shard(key), `${key}.mp4`);
+}
+
 /** Limits how many images are processed by sharp at the same time. */
 class Limiter {
 	private active = 0;
@@ -266,9 +271,12 @@ export async function extractMetadata(source: string): Promise<PhotoMetadata> {
 
 export async function removePhotoFiles(key: string, ext: string) {
 	await Promise.all(
-		[originalPath(key, ext), variantPath(key, 'thumb'), variantPath(key, 'medium')].map((file) =>
-			fsp.rm(file, { force: true })
-		)
+		[
+			originalPath(key, ext),
+			variantPath(key, 'thumb'),
+			variantPath(key, 'medium'),
+			previewPath(key)
+		].map((file) => fsp.rm(file, { force: true }))
 	);
 }
 

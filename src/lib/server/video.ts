@@ -13,7 +13,7 @@ const exec = promisify(execFile);
 
 let tools: Promise<boolean> | undefined;
 
-function hasTools() {
+export function hasTools() {
 	tools ??= Promise.all([exec('ffprobe', ['-version']), exec('ffmpeg', ['-version'])]).then(
 		() => true,
 		() => {
