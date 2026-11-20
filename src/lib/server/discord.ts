@@ -1,3 +1,4 @@
+import { hasPushDevices, sendPush } from './push.js';
 import { getSettings } from './settings.js';
 
 interface Embed {
@@ -40,8 +41,15 @@ export async function sendDiscord(embed: Embed, webhook = getSettings().discordW
 	}
 }
 
+/** Sends to Discord, if a webhook is set, and to any devices subscribed to push notifications. */
 export function notify(embed: Embed) {
 	void sendDiscord(embed);
+	void sendPush({
+		title: embed.title,
+		// Discord's bold markers, which a notification would show literally.
+		body: embed.description?.replace(/\*\*/g, ''),
+		url: embed.url
+	});
 }
 
 /* Individual photo downloads are batched per album so a busy client doesn't flood the channel. */
@@ -54,7 +62,7 @@ export function notifyPhotoDownload(
 	album: { id: number; title: string; url: string },
 	name: string
 ) {
-	if (!getSettings().discordWebhook) return;
+	if (!getSettings().discordWebhook && !hasPushDevices()) return;
 	const entry = pending.get(album.id);
 	if (entry) {
 		entry.names.push(name);

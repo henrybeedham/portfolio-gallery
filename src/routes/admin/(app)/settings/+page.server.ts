@@ -8,6 +8,7 @@ import { sendDiscord } from '#lib/server/discord.js';
 import { requireAdmin } from '#lib/server/guard.js';
 import { detectType, removeHeroImage, saveHeroImage, tempFile } from '#lib/server/images.js';
 import { getSettings, updateSettings } from '#lib/server/settings.js';
+import { listPushDevices, vapidPublicKey } from '#lib/server/push.js';
 import { getInvoiceSettings } from '#lib/server/billing.js';
 import { albumThemeCounts } from '#lib/server/albums.js';
 import { getTheme, hasTheme, themeSummaries } from '#lib/server/themes.js';
@@ -39,8 +40,9 @@ function themesInUse(settings: SiteSettings) {
 	);
 }
 
-export const load: PageServerLoad = ({ locals }) => {
+export const load: PageServerLoad = ({ locals, depends }) => {
 	requireAdmin(locals);
+	depends('admin:push');
 	const current = getSettings();
 	return {
 		current: {
@@ -49,7 +51,8 @@ export const load: PageServerLoad = ({ locals }) => {
 			defaultAlbumTheme: hasTheme(current.defaultAlbumTheme) ? current.defaultAlbumTheme : ''
 		},
 		themes: themeSummaries(),
-		themesInUse: themesInUse(current)
+		themesInUse: themesInUse(current),
+		push: { publicKey: vapidPublicKey(), devices: listPushDevices() }
 	};
 };
 

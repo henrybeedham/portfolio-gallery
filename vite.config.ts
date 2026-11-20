@@ -11,6 +11,8 @@ export default defineConfig({
 					filename.split(/[/\\]/).includes('node_modules') ? undefined : true
 			},
 			adapter: adapter(),
+			// Only the admin area registers it (push-client.ts), so public pages are left alone.
+			serviceWorker: { register: false },
 			csp: {
 				mode: 'auto',
 				directives: {

@@ -5,5 +5,5 @@ import type { PageServerLoad } from './$types';
 export const load: PageServerLoad = ({ locals, depends, url }) => {
 	requireAdmin(locals);
 	depends('admin:lightroom');
-	return { tokens: listApiTokens(), origin: url.origin };
+	return { tokens: listApiTokens('full'), origin: url.origin };
 };

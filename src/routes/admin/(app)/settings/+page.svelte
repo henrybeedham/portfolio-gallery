@@ -5,6 +5,7 @@
 	import ThemePicker from '#lib/components/admin/ThemePicker.svelte';
 	import ThemeManager from '#lib/components/admin/ThemeManager.svelte';
 	import Toggle from '#lib/components/admin/Toggle.svelte';
+	import PushSettings from '#lib/components/admin/PushSettings.svelte';
 	import { feedback } from '#lib/components/admin/feedback.svelte.js';
 	import type { Layout, SortOrder } from '#lib/types.js';
 	import type { PageProps } from './$types';
@@ -41,6 +42,7 @@
 		{ id: 'branding', label: 'Branding' },
 		{ id: 'homepage', label: 'Homepage' },
 		{ id: 'contact', label: 'Contact' },
+		{ id: 'notifications', label: 'Notifications' },
 		{ id: 'appearance', label: 'Appearance' },
 		{ id: 'defaults', label: 'Album defaults' }
 	];
@@ -229,6 +231,17 @@
 			</div>
 			<p class="hint">Get notified in Discord when clients download photos or full albums.</p>
 		</div>
+	</section>
+
+	<section class="card" id="notifications">
+		<div class="card-head">
+			<h2>Notifications</h2>
+			<p class="hint">
+				Get the same alerts as Discord on your phone or computer, when clients download photos or
+				full albums. Each device is turned on from that device.
+			</p>
+		</div>
+		<PushSettings publicKey={data.push.publicKey} devices={data.push.devices} />
 	</section>
 
 	<section class="card" id="appearance">

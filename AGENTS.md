@@ -92,6 +92,12 @@ Prettier-formatted, so `bun run lint` reports it; leave it alone unless asked.
 - **Lightroom API:** `/api/lightroom/…`, used by the Lightroom Classic plugin. It's authorised by
   an API token (`Authorization: Bearer gal_…`, `api-tokens.ts`), not the session cookie, so every
   endpoint calls `requireToken(event)` from `lightroom.ts`.
+- **Widget API:** `/api/widget` returns the summary the iPhone widgets show (`widget.ts`). The widgets
+  are a Scriptable script, `scriptable/Gallery.js`, bundled like the Lightroom plugin and copied from
+  `/admin/widgets` with the site's address (and a fresh token) filled in (`widget-script.ts`). It
+  takes a **widget** token: API tokens have a `scope`, `full` (Lightroom, `requireToken(event)`) or
+  `widget` (read-only, `requireToken(event, 'widget')`). `WidgetPreview.svelte` mirrors the
+  script's layouts for the admin page; change both together.
 - **Other:** `/site/themes.css`, `/site/calendar/[token].ics` (the jobs feed), `/album/[...path]`
   (legacy redirects) and `/healthz`.
 - **Album slugs live at the root.** Any new top-level route must be added to `RESERVED_SLUGS` in
@@ -149,7 +155,7 @@ Prettier-formatted, so `bun run lint` reports it; leave it alone unless asked.
   - `themes/` (uploaded themes)
   - `tmp/` (including unfinished uploads, `upload-<id>.part`, removed after a day)
   - `backups/` (database backups)
-  - the generated `.session-secret` and `.admin-password`
+  - the generated `.session-secret`, `.admin-password` and `.vapid-key.json`
 - **Database.** It uses `node:sqlite`, which is synchronous. Use the helpers in `db.ts`: `run`,
   `get`, `all`, `transaction` (nested calls join the outer one) and `placeholders(n)`.
   Booleans are stored as 0/1, `undefined` becomes `NULL`, and columns are snake_case, mapped to
@@ -270,7 +276,14 @@ background maintenance tasks (`jobs.ts`, `/admin/api/jobs`). The page route is s
   - Academic years start in September.
   - Gallery charts read `album_daily_stats`, updated in `analytics.ts`.
   - Admin views and downloads are never counted or notified.
-  - Discord notifications are in `discord.ts`. Single-photo downloads are batched per album for 60s.
+  - Notifications go through `notify()` in `discord.ts`, which sends to the Discord webhook and to
+    push devices (`push.ts`). Single-photo downloads are batched per album for 60s.
+- **Push notifications and the Home Screen app.** The admin area links a web app manifest
+  (`/site/manifest.webmanifest`) and registers `src/service-worker.ts` itself
+  (`push-client.ts`; automatic registration is off, so public pages never get it). The worker only
+  shows notifications; it doesn't cache. `web-push.ts` implements encryption and VAPID with
+  `node:crypto`, the key pair lives in `DATA_DIR/.vapid-key.json`, and devices are turned on under
+  Settings → Notifications (on an iPhone, only from the Home Screen app, over https).
 - **List filters** live in the URL (`?show=…`). `admin/list-memory.ts` and `BackLink.svelte`
   bring you back to the filtered list from a detail page.
 

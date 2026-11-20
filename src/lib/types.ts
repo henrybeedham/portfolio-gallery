@@ -327,3 +327,81 @@ export interface SearchEntry {
 	/** Extra text to match on that isn't shown. */
 	keywords: string;
 }
+
+/* ---------------------------------------------------------------- widgets */
+
+/** A colour as a hex value and an opacity, which is what Scriptable's `new Color()` takes. */
+/** For the Scriptable widgets (widget.ts, scriptable/Gallery.js) and their previews. */
+export type WidgetColor = [hex: string, alpha: number];
+
+export interface WidgetColors {
+	bg: WidgetColor;
+	surface: WidgetColor;
+	text: WidgetColor;
+	muted: WidgetColor;
+	subtle: WidgetColor;
+	border: WidgetColor;
+	highlight: WidgetColor;
+	danger: WidgetColor;
+	warning: WidgetColor;
+	success: WidgetColor;
+}
+
+export interface WidgetJob {
+	title: string;
+	client: string;
+	location: string;
+	/** “Sat 22 Nov”. */
+	day: string;
+	/** For the date blocks in job lists: “Sat” and “22”. */
+	weekday: string;
+	date: string;
+	time: string;
+	/** 0 for today, 1 for tomorrow… */
+	daysUntil: number;
+	when: string;
+	tentative: boolean;
+	url: string;
+}
+
+export interface WidgetTask {
+	label: string;
+	detail: string;
+	kind: 'overdue' | 'deliver' | 'invoice';
+	url: string;
+}
+
+export interface WidgetData {
+	site: { title: string; url: string };
+	generatedAt: string;
+	theme: string;
+	scheme: 'light' | 'dark';
+	themes: Record<string, { name: string; scheme: 'light' | 'dark'; colors: WidgetColors }>;
+	jobs: WidgetJob[];
+	money: {
+		outstanding: string;
+		unpaidCount: number;
+		overdue: string;
+		overdueCount: number;
+		paidThisMonth: string;
+		paidThisMonthCount: number;
+		paidThisTaxYear: string;
+		taxYear: string;
+		url: string;
+	};
+	activity: {
+		views: number;
+		downloads: number;
+		previousViews: number;
+		previousDownloads: number;
+		/** The last 14 days, oldest first. */
+		daily: { day: string; views: number; downloads: number }[];
+		top: { title: string; views: number; downloads: number }[];
+		url: string;
+	};
+	todo: { count: number; tasks: WidgetTask[]; url: string };
+}
+
+export type WidgetKind = 'overview' | 'jobs' | 'money' | 'activity' | 'todo';
+/** Home Screen sizes, then the Lock Screen's rectangular, circular and inline widgets. */
+export type WidgetFamily = 'small' | 'medium' | 'large' | 'rectangular' | 'circular' | 'inline';

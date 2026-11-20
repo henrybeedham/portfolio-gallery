@@ -11,12 +11,14 @@
 	import ChartColumn from '@lucide/svelte/icons/chart-column';
 	import DatabaseBackup from '@lucide/svelte/icons/database-backup';
 	import Aperture from '@lucide/svelte/icons/aperture';
+	import Smartphone from '@lucide/svelte/icons/smartphone';
 	import LogOut from '@lucide/svelte/icons/log-out';
 	import Menu from '@lucide/svelte/icons/menu';
 	import X from '@lucide/svelte/icons/x';
 	import FeedbackHost from '#lib/components/admin/FeedbackHost.svelte';
 	import CommandPalette from '#lib/components/admin/CommandPalette.svelte';
 	import { onMount } from 'svelte';
+	import { registerServiceWorker } from '#lib/push-client.js';
 	import '#lib/components/admin/admin-ui.css';
 	import type { LayoutProps } from './$types';
 
@@ -26,6 +28,8 @@
 	let shortcut = $state('Ctrl K');
 	onMount(() => {
 		if (/Mac|iPhone|iPad/.test(navigator.userAgent)) shortcut = '⌘K';
+		// For push notifications (Settings → Notifications).
+		registerServiceWorker().catch(() => {});
 	});
 
 	function openSearch() {
@@ -40,6 +44,7 @@
 		{ href: '/admin/invoices', label: 'Invoices', icon: Receipt, exact: false },
 		{ href: '/admin/analytics', label: 'Analytics', icon: ChartColumn, exact: false },
 		{ href: '/admin/lightroom', label: 'Lightroom', icon: Aperture, exact: false },
+		{ href: '/admin/widgets', label: 'Widgets', icon: Smartphone, exact: false },
 		{ href: '/admin/backups', label: 'Backups', icon: DatabaseBackup, exact: false },
 		{ href: '/admin/settings', label: 'Settings', icon: Settings, exact: false }
 	];

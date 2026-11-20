@@ -266,6 +266,24 @@ const MIGRATIONS: Migration[] = [
 	// Whether the album page opens with its sections collapsed to a few small previews.
 	`
 	ALTER TABLE albums ADD COLUMN sections_collapsed INTEGER NOT NULL DEFAULT 0;
+	`,
+	// Browsers (usually the admin's phone, installed to the home screen) that get push
+	// notifications. The endpoint is the push service's URL for that browser (push.ts).
+	`
+	CREATE TABLE push_subscriptions (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		endpoint TEXT NOT NULL UNIQUE,
+		p256dh TEXT NOT NULL,
+		auth TEXT NOT NULL,
+		name TEXT NOT NULL,
+		subject TEXT NOT NULL,
+		created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+	);
+	`,
+	// What an API token may do: 'full' (Lightroom: anything the admin can) or 'widget' (only read
+	// the summary that Home Screen widgets show, /api/widget).
+	`
+	ALTER TABLE api_tokens ADD COLUMN scope TEXT NOT NULL DEFAULT 'full';
 	`
 ];
 
