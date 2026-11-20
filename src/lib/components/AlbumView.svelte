@@ -14,11 +14,13 @@
 	import ImageIcon from '@lucide/svelte/icons/image';
 	import X from '@lucide/svelte/icons/x';
 	import ChevronDown from '@lucide/svelte/icons/chevron-down';
+	import Play from '@lucide/svelte/icons/play';
+	import Img from './Img.svelte';
 	import PhotoGallery from './PhotoGallery.svelte';
 	import Lightbox from './Lightbox.svelte';
 	import SiteFooter from './SiteFooter.svelte';
 	import { nativeDownload } from '#lib/download.js';
-	import { expiryLabel, formatDay, plural, viewQuery } from '#lib/utils.js';
+	import { expiryLabel, formatDay, mediaUrl, plural, viewQuery } from '#lib/utils.js';
 	import type { AlbumViewData, PhotoItem, SortOrder, ViewQuery, ViewSection } from '#lib/types.js';
 
 	let { data }: { data: AlbumViewData } = $props();
@@ -34,6 +36,8 @@
 	let loadingMore = $state(false);
 	let loadError = $state<string | null>(null);
 	const hasMore = $derived(photos.length < total);
+	/** Matches the server's page size. */
+	const PAGE_SIZE = 48;
 
 	// Infinite scroll: load the next page when a sentinel below the grid nears the viewport.
 	// The observer is recreated after each load so a still-visible sentinel triggers again.
@@ -42,7 +46,7 @@
 		if (!sentinel || !hasMore || loadingMore || loadError) return;
 		const observer = new IntersectionObserver(
 			(entries) => {
-				if (entries.some((entry) => entry.isIntersecting)) loadMore();
+				if (entries.some((entry) => entry.isIntersecting)) loadMore(loadLimit);
 			},
 			{ rootMargin: '0px 0px 1200px 0px' }
 		);
@@ -67,38 +71,76 @@
 
 	interface Group {
 		section: ViewSection | null;
-		/** Index of the group's first photo in `photos`. */
+		/** Photos in the group in this view, loaded or not. */
+		count: number;
+		/** Where the group starts in the view. */
 		start: number;
+		/** The ones loaded so far. */
 		photos: PhotoItem[];
 	}
 
-	/** The loaded photos in runs by section; photos without one come first, with no heading. */
+	/** Photos without a section first, with no heading, then every section, loaded or not. */
 	const groups = $derived.by((): Group[] => {
+		const loose = photos.filter((photo) => !photo.section || !sectionById.has(photo.section));
+		const inSections = data.sections.reduce((sum, section) => sum + section.count, 0);
 		const result: Group[] = [];
-		photos.forEach((photo, index) => {
-			const section = (photo.section && sectionById.get(photo.section)) || null;
-			const last = result.at(-1);
-			if (last && last.section === section) last.photos.push(photo);
-			else result.push({ section, start: index, photos: [photo] });
-		});
+		if (total > inSections) {
+			result.push({ section: null, count: total - inSections, start: 0, photos: loose });
+		}
+		for (const section of data.sections) {
+			result.push({
+				section,
+				count: section.count,
+				start: section.start,
+				photos: photos.filter((photo) => photo.section === section.id)
+			});
+		}
 		return result;
 	});
 
-	const collapsed = new SvelteSet<number>();
+	/** Sections start collapsed, showing a few small previews. */
+	const expanded = new SvelteSet<number>();
 
 	function toggleSection(id: number) {
-		if (collapsed.has(id)) collapsed.delete(id);
-		else collapsed.add(id);
+		if (expanded.has(id)) expanded.delete(id);
+		else expanded.add(id);
 	}
 
-	/** Loads photos up to the section if need be, then scrolls to its heading. */
+	/**
+	 * The first open group that still has photos to load. The loader sits at its end, so photos in
+	 * collapsed sections are only fetched once they're opened.
+	 */
+	const loadTarget = $derived(
+		sectioned
+			? groups.find(
+					(group) =>
+						(!group.section || expanded.has(group.section.id)) && group.photos.length < group.count
+				)
+			: undefined
+	);
+
+	/** Enough to fill the target with a page of photos, skipping past collapsed sections before it. */
+	const loadLimit = $derived(
+		loadTarget
+			? Math.min(
+					200,
+					Math.max(
+						PAGE_SIZE,
+						loadTarget.start + loadTarget.photos.length + PAGE_SIZE - photos.length
+					)
+				)
+			: undefined
+	);
+
+	function openGroupPhoto(group: Group, index: number) {
+		const id = group.photos[index]?.id;
+		const at = photos.findIndex((photo) => photo.id === id);
+		if (at >= 0) openLightbox(at);
+	}
+
+	/** Opens the section and scrolls to its heading; its photos load once it's in view. */
 	async function jumpTo(section: ViewSection) {
-		collapsed.delete(section.id);
-		while (photos.length <= section.start && hasMore && !loadError) {
-			const before = photos.length;
-			await loadMore(Math.min(200, section.start + 1 - photos.length + 24));
-			if (photos.length === before) break;
-		}
+		expanded.add(section.id);
 		await tick();
 		document
 			.getElementById(`section-${section.id}`)
@@ -351,11 +393,11 @@
 	{/if}
 
 	<section class="photos container" aria-live="polite">
-		{#if photos.length && sectioned}
+		{#if sectioned}
 			{#each groups as group (group.section?.id ?? 'none')}
 				{@const section = group.section}
+				{@const open = !section || expanded.has(section.id)}
 				{#if section}
-					{@const open = !collapsed.has(section.id)}
 					<header class="section-head" id="section-{section.id}">
 						<button
 							class="section-toggle"
@@ -377,27 +419,51 @@
 							{#if started === section.id}<Check size={13} />{:else}<Download size={13} />{/if}
 							{started === section.id ? 'Download Started' : 'Download Section'}
 						</button>
-						{#if section.description && open}
+						{#if section.description}
 							<p class="section-description">{section.description}</p>
 						{/if}
 					</header>
 				{/if}
-				<div
-					class="section-photos"
-					id={section ? `section-photos-${section.id}` : undefined}
-					hidden={!!section && collapsed.has(section.id)}
-				>
-					{#if !section || !collapsed.has(section.id)}
-						<PhotoGallery
-							photos={group.photos}
-							layout={album.layout}
-							href={photoHref}
-							onopen={(index) => openLightbox(group.start + index)}
-							{selecting}
-							{selected}
-							ontoggle={toggle}
-							eagerCount={group.start === 0 ? 4 : 0}
-						/>
+				<div class="section-photos" id={section ? `section-photos-${section.id}` : undefined}>
+					{#if open}
+						{#if group.photos.length}
+							<PhotoGallery
+								photos={group.photos}
+								layout={album.layout}
+								href={photoHref}
+								onopen={(index) => openGroupPhoto(group, index)}
+								{selecting}
+								{selected}
+								ontoggle={toggle}
+								eagerCount={group.start === 0 ? 4 : 0}
+							/>
+						{/if}
+						{#if loadTarget === group}
+							<div class="load-more" bind:this={sentinel}>
+								{@render loader(false, group.photos.length, group.count)}
+							</div>
+						{/if}
+					{:else if section}
+						<button
+							class="preview"
+							onclick={() => expanded.add(section.id)}
+							aria-label="Show all {plural(section.count, 'photo')} in {section.title}"
+						>
+							{#each section.preview as photo (photo.id)}
+								<span class="preview-tile">
+									<Img
+										src={mediaUrl(photo, 'thumb')}
+										alt=""
+										width={photo.w || undefined}
+										height={photo.h || undefined}
+									/>
+									{#if photo.kind === 'video'}
+										<span class="preview-play"><Play size={12} strokeWidth={2} /></span>
+									{/if}
+								</span>
+							{/each}
+							<span class="preview-more eyebrow">View all</span>
+						</button>
 					{/if}
 				</div>
 			{/each}
@@ -423,29 +489,31 @@
 			</div>
 		{/if}
 
-		{#if photos.length}
-			<div class="load-more" bind:this={sentinel}>
-				{#if hasMore}
-					{#if loadError}
-						<p class="error-text">{loadError}</p>
-						<button class="btn" onclick={() => loadMore()} disabled={loadingMore}>Try again</button>
-					{:else}
-						<p class="subtle loading" aria-live="polite">
-							<span class="spinner"></span> Loading more photos…
-						</p>
-					{/if}
-					<p class="subtle">Showing {photos.length.toLocaleString()} of {total.toLocaleString()}</p>
-				{:else}
-					<p class="done eyebrow">
-						{total === 1
-							? 'That’s the only photo'
-							: `You’ve seen all ${total.toLocaleString()} photos`}
-					</p>
-				{/if}
-			</div>
+		{#if photos.length && !sectioned}
+			<div class="load-more" bind:this={sentinel}>{@render loader(true)}</div>
 		{/if}
 	</section>
 </main>
+
+{#snippet loader(showDone: boolean, shown = photos.length, of = total)}
+	{#if hasMore}
+		{#if loadError}
+			<p class="error-text">{loadError}</p>
+			<button class="btn" onclick={() => loadMore(loadLimit)} disabled={loadingMore}
+				>Try again</button
+			>
+		{:else}
+			<p class="subtle loading" aria-live="polite">
+				<span class="spinner"></span> Loading more photos…
+			</p>
+		{/if}
+		<p class="subtle">Showing {shown.toLocaleString()} of {of.toLocaleString()}</p>
+	{:else if showDone}
+		<p class="done eyebrow">
+			{total === 1 ? 'That’s the only photo' : `You’ve seen all ${total.toLocaleString()} photos`}
+		</p>
+	{/if}
+{/snippet}
 
 <SiteFooter copyright={settings.copyright} isAdmin={data.isAdmin} />
 
@@ -766,6 +834,70 @@
 
 	.section-toggle:hover .chevron {
 		color: var(--text);
+	}
+
+	.preview {
+		display: flex;
+		gap: clamp(0.25rem, 0.5vw, 0.4rem);
+		width: 100%;
+		padding: 0;
+		border: 0;
+		background: none;
+		color: inherit;
+		cursor: pointer;
+	}
+
+	.preview-tile,
+	.preview-more {
+		position: relative;
+		flex: none;
+		width: clamp(58px, 9vw, 104px);
+		aspect-ratio: 1;
+		overflow: hidden;
+		background: var(--placeholder);
+	}
+
+	.preview-tile :global(img) {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		transition: transform 0.8s var(--ease);
+	}
+
+	.preview:hover .preview-tile :global(img.loaded) {
+		transform: scale(1.04);
+	}
+
+	.preview-play {
+		position: absolute;
+		left: 6px;
+		bottom: 6px;
+		display: grid;
+		place-items: center;
+		width: 20px;
+		height: 20px;
+		background: rgba(0, 0, 0, 0.5);
+		color: #fff;
+	}
+
+	.preview-more {
+		display: grid;
+		place-items: center;
+		background: none;
+		border: 1px solid var(--border-strong);
+		font-size: 0.6rem;
+		transition: border-color 0.3s var(--ease);
+	}
+
+	.preview:hover .preview-more {
+		border-color: var(--text);
+	}
+
+	/* Four previews and “View all” fit across a 360px screen. */
+	@media (max-width: 560px) {
+		.preview-tile:nth-child(n + 5) {
+			display: none;
+		}
 	}
 
 	.section-description {

@@ -32,18 +32,27 @@ function publicAlbum(album: Album) {
 	};
 }
 
-/** The album's sections that have photos in this view, with where each starts. */
-function viewSections(albumId: number, ordered: { section: number | null }[]): ViewSection[] {
-	const found = new Map<number, { count: number; start: number }>();
+const PREVIEW_COUNT = 6;
+
+/** The album's sections that have photos in this view, with where each starts and a preview. */
+function viewSections(
+	albumId: number,
+	ordered: { id: number; section: number | null }[]
+): ViewSection[] {
+	const found = new Map<number, { count: number; start: number; ids: number[] }>();
 	ordered.forEach((row, index) => {
 		if (row.section === null) return;
 		const entry = found.get(row.section);
-		if (entry) entry.count++;
-		else found.set(row.section, { count: 1, start: index });
+		if (!entry) found.set(row.section, { count: 1, start: index, ids: [row.id] });
+		else {
+			entry.count++;
+			if (entry.ids.length < PREVIEW_COUNT) entry.ids.push(row.id);
+		}
 	});
 	return albumSections(albumId).flatMap((section) => {
 		const entry = found.get(section.id);
-		return entry ? [{ ...section, ...entry }] : [];
+		if (!entry) return [];
+		return [{ ...section, count: entry.count, start: entry.start, preview: photoItems(entry.ids) }];
 	});
 }
 

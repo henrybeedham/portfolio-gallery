@@ -179,7 +179,9 @@ Prettier-formatted, so `bun run lint` reports it; leave it alone unless asked.
   most one per photo). `orderedPhotos` puts unsectioned photos first, then each section, sorting
   within each. The album page only shows headings, jump links, “Download Section”
   (`/[slug]/download?section=`) and ZIP folders once the photos span two or more groups, so an
-  album that is all one section looks the same as one with none.
+  album that is all one section looks the same as one with none. Sections start collapsed, showing
+  the first few photos small (`ViewSection.preview`); a section's photos are only paged in once
+  it's opened (`loadTarget` in `AlbumView.svelte`).
 - **Videos** (`video.ts`) are rows in `photos` with `kind = 'video'` and a `duration`. ffprobe reads
   their size (after rotation), length and date; ffmpeg's poster frame goes through
   `generateVariants`, so thumbnails, covers and the grid work unchanged. Use `detectMedia` and

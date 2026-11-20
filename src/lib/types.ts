@@ -106,6 +106,8 @@ export interface ViewSection extends Section {
 	count: number;
 	/** Where the section's first photo sits in the view, for jumping to it. */
 	start: number;
+	/** Its first few photos, shown small while the section is collapsed. */
+	preview: PhotoItem[];
 }
 
 export interface AlbumCardData {
