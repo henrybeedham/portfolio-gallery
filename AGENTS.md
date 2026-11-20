@@ -119,7 +119,11 @@ Prettier-formatted, so `bun run lint` reports it; leave it alone unless asked.
 - A published collection is an album (its remote id). Photos use the same chunked upload as the
   browser (`upload-receiver.ts`); `x-replace-photo` swaps a republished photo's file in place
   (`replacePhoto` in `photos.ts`), keeping its id, tags and downloads.
-- Changing the API means changing the plugin too, and users must download it again.
+- Changing the API means changing the plugin too. Users don't need to download it again by hand:
+  `pluginBuild` (a hash of the plugin's files, written into `Defaults.lua` as `build`) is reported
+  by `/api/lightroom`, and when it differs the plugin offers to fetch `/api/lightroom/plugin` and
+  copy the files over itself (`Updater.lua`, unzipping with `ditto` or PowerShell). It takes effect
+  when Lightroom restarts, so keep the old API working for a plugin that hasn't updated yet.
 
 ## Auth and access
 
@@ -179,9 +183,10 @@ Prettier-formatted, so `bun run lint` reports it; leave it alone unless asked.
   most one per photo). `orderedPhotos` puts unsectioned photos first, then each section, sorting
   within each. The album page only shows headings, jump links, “Download Section”
   (`/[slug]/download?section=`) and ZIP folders once the photos span two or more groups, so an
-  album that is all one section looks the same as one with none. Sections start collapsed, showing
-  the first few photos small (`ViewSection.preview`); a section's photos are only paged in once
-  it's opened (`loadTarget` in `AlbumView.svelte`).
+  album that is all one section looks the same as one with none. With the album's
+  `sections_collapsed` setting, sections start collapsed, showing the first few photos small
+  (`ViewSection.preview`); a section's photos are only paged in once it's open (`loadTarget` in
+  `AlbumView.svelte`).
 - **Videos** (`video.ts`) are rows in `photos` with `kind = 'video'` and a `duration`. ffprobe reads
   their size (after rotation), length and date; ffmpeg's poster frame goes through
   `generateVariants`, so thumbnails, covers and the grid work unchanged. Use `detectMedia` and

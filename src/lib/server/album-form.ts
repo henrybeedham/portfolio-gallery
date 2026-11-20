@@ -22,6 +22,7 @@ export interface AlbumFormValues {
 	theme: string;
 	layout: Layout;
 	sortOrder: SortOrder;
+	sectionsCollapsed: boolean;
 }
 
 export type AlbumFormResult =
@@ -73,7 +74,8 @@ export function parseAlbumForm(data: FormData, existing?: Album): AlbumFormResul
 		expiresAt,
 		theme: theme && hasTheme(theme) ? theme : '',
 		layout,
-		sortOrder
+		sortOrder,
+		sectionsCollapsed: checkbox(data, 'sections_collapsed')
 	};
 
 	const fail = (error: string, field?: string): AlbumFormResult => ({
@@ -116,7 +118,8 @@ export function parseAlbumForm(data: FormData, existing?: Album): AlbumFormResul
 			expiresAt: values.expiresAt || null,
 			theme: values.theme || null,
 			layout: values.layout,
-			sortOrder: values.sortOrder
+			sortOrder: values.sortOrder,
+			sectionsCollapsed: values.sectionsCollapsed
 		}
 	};
 }

@@ -48,7 +48,8 @@ export const load: PageServerLoad = ({ params, locals, url, depends }) => {
 			// A deleted theme shows as following the site, which is what the album falls back to.
 			theme: album.theme && hasTheme(album.theme) ? album.theme : '',
 			layout: album.layout,
-			sortOrder: album.sortOrder
+			sortOrder: album.sortOrder,
+			sectionsCollapsed: album.sectionsCollapsed
 		},
 		themes: themeSummaries(),
 		siteTheme: getTheme(getSettings().theme).id,

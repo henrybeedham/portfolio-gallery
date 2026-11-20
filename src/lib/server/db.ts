@@ -262,6 +262,10 @@ const MIGRATIONS: Migration[] = [
 	CREATE INDEX sections_album ON sections(album_id, position);
 	ALTER TABLE photos ADD COLUMN section_id INTEGER REFERENCES sections(id) ON DELETE SET NULL;
 	CREATE INDEX photos_section ON photos(section_id);
+	`,
+	// Whether the album page opens with its sections collapsed to a few small previews.
+	`
+	ALTER TABLE albums ADD COLUMN sections_collapsed INTEGER NOT NULL DEFAULT 0;
 	`
 ];
 

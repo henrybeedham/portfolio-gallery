@@ -98,12 +98,20 @@
 		return result;
 	});
 
-	/** Sections start collapsed, showing a few small previews. */
-	const expanded = new SvelteSet<number>();
+	/**
+	 * Sections the visitor has opened or closed, away from how they start: open, or collapsed to a
+	 * few small previews when the album says so.
+	 */
+	const toggled = new SvelteSet<number>();
+	const isOpen = (id: number) => album.sectionsCollapsed === toggled.has(id);
 
 	function toggleSection(id: number) {
-		if (expanded.has(id)) expanded.delete(id);
-		else expanded.add(id);
+		if (toggled.has(id)) toggled.delete(id);
+		else toggled.add(id);
+	}
+
+	function openSection(id: number) {
+		if (!isOpen(id)) toggleSection(id);
 	}
 
 	/**
@@ -114,7 +122,7 @@
 		sectioned
 			? groups.find(
 					(group) =>
-						(!group.section || expanded.has(group.section.id)) && group.photos.length < group.count
+						(!group.section || isOpen(group.section.id)) && group.photos.length < group.count
 				)
 			: undefined
 	);
@@ -140,7 +148,7 @@
 
 	/** Opens the section and scrolls to its heading; its photos load once it's in view. */
 	async function jumpTo(section: ViewSection) {
-		expanded.add(section.id);
+		openSection(section.id);
 		await tick();
 		document
 			.getElementById(`section-${section.id}`)
@@ -343,7 +351,7 @@
 				</button>
 			</div>
 		{/if}
-		{#if sectioned}
+		{#if sectioned && data.tags.length}
 			<nav class="contents fade-up" style:animation-delay="0.3s" aria-label="Sections">
 				<span class="eyebrow">In this gallery</span>
 				<ul>
@@ -374,6 +382,13 @@
 						</button>
 					{/each}
 				</div>
+			{:else if sectioned}
+				<!-- With no tags to filter by, the section links take their place in the sticky bar. -->
+				<nav class="tags jump" aria-label="Sections">
+					{#each data.sections as section (section.id)}
+						<button class="link" onclick={() => jumpTo(section)}>{section.title}</button>
+					{/each}
+				</nav>
 			{:else}
 				<span></span>
 			{/if}
@@ -396,7 +411,7 @@
 		{#if sectioned}
 			{#each groups as group (group.section?.id ?? 'none')}
 				{@const section = group.section}
-				{@const open = !section || expanded.has(section.id)}
+				{@const open = !section || isOpen(section.id)}
 				{#if section}
 					<header class="section-head" id="section-{section.id}">
 						<button
@@ -446,7 +461,7 @@
 					{:else if section}
 						<button
 							class="preview"
-							onclick={() => expanded.add(section.id)}
+							onclick={() => openSection(section.id)}
 							aria-label="Show all {plural(section.count, 'photo')} in {section.title}"
 						>
 							{#each section.preview as photo (photo.id)}
@@ -774,12 +789,21 @@
 		padding: 0;
 	}
 
+	.jump {
+		align-items: center;
+		gap: 1.5rem;
+	}
+
+	.jump .link {
+		flex: none;
+	}
+
 	.section-head {
 		display: grid;
 		grid-template-columns: minmax(0, 1fr) auto;
 		align-items: end;
 		gap: 0.75rem 1.5rem;
-		padding-top: clamp(2rem, 5vw, 3.5rem);
+		padding-top: clamp(1.25rem, 2.5vw, 1.75rem);
 		margin-bottom: 1.25rem;
 		border-top: 1px solid var(--border);
 		/* Clears the sticky top bar and toolbar when jumped to. */
@@ -787,12 +811,7 @@
 	}
 
 	.section-photos + .section-head {
-		margin-top: clamp(2rem, 5vw, 3.5rem);
-	}
-
-	.section-photos:first-child + .section-head,
-	.section-head:first-child {
-		padding-top: 1.5rem;
+		margin-top: clamp(1.75rem, 4vw, 2.5rem);
 	}
 
 	.section-toggle {

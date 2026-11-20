@@ -53,6 +53,7 @@
 	let theme = $state(start.theme);
 	let layout = $state<Layout>(start.layout);
 	let sortOrder = $state<SortOrder>(start.sortOrder);
+	let sectionsCollapsed = $state(start.sectionsCollapsed);
 	let saving = $state(false);
 
 	const effectiveSlug = $derived(slugTouched ? slugify(slug) : slugify(title));
@@ -286,6 +287,15 @@
 					</label>
 				{/each}
 			</div>
+		</div>
+
+		<div class="toggles">
+			<Toggle
+				name="sections_collapsed"
+				label="Start sections collapsed"
+				description="Each section opens as a row of small previews, and visitors click to see all of it. Only applies once the photos are split between two or more sections."
+				bind:checked={sectionsCollapsed}
+			/>
 		</div>
 	</section>
 

@@ -96,7 +96,8 @@ export function createAlbumFor(input: {
 		expiresAt: null,
 		theme: hasTheme(settings.defaultAlbumTheme) ? settings.defaultAlbumTheme : null,
 		layout: settings.defaultLayout,
-		sortOrder: settings.defaultSort
+		sortOrder: settings.defaultSort,
+		sectionsCollapsed: false
 	});
 	if (job) linkAlbum(job.id, id);
 	return id;

@@ -63,6 +63,16 @@ function API.post(settings, path, body)
 	return reply(LrHttp.post(baseUrl(settings) .. path, JSON.encode(body or {}), headers, 'POST', 60))
 end
 
+--- A file from the site, such as the plugin's own update. Returns its bytes.
+function API.download(settings, path)
+	local body, headers = LrHttp.get(baseUrl(settings) .. path, authHeaders(settings), 120)
+	if not headers or not headers.status or headers.status >= 400 or not body then
+		reply(body, headers) -- raises a readable message
+		fail('The download was empty.')
+	end
+	return body, headers
+end
+
 -- Calls ---------------------------------------------------------------------
 
 function API.ping(settings)
