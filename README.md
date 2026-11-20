@@ -22,9 +22,10 @@ A self-hosted photography portfolio and client-delivery platform. It combines a 
 - **Galleries** (`/admin/albums`): every album as a table or a grid of covers, with search and filters (public, private, password, expired).
 - **Search**: ⌘K (Ctrl K) finds pages, galleries, jobs, invoices and clients from anywhere in the admin, and each list has its own search box.
 - **Lightroom Classic** (`/admin/lightroom`): a publish-service plugin, downloaded from this page with the site's address filled in. Each published collection is an album; republished edits replace photos in place. It signs in with an API token made on the same page.
+- **Widgets** (`/admin/widgets`): iPhone Home Screen and Lock Screen widgets for jobs, money, gallery activity and what needs doing, through the free Scriptable app, with live previews of each option and a read-only token.
 - Album editor with batched multi-file uploads and progress (sent in 8 MB pieces, so large videos get through proxies and a dropped connection only repeats one piece), shift-click range selection, bulk delete and tagging (keywords from Lightroom and similar tools become tags automatically), cover and background images, analytics, and sharing links.
 - Maintenance jobs: regenerate thumbnails, re-extract metadata, and import from a server folder.
-- Settings for branding, the hero image, homepage copy, contact details, Discord notifications, the theme, and defaults for new albums.
+- Settings for branding, the hero image, homepage copy, contact details, Discord and phone notifications, the theme, and defaults for new albums.
 - **Backups** (`/admin/backups`): the database is backed up automatically before every update (the last ten are kept), and you can back up, download, restore or delete from the page. **Download Everything** streams the database with every original photo and video as one ZIP, to keep somewhere else.
 
 **Jobs, invoices and analytics**

@@ -4,7 +4,7 @@
  */
 import { error, type RequestEvent } from '@sveltejs/kit';
 import { createAlbum, getAlbumById, listAdminAlbums, validateSlug } from './albums.js';
-import { verifyApiToken } from './api-tokens.js';
+import { verifyApiToken, type TokenScope } from './api-tokens.js';
 import { getBooking, linkAlbum, listBookings } from './bookings.js';
 import { getPhoto, type PhotoRow } from './photos.js';
 import { clientIp, rateLimit } from './ratelimit.js';
@@ -12,15 +12,23 @@ import { getSettings } from './settings.js';
 import { hasTheme } from './themes.js';
 import { addDays, formatJobDate, slugify, todayIso } from '#lib/utils.js';
 
-/** Throws 401 unless the request has a valid token. Repeated failures from one address get 429. */
-export function requireToken(event: RequestEvent) {
+/**
+ * Throws 401 unless the request has a valid token allowed `scope`. Repeated failures from one
+ * address get 429.
+ */
+export function requireToken(event: RequestEvent, scope: TokenScope = 'full') {
 	const header = event.request.headers.get('authorization') ?? '';
 	const token = /^Bearer\s+(\S+)$/i.exec(header)?.[1] ?? '';
-	if (token && verifyApiToken(token)) return;
+	if (token && verifyApiToken(token, scope)) return;
 	if (!rateLimit(`api-token:${clientIp(event)}`, 20, 10 * 60 * 1000)) {
 		error(429, 'Too many failed attempts. Try again in a few minutes.');
 	}
-	error(401, 'The token is missing, wrong or has been revoked. Make a new one under Lightroom.');
+	error(
+		401,
+		scope === 'widget'
+			? 'The token is missing, wrong or has been revoked. Make a new one under Widgets.'
+			: 'The token is missing, wrong or has been revoked. Make a new one under Lightroom.'
+	);
 }
 
 export function albumSummary(origin: string, id: number) {

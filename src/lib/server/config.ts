@@ -30,7 +30,7 @@ export function ensureDirs() {
 }
 
 /** Reads a generated secret from disk, creating it the first time. */
-function persistedSecret(file: string, create: () => string): string {
+export function persistedSecret(file: string, create: () => string): string {
 	const full = path.join(dataDir, file);
 	try {
 		const existing = fs.readFileSync(full, 'utf8').trim();

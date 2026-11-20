@@ -12,10 +12,10 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			const name = String(body.name ?? '')
 				.trim()
 				.slice(0, 100);
-			return Response.json({ token: createApiToken(name || 'Lightroom') });
+			return Response.json({ token: createApiToken(name || 'Lightroom', 'full') });
 		}
 		case 'revoke-token': {
-			revokeApiToken(Number(body.id));
+			revokeApiToken(Number(body.id), 'full');
 			return Response.json({ ok: true });
 		}
 		default:
