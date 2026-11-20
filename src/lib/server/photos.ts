@@ -32,6 +32,7 @@ export interface PhotoRow {
 	duration: number | null;
 	/** For videos: 1 when there's a smaller copy for the browser, 0 when the original plays. */
 	preview: number | null;
+	section_id: number | null;
 	downloads: number;
 	version: number;
 	created_at: string;
@@ -55,20 +56,43 @@ export function randomSeed() {
 
 const CHRONO = 'COALESCE(p.taken_at, p.created_at)';
 
-/** The ordered photo ids for an album view (filter + sort), used for pagination and prev/next. */
-export function orderedPhotoIds(
+type View = { sort: SortOrder; tag: number | null; seed: number | null };
+
+/**
+ * The photos in an album view (filter + sort), in order, with their sections. Photos without a
+ * section come first, then each section in turn, and the sort applies within each.
+ */
+export function orderedPhotos(
 	albumId: number,
-	view: { sort: SortOrder; tag: number | null; seed: number | null }
-): number[] {
+	view: View
+): { id: number; section: number | null }[] {
 	const direction = view.sort === 'newest' ? 'DESC' : 'ASC';
 	const join = view.tag ? 'JOIN photo_tags pt ON pt.photo_id = p.id AND pt.tag_id = ?' : '';
 	const params = view.tag ? [view.tag, albumId] : [albumId];
-	const rows = all<{ id: number }>(
-		`SELECT p.id FROM photos p ${join} WHERE p.album_id = ? ORDER BY ${CHRONO} ${direction}, p.id ${direction}`,
+	const rows = all<{ id: number; section: number | null }>(
+		`SELECT p.id, s.id AS section FROM photos p ${join}
+		 LEFT JOIN sections s ON s.id = p.section_id
+		 WHERE p.album_id = ?
+		 ORDER BY s.id IS NOT NULL, s.position, s.id, ${CHRONO} ${direction}, p.id ${direction}`,
 		...params
 	);
-	const ids = rows.map((row) => row.id);
-	return view.sort === 'random' ? seededShuffle(ids, view.seed ?? 1) : ids;
+	if (view.sort !== 'random') return rows;
+	// Shuffle within each section, so the sections stay in their order.
+	const result: typeof rows = [];
+	for (let start = 0; start < rows.length;) {
+		let end = start;
+		while (end < rows.length && rows[end].section === rows[start].section) end++;
+		result.push(
+			...seededShuffle(rows.slice(start, end), (view.seed ?? 1) + (rows[start].section ?? 0))
+		);
+		start = end;
+	}
+	return result;
+}
+
+/** The ordered photo ids for an album view (filter + sort), used for pagination and prev/next. */
+export function orderedPhotoIds(albumId: number, view: View): number[] {
+	return orderedPhotos(albumId, view).map((row) => row.id);
 }
 
 export type MediaType = { mime: string; ext: string; kind: 'photo' | 'video' };
@@ -89,7 +113,7 @@ function toItem(row: PhotoRow): PhotoItem {
 }
 
 function photoItem(row: PhotoRow): PhotoItem {
-	return {
+	const item: PhotoItem = {
 		id: row.id,
 		key: row.key,
 		v: row.version,
@@ -97,6 +121,8 @@ function photoItem(row: PhotoRow): PhotoItem {
 		h: row.height,
 		name: row.original_name
 	};
+	if (row.section_id) item.section = row.section_id;
+	return item;
 }
 
 /** Loads photos by id, preserving the order of `ids`. */
@@ -177,7 +203,8 @@ export async function addPhoto(
 	tmpFile: string,
 	originalName: string,
 	type: MediaType,
-	options: { keepSourceOnFailure?: boolean } = {}
+	/** `sectionId` must be one of the album's sections. */
+	options: { keepSourceOnFailure?: boolean; sectionId?: number | null } = {}
 ): Promise<AdminPhoto> {
 	const key = newKey();
 	const destination = originalPath(key, type.ext);
@@ -192,8 +219,8 @@ export async function addPhoto(
 		const photoId = transaction(() => {
 			const result = run(
 				`INSERT INTO photos (album_id, key, ext, original_name, mime, size, width, height, taken_at,
-					kind, duration)
-				 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+					kind, duration, section_id)
+				 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 				albumId,
 				key,
 				type.ext,
@@ -204,7 +231,8 @@ export async function addPhoto(
 				details.height,
 				details.takenAt,
 				type.kind,
-				details.duration
+				details.duration,
+				options.sectionId ?? null
 			);
 			tagWithKeywords(albumId, result.lastInsertRowid, details.keywords);
 			deliverJobsForAlbum(albumId);

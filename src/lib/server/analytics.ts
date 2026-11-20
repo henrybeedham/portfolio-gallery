@@ -52,7 +52,13 @@ export function recordPhotoDownload(album: Album, photo: PhotoRow, origin: strin
 	);
 }
 
-export function recordZipDownload(album: Album, photoIds: number[] | null, origin: string) {
+/** `sectionTitle` is set when the photos are one of the album's sections. */
+export function recordZipDownload(
+	album: Album,
+	photoIds: number[] | null,
+	origin: string,
+	sectionTitle?: string
+) {
 	if (photoIds === null) {
 		transaction(() => {
 			run('UPDATE albums SET album_downloads = album_downloads + 1 WHERE id = ?', album.id);
@@ -79,11 +85,20 @@ export function recordZipDownload(album: Album, photoIds: number[] | null, origi
 		);
 		bumpDaily(album.id, 'photo_downloads', photoIds.length);
 	});
-	notify({
-		title: `${photoIds.length} selected photo${photoIds.length === 1 ? '' : 's'} downloaded`,
-		description: `**${album.title}** — selection downloaded as a ZIP archive.`,
-		url: `${origin}/${album.slug}`
-	});
+	const s = photoIds.length === 1 ? '' : 's';
+	notify(
+		sectionTitle
+			? {
+					title: `Section downloaded (${photoIds.length} photo${s})`,
+					description: `**${album.title}** — “${sectionTitle}” downloaded as a ZIP archive.`,
+					url: `${origin}/${album.slug}`
+				}
+			: {
+					title: `${photoIds.length} selected photo${s} downloaded`,
+					description: `**${album.title}** — selection downloaded as a ZIP archive.`,
+					url: `${origin}/${album.slug}`
+				}
+	);
 }
 
 export function clearAnalytics(albumId: number) {

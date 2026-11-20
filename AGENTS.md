@@ -175,6 +175,11 @@ Prettier-formatted, so `bun run lint` reports it; leave it alone unless asked.
     (`isContinuation`).
   - Uploads arrive in 8 MB pieces (`Uploader.svelte` and the upload endpoint), each with an upload id
     and offset, so every request stays inside Traefik's 60-second limit and a dropped piece resumes.
+- **Sections** (`sections.ts`) split one album into named, ordered parts (`photos.section_id`, at
+  most one per photo). `orderedPhotos` puts unsectioned photos first, then each section, sorting
+  within each. The album page only shows headings, jump links, “Download Section”
+  (`/[slug]/download?section=`) and ZIP folders once the photos span two or more groups, so an
+  album that is all one section looks the same as one with none.
 - **Videos** (`video.ts`) are rows in `photos` with `kind = 'video'` and a `duration`. ffprobe reads
   their size (after rotation), length and date; ffmpeg's poster frame goes through
   `generateVariants`, so thumbnails, covers and the grid work unchanged. Use `detectMedia` and

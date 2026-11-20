@@ -4,11 +4,13 @@
 
 	interface Props {
 		albumId: number;
+		/** The section new uploads go into, if any. */
+		sectionId?: number | null;
 		onuploaded: (photo: AdminPhoto) => void;
 		ondone: (summary: { ok: number; failed: number }) => void;
 	}
 
-	let { albumId, onuploaded, ondone }: Props = $props();
+	let { albumId, sectionId = null, onuploaded, ondone }: Props = $props();
 
 	const ACCEPT = [
 		'image/jpeg',
@@ -57,6 +59,7 @@
 		file: File,
 		id: string,
 		offset: number,
+		section: number | null,
 		onBytes: (delta: number) => void
 	): Promise<Reply> {
 		const piece = file.slice(offset, Math.min(file.size, offset + CHUNK));
@@ -69,6 +72,7 @@
 			xhr.setRequestHeader('x-upload-id', id);
 			xhr.setRequestHeader('x-upload-offset', String(offset));
 			xhr.setRequestHeader('x-upload-size', String(file.size));
+			if (section !== null) xhr.setRequestHeader('x-section-id', String(section));
 			xhr.upload.onprogress = (event) => {
 				onBytes(event.loaded - sent);
 				sent = event.loaded;
@@ -99,13 +103,17 @@
 		});
 	}
 
-	async function uploadOne(file: File, onBytes: (delta: number) => void): Promise<AdminPhoto> {
+	async function uploadOne(
+		file: File,
+		section: number | null,
+		onBytes: (delta: number) => void
+	): Promise<AdminPhoto> {
 		const id = uploadId();
 		let offset = 0;
 		let failures = 0;
 		for (;;) {
 			try {
-				const reply = await sendPiece(file, id, offset, onBytes);
+				const reply = await sendPiece(file, id, offset, section, onBytes);
 				if (reply.photo) return reply.photo;
 				offset = reply.received ?? offset;
 				failures = 0;
@@ -136,12 +144,14 @@
 		totalBytes = accepted.reduce((sum, file) => sum + file.size, 0);
 		loadedBytes = 0;
 
+		// Changing the section mid-way doesn't move files that are already on their way.
+		const section = sectionId;
 		// Large uploads are processed in small concurrent batches.
 		const queue = accepted.slice();
 		const worker = async () => {
 			for (let file = queue.shift(); file; file = queue.shift()) {
 				try {
-					const photo = await uploadOne(file, (delta) => (loadedBytes += delta));
+					const photo = await uploadOne(file, section, (delta) => (loadedBytes += delta));
 					onuploaded(photo);
 				} catch (error) {
 					failed++;

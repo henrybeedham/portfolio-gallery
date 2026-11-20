@@ -5,6 +5,7 @@ import { requireAdmin, requireAlbum } from '#lib/server/guard.js';
 import { runningJob } from '#lib/server/jobs.js';
 import { adminPhotos, albumTags } from '#lib/server/photos.js';
 import { importDir } from '#lib/server/config.js';
+import { adminSections } from '#lib/server/sections.js';
 import { bookingsForAlbum } from '#lib/server/bookings.js';
 import { getSettings } from '#lib/server/settings.js';
 import { getTheme, hasTheme, themeSummaries } from '#lib/server/themes.js';
@@ -53,6 +54,7 @@ export const load: PageServerLoad = ({ params, locals, url, depends }) => {
 		siteTheme: getTheme(getSettings().theme).id,
 		photos: adminPhotos(album.id),
 		tags: albumTags(album.id),
+		sections: adminSections(album.id),
 		stats,
 		job: runningJob(album.id),
 		bookings: bookingsForAlbum(album.id).map((booking) => ({

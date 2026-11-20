@@ -31,19 +31,27 @@ export interface ZipFile {
 	file: string;
 }
 
-/** Original files named as they were uploaded, with duplicates numbered. */
-export function photoZipFiles(rows: PhotoRow[]): ZipFile[] {
+/**
+ * Original files named as they were uploaded, with duplicates numbered. `folder` puts a file in a
+ * folder of the archive (a section's title, say); it's cleaned up for use as a folder name.
+ */
+export function photoZipFiles(
+	rows: PhotoRow[],
+	folder?: (row: PhotoRow) => string | null
+): ZipFile[] {
 	const used = new Map<string, number>();
 	return rows.map((row) => {
 		const clean = row.original_name.replace(/[/\\]/g, '_') || `${row.key}.${row.ext}`;
-		const lower = clean.toLowerCase();
+		const dir = folder?.(row);
+		const prefix = dir ? `${safeName(dir, 'Section')}/` : '';
+		const lower = (prefix + clean).toLowerCase();
 		const count = used.get(lower) ?? 0;
 		used.set(lower, count + 1);
 		const ext = path.extname(clean);
 		const name = count
 			? `${clean.slice(0, clean.length - ext.length)} (${count + 1})${ext}`
 			: clean;
-		return { name, file: originalPath(row.key, row.ext) };
+		return { name: prefix + name, file: originalPath(row.key, row.ext) };
 	});
 }
 
@@ -132,12 +140,18 @@ export async function zipResponse(
 	return new Response(Readable.toWeb(body) as ReadableStream<Uint8Array>, { status, headers });
 }
 
-export function zipName(title: string, suffix = '') {
-	// Strip only characters that are invalid in filenames on common systems.
-	const base =
-		title
+/** Strips only characters that are invalid in filenames on common systems. */
+function safeName(text: string, fallback: string) {
+	return (
+		text
 			.replace(/[/\\:*?"<>|\u0000-\u001f]+/g, ' ')
 			.replace(/\s+/g, ' ')
-			.trim() || 'gallery';
-	return `${base}${suffix}.zip`;
+			.trim()
+			// Windows drops trailing dots and spaces from folder names.
+			.replace(/[. ]+$/, '') || fallback
+	);
+}
+
+export function zipName(title: string, suffix = '') {
+	return `${safeName(title, 'gallery')}${safeName(suffix, '') && ` ${safeName(suffix, '')}`}.zip`;
 }
