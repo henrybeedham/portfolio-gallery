@@ -129,6 +129,7 @@
 			albumId={album.id}
 			photos={data.photos}
 			tags={data.tags}
+			sections={data.sections}
 			coverPhotoId={album.coverPhotoId}
 			backgroundPhotoId={album.backgroundPhotoId}
 		/>

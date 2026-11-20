@@ -71,6 +71,8 @@ export interface PhotoItem extends ImageRef {
 	duration?: number | null;
 	/** Set for videos with a smaller copy for playing in the browser; downloads get the original. */
 	preview?: true;
+	/** The album section the photo is in, if any. */
+	section?: number;
 }
 
 export interface AdminPhoto extends PhotoItem {
@@ -84,6 +86,26 @@ export interface AdminPhoto extends PhotoItem {
 export interface Tag {
 	id: number;
 	name: string;
+}
+
+/** A named part of an album, such as “Day 1 — Film”. Photos without one come first. */
+export interface Section {
+	id: number;
+	title: string;
+	/** Plain text, shown under the heading. */
+	description: string;
+}
+
+export interface AdminSection extends Section {
+	count: number;
+}
+
+/** A section as it appears in the visitor's current view (tag filter and sort). */
+export interface ViewSection extends Section {
+	/** Photos in the section in this view. */
+	count: number;
+	/** Where the section's first photo sits in the view, for jumping to it. */
+	start: number;
 }
 
 export interface AlbumCardData {
@@ -134,6 +156,7 @@ export interface AlbumViewData {
 	expired: boolean;
 	descriptionHtml: string;
 	tags: Tag[];
+	sections: ViewSection[];
 	view: ViewQuery;
 	photos: PhotoItem[];
 	total: number;

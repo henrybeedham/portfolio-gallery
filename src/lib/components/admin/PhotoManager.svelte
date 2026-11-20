@@ -10,21 +10,26 @@
 	import Plus from '@lucide/svelte/icons/plus';
 	import Tag from '@lucide/svelte/icons/tag';
 	import Images from '@lucide/svelte/icons/images';
+	import Layers from '@lucide/svelte/icons/layers';
+	import ArrowUp from '@lucide/svelte/icons/arrow-up';
+	import ArrowDown from '@lucide/svelte/icons/arrow-down';
+	import Pencil from '@lucide/svelte/icons/pencil';
 	import Uploader from './Uploader.svelte';
 	import { api, feedback } from './feedback.svelte.js';
 	import { sortAdminPhotos } from '#lib/sort.js';
 	import { formatBytes, formatDuration, mediaUrl } from '#lib/utils.js';
-	import type { AdminPhoto, AdminSort, Tag as TagType } from '#lib/types.js';
+	import type { AdminPhoto, AdminSection, AdminSort, Tag as TagType } from '#lib/types.js';
 
 	interface Props {
 		albumId: number;
 		photos: AdminPhoto[];
 		tags: TagType[];
+		sections: AdminSection[];
 		coverPhotoId: number | null;
 		backgroundPhotoId: number | null;
 	}
 
-	let { albumId, photos, tags, coverPhotoId, backgroundPhotoId }: Props = $props();
+	let { albumId, photos, tags, sections, coverPhotoId, backgroundPhotoId }: Props = $props();
 
 	// Photos uploaded in this session appear immediately, before the page data refreshes.
 	let uploaded = $state<AdminPhoto[]>([]);
@@ -35,7 +40,14 @@
 
 	let sort = $state<AdminSort>('oldest');
 	let seed = $state(1);
-	const sorted = $derived(sortAdminPhotos(all, sort, seed));
+	/** 'all', 'none' (photos without a section) or a section id. */
+	let show = $state<'all' | 'none' | number>('all');
+	const shown = $derived(
+		show === 'all'
+			? all
+			: all.filter((photo) => (show === 'none' ? !photo.section : photo.section === show))
+	);
+	const sorted = $derived(sortAdminPhotos(shown, sort, seed));
 
 	const PAGE = 120;
 	let visible = $state(PAGE);
@@ -47,6 +59,104 @@
 	let tagChoice = $state<number | ''>('');
 	let newTag = $state('');
 	const tagNames = $derived(new Map(tags.map((t) => [t.id, t.name])));
+
+	/* --------------------------------------------------------------- sections */
+
+	const sectionNames = $derived(new Map(sections.map((s) => [s.id, s.title])));
+	const sectionCounts = $derived.by(() => {
+		const counts = new Map<number, number>();
+		for (const photo of all) {
+			if (photo.section) counts.set(photo.section, (counts.get(photo.section) ?? 0) + 1);
+		}
+		return counts;
+	});
+	const unsectioned = $derived(all.filter((photo) => !photo.section).length);
+	/** Where new uploads go. */
+	let uploadSection = $state<number | ''>('');
+	/** Where “Move” sends the selection: a section id, 'none' or nothing chosen yet. */
+	let moveChoice = $state<number | 'none' | ''>('');
+	let newSection = $state('');
+	let editing = $state<{ id: number; title: string; description: string } | null>(null);
+
+	// Forget choices for sections that have been deleted.
+	$effect(() => {
+		const ids = new Set(sections.map((s) => s.id));
+		if (typeof uploadSection === 'number' && !ids.has(uploadSection)) uploadSection = '';
+		if (typeof moveChoice === 'number' && !ids.has(moveChoice)) moveChoice = '';
+		if (typeof show === 'number' && !ids.has(show)) show = 'all';
+	});
+
+	async function createSection(event: SubmitEvent) {
+		event.preventDefault();
+		const title = newSection.trim();
+		if (!title) return;
+		busy = true;
+		try {
+			const result = await api<{ section: AdminSection }>(`/admin/api/albums/${albumId}`, {
+				action: 'create-section',
+				title
+			});
+			newSection = '';
+			moveChoice = result.section.id;
+			await refresh();
+		} catch (error) {
+			feedback.toast((error as Error).message, 'error');
+		} finally {
+			busy = false;
+		}
+	}
+
+	async function saveSection(event: SubmitEvent) {
+		event.preventDefault();
+		if (!editing || !editing.title.trim()) return;
+		const { id, title, description } = editing;
+		await action('Section', { action: 'update-section', sectionId: id, title, description });
+		editing = null;
+	}
+
+	async function moveSection(index: number, by: -1 | 1) {
+		const ids = sections.map((s) => s.id);
+		const target = index + by;
+		if (target < 0 || target >= ids.length) return;
+		[ids[index], ids[target]] = [ids[target], ids[index]];
+		await action('Reorder', { action: 'reorder-sections', ids });
+	}
+
+	async function deleteSection(section: AdminSection) {
+		const ok = await feedback.confirm({
+			title: `Delete the section “${section.title}”?`,
+			message:
+				'Its photos stay in the album without a section, so they move to the top of the gallery.',
+			confirmLabel: 'Delete section',
+			danger: true
+		});
+		if (!ok) return;
+		if (editing?.id === section.id) editing = null;
+		await action(
+			'Delete section',
+			{ action: 'delete-section', sectionId: section.id },
+			'Section deleted'
+		);
+	}
+
+	async function moveSelected() {
+		if (moveChoice === '' || !selected.size) return;
+		const count = selected.size;
+		const photosLabel = `${count} photo${count === 1 ? '' : 's'}`;
+		await action(
+			'Move',
+			{
+				action: 'assign-section',
+				sectionId: moveChoice === 'none' ? null : moveChoice,
+				ids: [...selected]
+			},
+			moveChoice === 'none'
+				? `Took ${photosLabel} out of their section`
+				: `Moved ${photosLabel} to “${sectionNames.get(moveChoice)}”`
+		);
+		// When filtering by section, the moved photos leave the view, so drop them from the selection.
+		if (show !== 'all') clearSelection();
+	}
 	const tagCounts = $derived.by(() => {
 		const counts = new Map<number, number>();
 		for (const photo of all) for (const id of photo.tags) counts.set(id, (counts.get(id) ?? 0) + 1);
@@ -79,7 +189,7 @@
 	}
 
 	function selectAll() {
-		for (const photo of all) selected.add(photo.id);
+		for (const photo of shown) selected.add(photo.id);
 	}
 
 	function clearSelection() {
@@ -174,8 +284,20 @@
 </script>
 
 <section class="block">
+	{#if sections.length}
+		<label class="upload-target">
+			<span class="label">Upload into</span>
+			<select class="select compact" bind:value={uploadSection}>
+				<option value="">No section</option>
+				{#each sections as section (section.id)}
+					<option value={section.id}>{section.title}</option>
+				{/each}
+			</select>
+		</label>
+	{/if}
 	<Uploader
 		{albumId}
+		sectionId={uploadSection === '' ? null : uploadSection}
 		onuploaded={(photo) => (uploaded = [...uploaded, photo])}
 		ondone={async ({ ok, failed }) => {
 			await refresh();
@@ -221,19 +343,144 @@
 	{/if}
 </section>
 
+<section class="block tags-block">
+	<div class="tags-head">
+		<h3><Layers size={15} strokeWidth={1.5} /> Sections</h3>
+		<form class="new-tag" onsubmit={createSection}>
+			<input
+				class="input"
+				placeholder="New section, e.g. Day 1 — Film"
+				bind:value={newSection}
+				maxlength="80"
+				aria-label="New section title"
+			/>
+			<button class="btn btn-sm btn-quiet" disabled={!newSection.trim() || busy}>
+				<Plus size={13} /> Add
+			</button>
+		</form>
+	</div>
+	{#if sections.length}
+		<ol class="section-list">
+			{#each sections as section, index (section.id)}
+				<li>
+					{#if editing?.id === section.id}
+						<form class="section-edit" onsubmit={saveSection}>
+							<input
+								class="input"
+								bind:value={editing.title}
+								maxlength="80"
+								aria-label="Section title"
+								required
+							/>
+							<textarea
+								class="input"
+								bind:value={editing.description}
+								maxlength="500"
+								rows="2"
+								placeholder="Optional line shown under the heading"
+								aria-label="Section description"></textarea>
+							<div class="section-edit-actions">
+								<button class="btn btn-sm btn-solid" disabled={!editing.title.trim() || busy}>
+									Save
+								</button>
+								<button type="button" class="btn btn-sm btn-quiet" onclick={() => (editing = null)}>
+									Cancel
+								</button>
+							</div>
+						</form>
+					{:else}
+						<div class="section-text">
+							<span class="section-title">{section.title}</span>
+							{#if section.description}<span class="subtle">{section.description}</span>{/if}
+						</div>
+						<span class="subtle count">{sectionCounts.get(section.id) ?? 0}</span>
+						<div class="section-actions">
+							<button
+								onclick={() => moveSection(index, -1)}
+								disabled={busy || index === 0}
+								aria-label="Move {section.title} up"
+								title="Move up"
+							>
+								<ArrowUp size={13} strokeWidth={1.5} />
+							</button>
+							<button
+								onclick={() => moveSection(index, 1)}
+								disabled={busy || index === sections.length - 1}
+								aria-label="Move {section.title} down"
+								title="Move down"
+							>
+								<ArrowDown size={13} strokeWidth={1.5} />
+							</button>
+							<button
+								onclick={() =>
+									(editing = {
+										id: section.id,
+										title: section.title,
+										description: section.description
+									})}
+								disabled={busy}
+								aria-label="Edit {section.title}"
+								title="Edit"
+							>
+								<Pencil size={13} strokeWidth={1.5} />
+							</button>
+							<button
+								class="danger"
+								onclick={() => deleteSection(section)}
+								disabled={busy}
+								aria-label="Delete section {section.title}"
+								title="Delete"
+							>
+								<X size={13} strokeWidth={1.5} />
+							</button>
+						</div>
+					{/if}
+				</li>
+			{/each}
+		</ol>
+		{#if unsectioned}
+			<p class="subtle small">
+				{unsectioned} photo{unsectioned === 1 ? ' isn’t' : 's aren’t'} in a section yet. Visitors see
+				{unsectioned === 1 ? 'it' : 'them'} first, above the sections.
+			</p>
+		{/if}
+	{:else}
+		<p class="subtle small">
+			Sections split one gallery into parts, such as the days of a shoot. Visitors see each under
+			its own heading and can download it on its own. Create one, select photos, then move them in.
+		</p>
+	{/if}
+</section>
+
 <div class="toolbar">
 	<div class="selection">
 		{#if selected.size}
 			<strong>{selected.size}</strong> selected
 			<button class="link" onclick={clearSelection}>Deselect</button>
 		{:else}
-			<span class="subtle">{all.length} photo{all.length === 1 ? '' : 's'}</span>
+			<span class="subtle">{shown.length} photo{shown.length === 1 ? '' : 's'}</span>
 		{/if}
-		<button class="link" onclick={selectAll} disabled={!all.length}>Select all</button>
+		<button class="link" onclick={selectAll} disabled={!shown.length}>Select all</button>
 	</div>
 
 	{#if selected.size}
 		<div class="bulk">
+			{#if sections.length}
+				<select class="select compact" bind:value={moveChoice} aria-label="Section to move to">
+					<option value="">Move to section…</option>
+					{#each sections as section (section.id)}
+						<option value={section.id}>{section.title}</option>
+					{/each}
+					<option value="none">No section</option>
+				</select>
+				<button
+					class="btn btn-sm btn-quiet"
+					disabled={moveChoice === '' || busy}
+					onclick={moveSelected}
+				>
+					Move
+				</button>
+			{/if}
 			{#if tags.length}
 				<select class="select compact" bind:value={tagChoice} aria-label="Tag to apply">
 					<option value="">Choose tag…</option>
@@ -258,6 +505,26 @@
 				<Trash2 size={13} /> Delete
 			</button>
 		</div>
+	{/if}
+
+	{#if sections.length}
+		<label class="sort">
+			<span class="label">Show</span>
+			<select
+				class="select compact"
+				bind:value={show}
+				onchange={() => {
+					anchor = null;
+					visible = PAGE;
+				}}
+			>
+				<option value="all">All sections</option>
+				{#each sections as section (section.id)}
+					<option value={section.id}>{section.title}</option>
+				{/each}
+				<option value="none">No section</option>
+			</select>
+		</label>
 	{/if}
 
 	<label class="sort">
@@ -346,6 +613,11 @@
 						<span class="downloads" title="Downloads"><Download size={11} /> {photo.downloads}</span
 						>
 					</span>
+					{#if sections.length && show === 'all'}
+						<span class="tile-section" class:none={!photo.section}>
+							{photo.section ? (sectionNames.get(photo.section) ?? '') : 'No section'}
+						</span>
+					{/if}
 					{#if photo.tags.length}
 						<span class="tile-tags">
 							{#each photo.tags as tagId (tagId)}
@@ -364,6 +636,16 @@
 			</button>
 		</div>
 	{/if}
+{:else if all.length}
+	<div class="empty">
+		<Layers size={26} strokeWidth={1} />
+		<p>
+			{show === 'none'
+				? 'Every photo is in a section.'
+				: 'No photos in this section yet. Select some under All sections and move them in.'}
+		</p>
+		<button class="btn btn-sm" onclick={() => (show = 'all')}>Show All Sections</button>
+	</div>
 {:else}
 	<div class="empty">
 		<Images size={26} strokeWidth={1} />
@@ -449,6 +731,105 @@
 
 	.tag-list button:hover {
 		color: var(--danger);
+	}
+
+	.upload-target {
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+		margin-bottom: 0.75rem;
+	}
+
+	.section-list {
+		display: grid;
+		list-style: none;
+		margin: 0 0 0.6rem;
+		padding: 0;
+		border-top: 1px solid var(--border);
+	}
+
+	.section-list li {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) auto auto;
+		align-items: center;
+		gap: 0.75rem;
+		padding: 0.55rem 0;
+		border-bottom: 1px solid var(--border);
+		font-size: 0.86rem;
+	}
+
+	.section-text {
+		display: grid;
+		min-width: 0;
+	}
+
+	.section-text .subtle {
+		font-size: 0.78rem;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.section-list .count {
+		font-variant-numeric: tabular-nums;
+	}
+
+	.section-actions {
+		display: flex;
+		gap: 2px;
+	}
+
+	.section-actions button {
+		display: grid;
+		place-items: center;
+		width: 28px;
+		height: 28px;
+		border: 0;
+		background: none;
+		color: var(--text-subtle);
+		cursor: pointer;
+	}
+
+	.section-actions button:hover:not(:disabled) {
+		color: var(--text);
+		background: var(--surface);
+	}
+
+	.section-actions button.danger:hover:not(:disabled) {
+		color: var(--danger);
+	}
+
+	.section-actions button:disabled {
+		opacity: 0.35;
+		cursor: default;
+	}
+
+	.section-edit {
+		grid-column: 1 / -1;
+		display: grid;
+		gap: 0.5rem;
+	}
+
+	.section-edit .input {
+		font-size: 0.86rem;
+	}
+
+	.section-edit-actions {
+		display: flex;
+		gap: 0.5rem;
+	}
+
+	.tile-section {
+		font-size: 0.7rem;
+		color: var(--text-muted);
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.tile-section.none {
+		color: var(--text-subtle);
+		font-style: italic;
 	}
 
 	.toolbar {

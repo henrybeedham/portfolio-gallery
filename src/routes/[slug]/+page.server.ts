@@ -9,11 +9,13 @@ import {
 import { albumAccess } from '#lib/server/access.js';
 import { unlockAlbum, verifyPassword } from '#lib/server/auth.js';
 import { renderMarkdown } from '#lib/server/markdown.js';
-import { albumTags, getPhoto, orderedPhotoIds, PAGE_SIZE, photoItems } from '#lib/server/photos.js';
+import { albumTags, getPhoto, orderedPhotos, PAGE_SIZE, photoItems } from '#lib/server/photos.js';
 import { clientIp, rateLimit } from '#lib/server/ratelimit.js';
+import { albumSections } from '#lib/server/sections.js';
 import { getSettings } from '#lib/server/settings.js';
 import { albumPageTheme } from '#lib/server/themes.js';
 import { parseView } from '#lib/server/view.js';
+import type { ViewSection } from '#lib/types.js';
 import type { Actions, PageServerLoad } from './$types';
 
 function publicAlbum(album: Album) {
@@ -28,6 +30,21 @@ function publicAlbum(album: Album) {
 		hasPassword: !!album.passwordHash,
 		isPublic: album.isPublic
 	};
+}
+
+/** The album's sections that have photos in this view, with where each starts. */
+function viewSections(albumId: number, ordered: { section: number | null }[]): ViewSection[] {
+	const found = new Map<number, { count: number; start: number }>();
+	ordered.forEach((row, index) => {
+		if (row.section === null) return;
+		const entry = found.get(row.section);
+		if (entry) entry.count++;
+		else found.set(row.section, { count: 1, start: index });
+	});
+	return albumSections(albumId).flatMap((section) => {
+		const entry = found.get(section.id);
+		return entry ? [{ ...section, ...entry }] : [];
+	});
 }
 
 function contact() {
@@ -62,7 +79,8 @@ export const load: PageServerLoad = (event) => {
 
 	const tags = albumTags(album.id);
 	const view = parseView(url, album, tags);
-	const ids = orderedPhotoIds(album.id, view);
+	const ordered = orderedPhotos(album.id, view);
+	const ids = ordered.map((row) => row.id);
 	const background = album.backgroundPhotoId ? getPhoto(album.backgroundPhotoId) : undefined;
 
 	return {
@@ -70,6 +88,7 @@ export const load: PageServerLoad = (event) => {
 		status: 'ok' as const,
 		descriptionHtml: renderMarkdown(album.description),
 		tags,
+		sections: viewSections(album.id, ordered),
 		view,
 		photos: photoItems(ids.slice(0, PAGE_SIZE)),
 		total: ids.length,

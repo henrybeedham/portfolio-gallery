@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { fly } from 'svelte/transition';
 	import { SvelteSet } from 'svelte/reactivity';
 	import { goto } from '$app/navigation';
@@ -13,12 +13,13 @@
 	import Eye from '@lucide/svelte/icons/eye';
 	import ImageIcon from '@lucide/svelte/icons/image';
 	import X from '@lucide/svelte/icons/x';
+	import ChevronDown from '@lucide/svelte/icons/chevron-down';
 	import PhotoGallery from './PhotoGallery.svelte';
 	import Lightbox from './Lightbox.svelte';
 	import SiteFooter from './SiteFooter.svelte';
 	import { nativeDownload } from '#lib/download.js';
 	import { expiryLabel, formatDay, plural, viewQuery } from '#lib/utils.js';
-	import type { AlbumViewData, PhotoItem, SortOrder, ViewQuery } from '#lib/types.js';
+	import type { AlbumViewData, PhotoItem, SortOrder, ViewQuery, ViewSection } from '#lib/types.js';
 
 	let { data }: { data: AlbumViewData } = $props();
 
@@ -53,7 +54,56 @@
 	const selected = new SvelteSet<number>();
 	let selectingAll = $state(false);
 
-	let started = $state<'all' | 'selection' | null>(null);
+	/** Which download button was just used: a section's id for a section's. */
+	let started = $state<'all' | 'selection' | number | null>(null);
+
+	/* --------------------------------------------------------------- sections */
+
+	// Only shown once the view really is split: everything in one section looks like no sections.
+	const sectioned = $derived(
+		data.sections.length > 1 || (data.sections.length === 1 && data.sections[0].count < data.total)
+	);
+	const sectionById = $derived(new Map(data.sections.map((section) => [section.id, section])));
+
+	interface Group {
+		section: ViewSection | null;
+		/** Index of the group's first photo in `photos`. */
+		start: number;
+		photos: PhotoItem[];
+	}
+
+	/** The loaded photos in runs by section; photos without one come first, with no heading. */
+	const groups = $derived.by((): Group[] => {
+		const result: Group[] = [];
+		photos.forEach((photo, index) => {
+			const section = (photo.section && sectionById.get(photo.section)) || null;
+			const last = result.at(-1);
+			if (last && last.section === section) last.photos.push(photo);
+			else result.push({ section, start: index, photos: [photo] });
+		});
+		return result;
+	});
+
+	const collapsed = new SvelteSet<number>();
+
+	function toggleSection(id: number) {
+		if (collapsed.has(id)) collapsed.delete(id);
+		else collapsed.add(id);
+	}
+
+	/** Loads photos up to the section if need be, then scrolls to its heading. */
+	async function jumpTo(section: ViewSection) {
+		collapsed.delete(section.id);
+		while (photos.length <= section.start && hasMore && !loadError) {
+			const before = photos.length;
+			await loadMore(Math.min(200, section.start + 1 - photos.length + 24));
+			if (photos.length === before) break;
+		}
+		await tick();
+		document
+			.getElementById(`section-${section.id}`)
+			?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+	}
 
 	let now = $state(Date.now());
 	onMount(() => {
@@ -94,14 +144,22 @@
 		goto(`/${album.slug}${query(next)}`, { replace: true, reset: false });
 	}
 
-	async function loadMore() {
-		if (loadingMore || !hasMore) return;
+	let pending: Promise<void> | null = null;
+
+	/** Loads the next page, or `limit` photos; a load already under way is shared. */
+	function loadMore(limit?: number): Promise<void> {
+		if (!hasMore) return Promise.resolve();
+		pending ??= fetchMore(limit).finally(() => (pending = null));
+		return pending;
+	}
+
+	async function fetchMore(limit?: number) {
 		loadingMore = true;
 		loadError = null;
 		try {
-			const response = await fetch(
-				`/${album.slug}/photos${query(data.view, { offset: String(photos.length) })}`
-			);
+			const extra: Record<string, string> = { offset: String(photos.length) };
+			if (limit) extra.limit = String(limit);
+			const response = await fetch(`/${album.slug}/photos${query(data.view, extra)}`);
 			if (!response.ok) throw new Error();
 			const result: { photos: PhotoItem[]; total: number } = await response.json();
 			const known = new Set(photos.map((p) => p.id));
@@ -165,7 +223,11 @@
 	/* -------------------------------------------------------------- downloads */
 
 	/** The browser's download manager takes over, so the button only needs to acknowledge the click. */
-	function startDownload(target: 'all' | 'selection', query = '', body?: Record<string, string>) {
+	function startDownload(
+		target: 'all' | 'selection' | number,
+		query = '',
+		body?: Record<string, string>
+	) {
 		if (started) return;
 		nativeDownload(`/${album.slug}/download${query}`, body);
 		started = target;
@@ -239,6 +301,18 @@
 				</button>
 			</div>
 		{/if}
+		{#if sectioned}
+			<nav class="contents fade-up" style:animation-delay="0.3s" aria-label="Sections">
+				<span class="eyebrow">In this gallery</span>
+				<ul>
+					{#each data.sections as section (section.id)}
+						<li>
+							<button class="link" onclick={() => jumpTo(section)}>{section.title}</button>
+						</li>
+					{/each}
+				</ul>
+			</nav>
+		{/if}
 	</section>
 
 	{#if data.albumCount}
@@ -277,7 +351,57 @@
 	{/if}
 
 	<section class="photos container" aria-live="polite">
-		{#if photos.length}
+		{#if photos.length && sectioned}
+			{#each groups as group (group.section?.id ?? 'none')}
+				{@const section = group.section}
+				{#if section}
+					{@const open = !collapsed.has(section.id)}
+					<header class="section-head" id="section-{section.id}">
+						<button
+							class="section-toggle"
+							aria-expanded={open}
+							aria-controls="section-photos-{section.id}"
+							onclick={() => toggleSection(section.id)}
+						>
+							<span class="eyebrow">{plural(section.count, 'photo')}</span>
+							<span class="section-title">
+								<h2>{section.title}</h2>
+								<span class="chevron" class:closed={!open}><ChevronDown size={18} /></span>
+							</span>
+						</button>
+						<button
+							class="btn btn-sm btn-quiet section-download"
+							onclick={() => startDownload(section.id, `?section=${section.id}`)}
+							disabled={!!started}
+						>
+							{#if started === section.id}<Check size={13} />{:else}<Download size={13} />{/if}
+							{started === section.id ? 'Download Started' : 'Download Section'}
+						</button>
+						{#if section.description && open}
+							<p class="section-description">{section.description}</p>
+						{/if}
+					</header>
+				{/if}
+				<div
+					class="section-photos"
+					id={section ? `section-photos-${section.id}` : undefined}
+					hidden={!!section && collapsed.has(section.id)}
+				>
+					{#if !section || !collapsed.has(section.id)}
+						<PhotoGallery
+							photos={group.photos}
+							layout={album.layout}
+							href={photoHref}
+							onopen={(index) => openLightbox(group.start + index)}
+							{selecting}
+							{selected}
+							ontoggle={toggle}
+							eagerCount={group.start === 0 ? 4 : 0}
+						/>
+					{/if}
+				</div>
+			{/each}
+		{:else if photos.length}
 			<PhotoGallery
 				{photos}
 				layout={album.layout}
@@ -304,7 +428,7 @@
 				{#if hasMore}
 					{#if loadError}
 						<p class="error-text">{loadError}</p>
-						<button class="btn" onclick={loadMore} disabled={loadingMore}>Try again</button>
+						<button class="btn" onclick={() => loadMore()} disabled={loadingMore}>Try again</button>
 					{:else}
 						<p class="subtle loading" aria-live="polite">
 							<span class="spinner"></span> Loading more photos…
@@ -564,6 +688,102 @@
 	@media (max-width: 560px) {
 		.sort .eyebrow {
 			display: none;
+		}
+	}
+
+	.contents {
+		display: grid;
+		gap: 0.6rem;
+		margin-top: 0.75rem;
+	}
+
+	.contents ul {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem 1.5rem;
+		list-style: none;
+		margin: 0;
+		padding: 0;
+	}
+
+	.section-head {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) auto;
+		align-items: end;
+		gap: 0.75rem 1.5rem;
+		padding-top: clamp(2rem, 5vw, 3.5rem);
+		margin-bottom: 1.25rem;
+		border-top: 1px solid var(--border);
+		/* Clears the sticky top bar and toolbar when jumped to. */
+		scroll-margin-top: 140px;
+	}
+
+	.section-photos + .section-head {
+		margin-top: clamp(2rem, 5vw, 3.5rem);
+	}
+
+	.section-photos:first-child + .section-head,
+	.section-head:first-child {
+		padding-top: 1.5rem;
+	}
+
+	.section-toggle {
+		display: grid;
+		gap: 0.75rem;
+		justify-items: start;
+		min-width: 0;
+		padding: 0;
+		border: 0;
+		background: none;
+		color: inherit;
+		text-align: left;
+		cursor: pointer;
+	}
+
+	.section-title {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		min-width: 0;
+	}
+
+	.section-title h2 {
+		font-size: clamp(1.7rem, 3.6vw, 2.6rem);
+		letter-spacing: -0.01em;
+		overflow-wrap: anywhere;
+	}
+
+	.chevron {
+		display: grid;
+		flex: none;
+		color: var(--text-muted);
+		transition: transform 0.5s var(--ease);
+	}
+
+	.chevron.closed {
+		transform: rotate(-90deg);
+	}
+
+	.section-toggle:hover .chevron {
+		color: var(--text);
+	}
+
+	.section-description {
+		grid-column: 1 / -1;
+		max-width: 62ch;
+		margin: 0;
+		color: var(--text-muted);
+	}
+
+	@media (max-width: 560px) {
+		.section-head {
+			grid-template-columns: 1fr;
+			align-items: start;
+		}
+
+		.section-download {
+			justify-self: start;
+			grid-row: 3;
 		}
 	}
 

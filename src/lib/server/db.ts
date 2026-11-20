@@ -247,6 +247,21 @@ const MIGRATIONS: Migration[] = [
 	// the original, 1 has one (video-preview.ts).
 	`
 	ALTER TABLE photos ADD COLUMN preview INTEGER;
+	`,
+	// Named, ordered parts of an album (e.g. “Day 1 — Film”). A photo is in at most one; deleting a
+	// section leaves its photos in the album without one (sections.ts).
+	`
+	CREATE TABLE sections (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		album_id INTEGER NOT NULL REFERENCES albums(id) ON DELETE CASCADE,
+		title TEXT NOT NULL,
+		description TEXT NOT NULL DEFAULT '',
+		position INTEGER NOT NULL DEFAULT 0,
+		created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+	);
+	CREATE INDEX sections_album ON sections(album_id, position);
+	ALTER TABLE photos ADD COLUMN section_id INTEGER REFERENCES sections(id) ON DELETE SET NULL;
+	CREATE INDEX photos_section ON photos(section_id);
 	`
 ];
 

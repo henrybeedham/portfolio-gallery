@@ -21,6 +21,13 @@ import {
 	regenerateVariants,
 	setTag
 } from '#lib/server/photos.js';
+import {
+	assignSection,
+	createSection,
+	deleteSection,
+	reorderSections,
+	updateSection
+} from '#lib/server/sections.js';
 import type { Album } from '#lib/server/albums.js';
 import type { RequestHandler } from './$types';
 
@@ -94,6 +101,35 @@ export const POST: RequestHandler = async ({ request, params, locals }) => {
 		case 'tag-photos': {
 			setTag(album.id, Number(body.tagId), ids(body.ids), body.applied !== false);
 			return Response.json({ ok: true });
+		}
+
+		case 'create-section': {
+			const section = createSection(album.id, body);
+			if (!section) error(400, 'Section title is required');
+			return Response.json({ section });
+		}
+
+		case 'update-section': {
+			if (!updateSection(album.id, Number(body.sectionId), body)) {
+				error(400, 'Section title is required');
+			}
+			return Response.json({ ok: true });
+		}
+
+		case 'delete-section': {
+			deleteSection(album.id, Number(body.sectionId));
+			return Response.json({ ok: true });
+		}
+
+		case 'reorder-sections': {
+			reorderSections(album.id, ids(body.ids));
+			return Response.json({ ok: true });
+		}
+
+		case 'assign-section': {
+			const sectionId = body.sectionId === null ? null : Number(body.sectionId);
+			const moved = assignSection(album.id, sectionId, ids(body.ids));
+			return Response.json({ moved });
 		}
 
 		case 'clear-analytics': {
