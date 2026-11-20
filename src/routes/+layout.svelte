@@ -32,6 +32,8 @@
 
 <svelte:head>
 	<meta name="theme-color" content={theme.color} />
+	<link rel="icon" href={theme.icons.favicon} type="image/svg+xml" />
+	<link rel="apple-touch-icon" href={theme.icons.touch} />
 </svelte:head>
 
 {#if navigating.to}

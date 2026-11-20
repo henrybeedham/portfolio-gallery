@@ -305,6 +305,10 @@ background maintenance tasks (`jobs.ts`, `/admin/api/jobs`). The page route is s
   - The root layout returns the site theme as `theme`.
   - Album pages return `albumPageTheme(locals, album)`, which also sets `locals.theme` so the
     server-rendered `<html data-theme>` is right. `+layout.svelte` reads `page.data.theme`.
+- **Icons** (favicon, Home Screen and notification icons) are drawn in the theme's colours by
+  `site-icon.ts` and served from `/site/icon/[theme]/[file]`, versioned by `iconUrl`. Pages get
+  theirs from `PageTheme.icons`, so an album in its own theme gets matching icons. There are no
+  static icon files; change the monogram in `site-icon.ts`.
 - **Invoices** use a theme's colours with its optional `invoice` overrides. Each invoice picks its
   own style, separate from the site theme.
 - **Colours in components.**

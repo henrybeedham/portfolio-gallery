@@ -6,6 +6,7 @@
 import { persistedSecret } from './config.js';
 import { all, get, run } from './db.js';
 import { getSettings } from './settings.js';
+import { iconUrl } from './themes.js';
 import {
 	encryptPayload,
 	generateVapidJwk,
@@ -194,7 +195,8 @@ export async function sendPush(message: PushMessage): Promise<number> {
 			title: message.title.slice(0, 120),
 			body: message.body?.slice(0, 1000),
 			url: message.url,
-			tag: message.tag
+			tag: message.tag,
+			icon: iconUrl(getSettings().theme, '192.png')
 		})
 	);
 	const results = await Promise.all(subs.map((sub) => sendOne(sub, payload)));

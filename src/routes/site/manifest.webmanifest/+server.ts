@@ -1,5 +1,5 @@
 import { getSettings } from '#lib/server/settings.js';
-import { pageTheme } from '#lib/server/themes.js';
+import { iconUrl, pageTheme } from '#lib/server/themes.js';
 import type { RequestHandler } from './$types';
 
 /**
@@ -20,9 +20,9 @@ export const GET: RequestHandler = () => {
 			background_color: color,
 			theme_color: color,
 			icons: [
-				{ src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
-				{ src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
-				{ src: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }
+				{ src: iconUrl(settings.theme, '192.png'), sizes: '192x192', type: 'image/png' },
+				{ src: iconUrl(settings.theme, '512.png'), sizes: '512x512', type: 'image/png' },
+				{ src: iconUrl(settings.theme, '180.png'), sizes: '180x180', type: 'image/png' }
 			]
 		}),
 		{
