@@ -18,7 +18,16 @@ local LrPathUtils = import 'LrPathUtils'
 
 local API = require 'GalleryAPI'
 local Defaults = require 'Defaults'
-local Updater = require 'Updater'
+-- Updates are a nicety: if the updater can't load (say Updater.lua arrived while Lightroom was
+-- running, before the plugin was reloaded), publishing carries on without them.
+local updaterLoaded, Updater = pcall(require, 'Updater')
+if not updaterLoaded then
+	Updater = {
+		newerBuild = function() return nil end,
+		installAndReport = function() return false end,
+		offerAfterPublish = function() end,
+	}
+end
 
 local bind = LrView.bind
 local share = LrView.share
@@ -72,7 +81,10 @@ function provider.sectionsForTopOfDialog(f, propertyTable)
 	local siteName = Defaults.siteTitle and Defaults.siteTitle ~= '' and Defaults.siteTitle or 'Gallery'
 
 	local function showUpdate(ping)
-		if Updater.newerBuild(ping) then
+		if not updaterLoaded then
+			propertyTable.updateAvailable = false
+			propertyTable.updateStatus = 'Can’t check for updates until Lightroom is restarted.'
+		elseif Updater.newerBuild(ping) then
 			propertyTable.updateAvailable = true
 			propertyTable.updateStatus = 'A newer version of this plugin is available.'
 		else
