@@ -7,6 +7,8 @@
 	- Removing photos from the collection deletes them from the album.
 	- Renaming the collection renames the album (its web address stays the same).
 	- Deleting the collection leaves the album on the site; delete it there if you mean to.
+	- When the site has a newer version of this plugin, the settings dialog says so and can install
+	  it, and you're asked once per session after a publish (Updater.lua).
 ]]
 
 local LrView = import 'LrView'
@@ -16,6 +18,7 @@ local LrPathUtils = import 'LrPathUtils'
 
 local API = require 'GalleryAPI'
 local Defaults = require 'Defaults'
+local Updater = require 'Updater'
 
 local bind = LrView.bind
 local share = LrView.share
@@ -64,19 +67,49 @@ end
 
 function provider.sectionsForTopOfDialog(f, propertyTable)
 	propertyTable.connectionStatus = ''
+	propertyTable.updateStatus = ''
+	propertyTable.updateAvailable = false
 	local siteName = Defaults.siteTitle and Defaults.siteTitle ~= '' and Defaults.siteTitle or 'Gallery'
 
-	local function test()
+	local function showUpdate(ping)
+		if Updater.newerBuild(ping) then
+			propertyTable.updateAvailable = true
+			propertyTable.updateStatus = 'A newer version of this plugin is available.'
+		else
+			propertyTable.updateAvailable = false
+			propertyTable.updateStatus = 'This plugin is up to date.'
+		end
+	end
+
+	--- `quiet` is for the check when the dialog opens: errors only show after a click.
+	local function test(quiet)
 		LrTasks.startAsyncTask(function()
-			propertyTable.connectionStatus = 'Checking…'
+			if not quiet then propertyTable.connectionStatus = 'Checking…' end
 			local ok, result = LrTasks.pcall(API.ping, propertyTable)
 			if ok then
 				propertyTable.connectionStatus = 'Connected to ' .. tostring(result.site or 'the site') .. '.'
-			else
+				showUpdate(result)
+			elseif not quiet then
 				propertyTable.connectionStatus = tostring(result)
 			end
 		end)
 	end
+
+	local function installUpdate()
+		LrTasks.startAsyncTask(function()
+			propertyTable.updateStatus = 'Installing…'
+			propertyTable.updateAvailable = false
+			if Updater.installAndReport(propertyTable) then
+				propertyTable.updateStatus = 'Updated. Restart Lightroom to use the new version.'
+			else
+				propertyTable.updateStatus = 'The update didn’t install.'
+				propertyTable.updateAvailable = true
+			end
+		end)
+	end
+
+	-- Look for an update straight away when the service is already set up.
+	if (propertyTable.serverUrl or '') ~= '' and (propertyTable.token or '') ~= '' then test(true) end
 
 	return {
 		{
@@ -108,8 +141,17 @@ function provider.sectionsForTopOfDialog(f, propertyTable)
 			},
 			f:row {
 				f:static_text { title = '', width = share 'labelWidth' },
-				f:push_button { title = 'Test Connection', action = test },
+				f:push_button { title = 'Test Connection', action = function() test(false) end },
 				f:static_text { title = bind 'connectionStatus', fill_horizontal = 1, width_in_chars = 30 },
+			},
+			f:row {
+				f:static_text { title = '', width = share 'labelWidth' },
+				f:push_button {
+					title = 'Install Update',
+					action = installUpdate,
+					enabled = bind 'updateAvailable',
+				},
+				f:static_text { title = bind 'updateStatus', fill_horizontal = 1, width_in_chars = 30 },
 			},
 		},
 	}
@@ -311,6 +353,7 @@ function provider.processRenderedPhotos(functionContext, exportContext)
 	end
 
 	progress:done()
+	Updater.offerAfterPublish(publishSettings)
 end
 
 return provider

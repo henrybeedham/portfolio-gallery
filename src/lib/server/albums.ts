@@ -19,6 +19,8 @@ export interface Album {
 	theme: string | null;
 	layout: Layout;
 	sortOrder: SortOrder;
+	/** The album page opens with its sections collapsed to a few small previews. */
+	sectionsCollapsed: boolean;
 	coverPhotoId: number | null;
 	backgroundPhotoId: number | null;
 	views: number;
@@ -43,6 +45,7 @@ interface AlbumRow {
 	theme: string | null;
 	layout: string;
 	sort_order: string;
+	sections_collapsed: number;
 	cover_photo_id: number | null;
 	background_photo_id: number | null;
 	views: number;
@@ -70,6 +73,7 @@ function mapAlbum(row: AlbumRow): Album {
 		sortOrder: (['oldest', 'newest', 'random'].includes(row.sort_order)
 			? row.sort_order
 			: 'oldest') as SortOrder,
+		sectionsCollapsed: !!row.sections_collapsed,
 		coverPhotoId: row.cover_photo_id,
 		backgroundPhotoId: row.background_photo_id,
 		views: row.views,
@@ -132,6 +136,7 @@ export type AlbumInput = Pick<
 	| 'theme'
 	| 'layout'
 	| 'sortOrder'
+	| 'sectionsCollapsed'
 > & { passwordHash: string | null };
 
 export function createAlbum(input: AlbumInput): number {
@@ -139,8 +144,8 @@ export function createAlbum(input: AlbumInput): number {
 		if (input.isFeatured) run('UPDATE albums SET is_featured = 0');
 		const result = run(
 			`INSERT INTO albums (title, slug, description, album_date, is_public, show_on_home, show_on_galleries,
-				is_featured, password_hash, expires_at, theme, layout, sort_order)
-			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				is_featured, password_hash, expires_at, theme, layout, sort_order, sections_collapsed)
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 			input.title,
 			input.slug,
 			input.description,
@@ -153,7 +158,8 @@ export function createAlbum(input: AlbumInput): number {
 			input.expiresAt,
 			input.theme,
 			input.layout,
-			input.sortOrder
+			input.sortOrder,
+			input.sectionsCollapsed
 		);
 		return result.lastInsertRowid;
 	});
@@ -165,7 +171,7 @@ export function updateAlbum(id: number, input: AlbumInput) {
 		run(
 			`UPDATE albums SET title = ?, slug = ?, description = ?, album_date = ?, is_public = ?, show_on_home = ?,
 				show_on_galleries = ?, is_featured = ?, password_hash = ?, expires_at = ?, theme = ?, layout = ?,
-				sort_order = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+				sort_order = ?, sections_collapsed = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
 			 WHERE id = ?`,
 			input.title,
 			input.slug,
@@ -180,6 +186,7 @@ export function updateAlbum(id: number, input: AlbumInput) {
 			input.theme,
 			input.layout,
 			input.sortOrder,
+			input.sectionsCollapsed,
 			id
 		);
 		deliverJobsForAlbum(id);

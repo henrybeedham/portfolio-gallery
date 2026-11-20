@@ -27,6 +27,7 @@ function publicAlbum(album: Album) {
 		expiresAt: album.expiresAt,
 		layout: album.layout,
 		sortOrder: album.sortOrder,
+		sectionsCollapsed: album.sectionsCollapsed,
 		hasPassword: !!album.passwordHash,
 		isPublic: album.isPublic
 	};

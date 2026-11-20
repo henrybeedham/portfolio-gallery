@@ -146,6 +146,7 @@ export interface PublicAlbum {
 	expiresAt: string | null;
 	layout: Layout;
 	sortOrder: SortOrder;
+	sectionsCollapsed: boolean;
 	hasPassword: boolean;
 	isPublic: boolean;
 }
@@ -181,6 +182,7 @@ export interface AlbumFormInitial {
 	theme: Theme;
 	layout: Layout;
 	sortOrder: SortOrder;
+	sectionsCollapsed: boolean;
 }
 
 /* ------------------------------------------------------------ jobs & invoices */

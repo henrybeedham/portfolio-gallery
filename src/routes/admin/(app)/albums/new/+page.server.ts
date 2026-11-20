@@ -36,7 +36,8 @@ export const load: PageServerLoad = ({ locals, url }) => {
 			expiresAt: '',
 			theme: hasTheme(settings.defaultAlbumTheme) ? settings.defaultAlbumTheme : '',
 			layout: settings.defaultLayout,
-			sortOrder: settings.defaultSort
+			sortOrder: settings.defaultSort,
+			sectionsCollapsed: false
 		}
 	};
 };

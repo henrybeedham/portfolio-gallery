@@ -97,6 +97,12 @@
 		<p class="hint">
 			This site’s address is already filled in. It works with Lightroom Classic 6 and later.
 		</p>
+		<p class="hint">
+			Once it’s installed, the plugin keeps itself up to date. When the site has a newer version,
+			its publish service settings offer Install Update, and Lightroom asks once after a publish.
+			Restart Lightroom afterwards to use it. Copies downloaded before this was added need
+			downloading again once.
+		</p>
 	</section>
 
 	<section class="ui-card">
