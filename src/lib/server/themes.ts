@@ -226,10 +226,24 @@ export function hasTheme(id: string): boolean {
 	return listThemes().some((theme) => theme.id === id);
 }
 
+/** The site icons, drawn in a theme's colours by site-icon.ts and served from /site/icon. */
+export const ICON_FILES = ['favicon.svg', '180.png', '192.png', '512.png'] as const;
+export type IconFile = (typeof ICON_FILES)[number];
+
+/** The URL of a theme's icon, versioned so browsers fetch it again when the theme changes. */
+export function iconUrl(id: string | null | undefined, file: IconFile): string {
+	return `/site/icon/${getTheme(id).id}/${file}?v=${themeVersion()}`;
+}
+
 /** What a page needs to show a theme: the `data-theme` id, the browser UI colour and the CSS version. */
 export function pageTheme(id: string | null | undefined): PageTheme {
 	const theme = getTheme(id);
-	return { id: theme.id, color: theme.swatch.bg, version: themeVersion() };
+	return {
+		id: theme.id,
+		color: theme.swatch.bg,
+		version: themeVersion(),
+		icons: { favicon: iconUrl(theme.id, 'favicon.svg'), touch: iconUrl(theme.id, '180.png') }
+	};
 }
 
 /**

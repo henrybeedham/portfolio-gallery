@@ -13,7 +13,7 @@ sw.addEventListener('install', () => void sw.skipWaiting());
 sw.addEventListener('activate', (event) => event.waitUntil(sw.clients.claim()));
 
 sw.addEventListener('push', (event) => {
-	let data: { title?: string; body?: string; url?: string; tag?: string } = {};
+	let data: { title?: string; body?: string; url?: string; tag?: string; icon?: string } = {};
 	try {
 		data = event.data?.json() ?? {};
 	} catch {
@@ -24,7 +24,7 @@ sw.addEventListener('push', (event) => {
 		sw.registration.showNotification(data.title || 'Gallery', {
 			body: data.body,
 			tag: data.tag,
-			icon: '/icon-192.png',
+			icon: data.icon,
 			data: { url: data.url ?? '/admin' }
 		})
 	);

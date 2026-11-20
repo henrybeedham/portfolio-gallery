@@ -12,7 +12,6 @@
 <!-- Lets the admin area be added to a phone's Home Screen and opened like an app. -->
 <svelte:head>
 	<link rel="manifest" href="/site/manifest.webmanifest" />
-	<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 	<meta name="apple-mobile-web-app-title" content={shortName} />
 	<meta name="mobile-web-app-capable" content="yes" />
 </svelte:head>

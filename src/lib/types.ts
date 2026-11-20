@@ -24,6 +24,8 @@ export interface PageTheme {
 	color: string;
 	/** Changes whenever the theme CSS does. */
 	version: string;
+	/** The browser-tab and Home Screen icons, drawn in this theme's colours. */
+	icons: { favicon: string; touch: string };
 }
 
 export const LAYOUTS: Layout[] = ['grid', 'masonry'];
