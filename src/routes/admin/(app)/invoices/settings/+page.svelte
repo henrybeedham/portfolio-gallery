@@ -213,8 +213,8 @@
 		<div class="ui-card-head">
 			<h2>Saved addresses</h2>
 			<p class="hint">
-				Pick one when you bill a client, e.g. AU or Guild. The short name is what you click; the
-				organisation and address are printed under the client’s name.
+				Save the addresses of clients you bill often, then pick one when you bill them. The short
+				name is what you click; the organisation and address are printed under the client’s name.
 			</p>
 		</div>
 
@@ -266,7 +266,7 @@
 				<div class="address-grid">
 					<div class="field">
 						<label for="label-new">Short name</label>
-						<input id="label-new" class="input" name="label" placeholder="Guild" required />
+						<input id="label-new" class="input" name="label" placeholder="Acme" required />
 					</div>
 					<div class="field">
 						<label for="org-new">Organisation</label>

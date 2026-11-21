@@ -107,8 +107,37 @@ export function paragraphs(text: string): string[] {
 		.filter(Boolean);
 }
 
-export function copyrightText(template: string) {
-	return template.replace(/\{year\}/g, String(new Date().getFullYear()));
+/** The footer line: `{year}` becomes the current year and `{title}` the site title. */
+export function copyrightText(template: string, title = '') {
+	return template
+		.replace(/\{year\}/g, String(new Date().getFullYear()))
+		.replace(/\{title\}/g, () => title);
+}
+
+/** Words that describe the business rather than name it, so they're left out of the initials. */
+const GENERIC_WORDS = new Set(
+	'and by co company films film gallery images imagery ltd media of photo photographer photographers photography photos portraits studio studios the weddings'.split(
+		' '
+	)
+);
+
+/**
+ * Up to two initials for the site's monogram: “Jane Doe Photography” → “JD”. Accents are dropped,
+ * and only A–Z and 0–9 are kept, which the monogram's typeface covers.
+ */
+export function siteInitials(title: string): string {
+	const words = title
+		.normalize('NFKD')
+		.replace(/[̀-ͯ]/g, '')
+		.split(/[^A-Za-z0-9]+/)
+		.filter(Boolean);
+	const named = words.filter((word) => !GENERIC_WORDS.has(word.toLowerCase()));
+	return (
+		(named.length ? named : words)
+			.slice(0, 2)
+			.map((word) => word[0].toUpperCase())
+			.join('') || 'G'
+	);
 }
 
 /** Today's date as YYYY-MM-DD in the server's (or browser's) local timezone. */

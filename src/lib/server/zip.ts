@@ -41,7 +41,9 @@ export function photoZipFiles(
 ): ZipFile[] {
 	const used = new Map<string, number>();
 	return rows.map((row) => {
-		const clean = row.original_name.replace(/[/\\]/g, '_') || `${row.key}.${row.ext}`;
+		// Names yazl refuses (a drive letter, or “..”) would fail the whole archive.
+		const named = row.original_name.replace(/[/\\]/g, '_').replace(/^([a-zA-Z]):/, '$1_');
+		const clean = named && named !== '..' ? named : `${row.key}.${row.ext}`;
 		const dir = folder?.(row);
 		const prefix = dir ? `${safeName(dir, 'Section')}/` : '';
 		const lower = (prefix + clean).toLowerCase();

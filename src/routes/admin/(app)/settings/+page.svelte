@@ -131,11 +131,15 @@
 					value={data.current.siteTitle}
 					required
 				/>
+				<p class="hint">Its initials make the site’s icon, leaving out words like “Photography”.</p>
 			</div>
 			<div class="field">
 				<label for="copyright">Copyright text</label>
 				<input id="copyright" class="input" name="copyright" value={data.current.copyright} />
-				<p class="hint"><code>{'{year}'}</code> is replaced with the current year.</p>
+				<p class="hint">
+					<code>{'{year}'}</code> is replaced with the current year, and <code>{'{title}'}</code>
+					with the site title.
+				</p>
 			</div>
 		</div>
 	</section>

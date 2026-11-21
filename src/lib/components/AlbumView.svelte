@@ -530,7 +530,7 @@
 	{/if}
 {/snippet}
 
-<SiteFooter copyright={settings.copyright} isAdmin={data.isAdmin} />
+<SiteFooter copyright={settings.copyright} title={settings.siteTitle} isAdmin={data.isAdmin} />
 
 {#if selecting}
 	<div class="selection-bar" transition:fly={{ y: 80, duration: 300 }}>

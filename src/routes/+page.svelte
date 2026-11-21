@@ -204,7 +204,7 @@
 	</section>
 </main>
 
-<SiteFooter copyright={settings.copyright} isAdmin={data.isAdmin} />
+<SiteFooter copyright={settings.copyright} title={settings.siteTitle} isAdmin={data.isAdmin} />
 
 {#if lightboxIndex >= 0}
 	<Lightbox

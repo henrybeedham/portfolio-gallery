@@ -112,8 +112,8 @@
 			<div>
 				<h2>{rows.length} jobs found</h2>
 				<p class="hint">
-					Delivered and cancelled jobs are left unticked. Check each client and choose AU, Guild or Other,
-					so invoices fill themselves in.
+					Delivered and cancelled jobs are left unticked. Check each client and choose a saved address,
+					or Other, so invoices fill themselves in.
 				</p>
 			</div>
 			<button class="btn btn-solid" disabled={!selected.length || importing} onclick={run}>
