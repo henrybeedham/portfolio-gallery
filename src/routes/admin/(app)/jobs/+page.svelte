@@ -213,8 +213,10 @@
 											{#if clashing.has(booking.id)}
 												<span
 													class="ui-badge warn clash"
-													title="Overlaps {clashing.get(booking.id)}">Clash</span
+													title="Overlaps {clashing.get(booking.id)}"
 												>
+													Clash
+												</span>
 											{/if}
 										{:else}
 											<span class="ui-sub">Date TBC</span>
@@ -257,8 +259,10 @@
 												: invoice.imported
 													? 'Imported record'
 													: undefined}
-											href="/admin/invoices/{invoice.id}">{invoiceLabel(invoice.number)}</a
+											href="/admin/invoices/{invoice.id}"
 										>
+											{invoiceLabel(invoice.number)}
+										</a>
 									{/each}
 									{#if !booking.invoices.length && booking.status !== 'cancelled'}
 										<a class="create" href="/admin/invoices/new?job={booking.id}">Create</a>

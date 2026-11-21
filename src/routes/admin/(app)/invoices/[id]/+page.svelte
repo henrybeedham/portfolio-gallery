@@ -111,9 +111,9 @@
 				{#if issuing}<span class="spinner"></span>{:else}<Send size={13} />{/if} Issue Invoice
 			</button>
 		{:else if !invoice.imported}
-			<button class="btn btn-sm btn-solid" onclick={download}
-				><Download size={13} /> Download PDF</button
-			>
+			<button class="btn btn-sm btn-solid" onclick={download}>
+				<Download size={13} /> Download PDF
+			</button>
 		{/if}
 		{#if !invoice.imported}
 			<a class="btn btn-sm btn-quiet" href="{pdfUrl}?inline=1" target="_blank" rel="noopener">

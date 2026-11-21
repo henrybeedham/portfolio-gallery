@@ -359,8 +359,10 @@
 							onclick={() => {
 								addressTouched = true;
 								applyAddress(address.id);
-							}}>{address.label}</button
+							}}
 						>
+							{address.label}
+						</button>
 					{/each}
 					<button
 						type="button"
@@ -371,8 +373,10 @@
 						onclick={() => {
 							addressTouched = true;
 							billingAddressId = null;
-						}}>Other</button
+						}}
 					>
+						Other
+					</button>
 				</div>
 				<textarea
 					class="textarea ui-textarea-short"
@@ -408,9 +412,9 @@
 				<span class="label">Items</span>
 				<div class="items">
 					<div class="item item-head" aria-hidden="true">
-						<span>Description</span><span>Qty</span><span>Rate</span><span class="amount"
-							>Amount</span
-						><span></span>
+						<span>Description</span><span>Qty</span><span>Rate</span><span class="amount">
+							Amount
+						</span><span></span>
 					</div>
 					{#each items as item, i (item.key)}
 						<div class="item">

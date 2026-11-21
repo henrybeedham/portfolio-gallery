@@ -113,9 +113,9 @@
 					/>
 					<p class="hint">Recommended around 2400 × 1600 pixels, landscape. Saved with the form.</p>
 					{#if data.current.heroImage && !preview}
-						<button class="link danger" formaction="?/removeHero" formnovalidate
-							>Remove hero image</button
-						>
+						<button class="link danger" formaction="?/removeHero" formnovalidate>
+							Remove hero image
+						</button>
 					{/if}
 				</div>
 			</div>
@@ -229,9 +229,9 @@
 					value={data.current.discordWebhook}
 					placeholder="https://discord.com/api/webhooks/…"
 				/>
-				<button class="btn btn-sm btn-quiet" formaction="?/testWebhook" formnovalidate
-					>Send test</button
-				>
+				<button class="btn btn-sm btn-quiet" formaction="?/testWebhook" formnovalidate>
+					Send test
+				</button>
 			</div>
 			<p class="hint">Get notified in Discord when clients download photos or full albums.</p>
 		</div>

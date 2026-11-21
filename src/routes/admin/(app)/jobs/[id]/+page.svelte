@@ -174,9 +174,9 @@
 						{#each booking.invoices as invoice (invoice.id)}
 							<li>
 								<div>
-									<a class="ui-title" href="/admin/invoices/{invoice.id}"
-										>{invoiceLabel(invoice.number)}</a
-									>
+									<a class="ui-title" href="/admin/invoices/{invoice.id}">
+										{invoiceLabel(invoice.number)}
+									</a>
 									<span class="ui-sub">
 										{formatMoney(invoice.total)}
 										{#if invoice.state === 'draft'}
@@ -193,8 +193,10 @@
 											{formatMoney(invoice.share)} counts here · shared with
 											{#each invoice.sharedWith as other, i (other.id)}{i ? ', ' : ''}<a
 													class="shared"
-													href="/admin/jobs/{other.id}">{other.title}</a
-												>{/each}
+													href="/admin/jobs/{other.id}"
+												>
+													{other.title}
+												</a>{/each}
 										</span>
 									{/if}
 								</div>
@@ -253,9 +255,9 @@
 								{#if draft}This replaces draft {invoiceLabel(draft.number)}.{/if}
 							</p>
 							<div class="field">
-								<label for="external-number"
-									>Invoice number <span class="ui-optional">optional</span></label
-								>
+								<label for="external-number">
+									Invoice number <span class="ui-optional">optional</span>
+								</label>
 								<input
 									id="external-number"
 									class="input"
@@ -274,8 +276,9 @@
 								/>
 							</div>
 							<div class="field">
-								<label for="external-amount">Amount <span class="ui-optional">optional</span></label
-								>
+								<label for="external-amount">
+									Amount <span class="ui-optional">optional</span>
+								</label>
 								<div class="ui-money-input">
 									<input
 										id="external-amount"

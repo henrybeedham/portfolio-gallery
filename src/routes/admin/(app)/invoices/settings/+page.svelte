@@ -253,9 +253,9 @@
 					>
 				</div>
 				<div class="address-actions">
-					<button class="btn btn-sm btn-danger" formaction="?/deleteAddress" formnovalidate
-						>Delete</button
-					>
+					<button class="btn btn-sm btn-danger" formaction="?/deleteAddress" formnovalidate>
+						Delete
+					</button>
 					<button class="btn btn-sm btn-quiet">Save address</button>
 				</div>
 			</form>
@@ -279,9 +279,9 @@
 					></textarea>
 				</div>
 				<div class="address-actions">
-					<button type="button" class="btn btn-sm btn-quiet" onclick={() => (adding = false)}
-						>Cancel</button
-					>
+					<button type="button" class="btn btn-sm btn-quiet" onclick={() => (adding = false)}>
+						Cancel
+					</button>
 					<button class="btn btn-sm btn-solid">Add address</button>
 				</div>
 			</form>

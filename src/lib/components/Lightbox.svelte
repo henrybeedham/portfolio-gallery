@@ -121,13 +121,13 @@
 			<div class="actions">
 				<button class="btn btn-sm light" onclick={download} disabled={started} aria-live="polite">
 					{#if started}<Check size={14} />{:else}<Download size={14} />{/if}
-					<span
-						>{started
+					<span>
+						{started
 							? 'Download Started'
 							: photo.kind === 'video'
 								? 'Download Video'
-								: 'Download Photo'}</span
-					>
+								: 'Download Photo'}
+					</span>
 				</button>
 				<button class="icon" onclick={onclose} aria-label="Close viewer">
 					<X size={22} strokeWidth={1.5} />
