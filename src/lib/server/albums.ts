@@ -84,7 +84,7 @@ function mapAlbum(row: AlbumRow): Album {
 	};
 }
 
-export const RESERVED_SLUGS = new Set([
+const RESERVED_SLUGS = new Set([
 	'admin',
 	// Used for redirects from the previous gallery's /album/<slug> links.
 	'album',
@@ -304,7 +304,7 @@ export function getFeaturedAlbum(): Album | undefined {
 	return mapAlbum(row);
 }
 
-export interface AdminAlbumRow extends AlbumCardData {
+interface AdminAlbumRow extends AlbumCardData {
 	count: number;
 	isPublic: boolean;
 	showOnHome: boolean;

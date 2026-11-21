@@ -366,7 +366,7 @@ function id(value: unknown): number | null {
 	return Number.isInteger(n) && n > 0 ? n : null;
 }
 
-export type InvoiceParseResult = { ok: true; input: InvoiceInput } | { ok: false; error: string };
+type InvoiceParseResult = { ok: true; input: InvoiceInput } | { ok: false; error: string };
 
 /** Validates an invoice sent by the editor (as JSON). `draft` only matters when creating one. */
 export function parseInvoice(raw: unknown): InvoiceParseResult {

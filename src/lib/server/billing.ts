@@ -43,7 +43,7 @@ export function getBillingAddress(id: number | null | undefined): BillingAddress
 	);
 }
 
-export type BillingAddressInput = Omit<BillingAddress, 'id'>;
+type BillingAddressInput = Omit<BillingAddress, 'id'>;
 
 export function createBillingAddress(input: BillingAddressInput): number {
 	const next = get<{ n: number }>(

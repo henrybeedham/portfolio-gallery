@@ -68,14 +68,14 @@ Prettier-formatted, so `bun run lint` reports it; leave it alone unless asked.
   `auth`, `access`, `themes`, `bookings`, `invoices`, `invoice-pdf`, `insights`, …). Route files
   stay thin and call into these.
 - **`src/lib/`**: code shared with the browser: `types.ts`, `utils.ts` (date and format helpers),
-  `money.ts`, `booking-import.ts`, `sort.ts`, `download.ts`.
+  `money.ts`, `sort.ts`, `download.ts`.
 - **`src/lib/components/`**: public components.
   - `admin/` holds the admin components and `admin-ui.css`, which defines the shared `ui-*`
     classes used by the jobs, invoices and analytics pages.
   - `charts/` holds hand-rolled SVG charts.
 - **`src/lib/themes/`**: the built-in theme JSON files, their schema and format docs.
-- **`scripts/import-legacy.*`**: a one-off migration from the previous version of the app. It
-  creates the `legacy_import_map` table that the `/album/[...path]` redirects read.
+- **`/album/[...path]`** redirects links from the previous version of the app, using the
+  `legacy_import_map` table its one-off import created (the import script has since been removed).
 
 ## Routes
 
@@ -246,9 +246,8 @@ background maintenance tasks (`jobs.ts`, `/admin/api/jobs`). The page route is s
     Issuing it (`issueInvoice`) dates it today and recomputes the due date with `invoiceDueDate`.
   - An **imported** record (`imported = 1`) was converted from the money jobs used to hold
     (`legacy-money.ts`). It has no PDF, its number may be empty or list several earlier numbers, and
-    it's left out of “time to get paid”. The spreadsheet import makes the same conversion, and
-    “Invoiced Elsewhere” on a job (`recordExternalInvoice`) creates one by hand, replacing a draft
-    if the job has one.
+    it's left out of “time to get paid”. “Invoiced Elsewhere” on a job (`recordExternalInvoice`)
+    creates one by hand, replacing a draft if the job has one.
 - **Invoices are snapshots.**
   - The sender, bill-to, payment details, line items (JSON) and style are copied onto the invoice
     row, so changing defaults never alters an issued invoice.
@@ -264,8 +263,6 @@ background maintenance tasks (`jobs.ts`, `/admin/api/jobs`). The page route is s
     loads it in an iframe.
 - **Billing addresses** are a table, empty on a new install (filled in under Invoices → Settings),
   and a job picks one by id.
-- **Spreadsheet import** (`booking-import.ts`) parses pasted TSV/CSV by header name. The "Mine"
-  column maps yes → confirmed, maybe → tentative, no → cancelled.
 - **Calendar feed** (`calendar.ts`): a private iCalendar feed of dated, non-cancelled jobs. Calendar
   apps can't sign in, so a random token in the URL is the access; it's a separate settings row
   (`'calendar-token'`), reset from `/admin/jobs/calendar`. Times are floating, matching `starts_at`.

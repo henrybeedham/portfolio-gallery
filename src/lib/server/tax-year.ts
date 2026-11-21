@@ -29,7 +29,7 @@ export function taxYears(): number[] {
 	return Array.from({ length: current - first + 1 }, (_, i) => current - i);
 }
 
-export interface TaxYearInvoice {
+interface TaxYearInvoice {
 	id: number;
 	number: string;
 	client: string;

@@ -35,7 +35,7 @@ export interface Theme extends ThemeSummary {
 	invoice: Record<string, string>;
 }
 
-export const DEFAULT_THEME = 'light';
+const DEFAULT_THEME = 'light';
 export const customThemesDir = path.join(dataDir, 'themes');
 
 const ID = /^[a-z0-9][a-z0-9-]{0,39}$/;
@@ -285,7 +285,7 @@ export function themeFileJson(id: string): string | null {
 /* ------------------------------------------------------------ uploads */
 
 /** Picks up added or removed theme files straight away instead of within a few seconds. */
-export function refreshThemes() {
+function refreshThemes() {
 	cache = undefined;
 }
 
@@ -301,8 +301,7 @@ export function themeIdFromFilename(filename: string): string {
 		.slice(0, 40);
 }
 
-export type ThemeCheck =
-	{ ok: true; theme: ThemeFile; warnings: string[] } | { ok: false; error: string };
+type ThemeCheck = { ok: true; theme: ThemeFile; warnings: string[] } | { ok: false; error: string };
 
 /** Checks an uploaded theme file before it's saved. */
 export function checkThemeFile(text: string, id: string): ThemeCheck {
@@ -363,7 +362,7 @@ export function deleteCustomTheme(id: string): boolean {
 }
 
 /** The uploaded file's contents, for downloading it again. */
-export function readCustomTheme(id: string): string | null {
+function readCustomTheme(id: string): string | null {
 	if (!ID.test(id)) return null;
 	try {
 		return fs.readFileSync(path.join(customThemesDir, `${id}.json`), 'utf8');

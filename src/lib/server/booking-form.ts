@@ -3,7 +3,7 @@ import type { BookingInput } from './bookings.js';
 import { BOOKING_STATUSES, type BookingStatus } from '#lib/types.js';
 import { addDays, isIsoDay } from '#lib/utils.js';
 
-export type BookingFormResult =
+type BookingFormResult =
 	{ ok: true; input: BookingInput } | { ok: false; error: string; field?: string };
 
 function checkbox(data: FormData, name: string) {
@@ -23,7 +23,7 @@ function endsAt(date: string, time: string, endTime: string): string | null {
 	return `${endTime < time ? addDays(date, 1) : date}T${endTime}`;
 }
 
-export function cleanBookingInput(input: BookingInput): BookingInput {
+function cleanBookingInput(input: BookingInput): BookingInput {
 	return {
 		...input,
 		title: input.title.trim().slice(0, 200),
