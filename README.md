@@ -84,7 +84,7 @@ ghcr.io/henrybeedham/portfolio-gallery:latest
 
 ### Railway (one click)
 
-[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/TEMPLATE_CODE)
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/client-gallery)
 
 The button creates the app from the published image with a volume at `/data`, a random admin password and a `*.up.railway.app` address with HTTPS.
 
