@@ -21,7 +21,29 @@ process.env.HOST_HEADER ||= 'x-forwarded-host';
 process.env.ADDRESS_HEADER = CLIENT_IP_HEADER;
 process.env.BODY_SIZE_LIMIT ||= '512M';
 
-const origin = process.env.ORIGIN ? new URL(process.env.ORIGIN) : null;
+// An empty ORIGIN (e.g. "ORIGIN=" left in .env) means unset. adapter-node reads it too and
+// refuses an empty value, so remove it before the handler loads.
+const originSetting = process.env.ORIGIN?.trim();
+if (originSetting) process.env.ORIGIN = originSetting;
+else delete process.env.ORIGIN;
+
+const origin = originSetting ? parseOrigin(originSetting) : null;
+
+function parseOrigin(value) {
+	let url;
+	try {
+		url = new URL(value);
+	} catch {
+		url = null;
+	}
+	if (!url || (url.protocol !== 'http:' && url.protocol !== 'https:')) {
+		console.error(
+			`[gallery] ORIGIN must be the site’s public URL, e.g. https://photos.example.com (got ${JSON.stringify(value)}).`
+		);
+		process.exit(1);
+	}
+	return url;
+}
 const port = Number(process.env.PORT || 3000);
 const host = process.env.HOST || '0.0.0.0';
 
