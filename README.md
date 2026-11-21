@@ -39,8 +39,8 @@ A self-hosted photography portfolio and client-delivery platform. It combines a 
   on the job to record it.
 - **Calendar** (`/admin/jobs/calendar`): a private link that puts your jobs in Apple Calendar and
   keeps them up to date.
-- **Saved addresses**: type a client's name and pick AU, Guild or any other saved address (or
-  type one in for one-off clients). Clients you've billed before pick their address automatically.
+- **Saved addresses**: type a client's name and pick one of the addresses you've saved under
+  **Invoices → Settings** (or type one in for one-off clients). Clients you've billed before pick their address automatically.
 - **Invoices** (`/admin/invoices`): PDF invoices with a live preview, a unique random 8-digit number,
   line items, a due date (by default the shoot date, or your payment terms), and a paid stamp once
   paid. Your details, bank details and notes are copied onto each invoice, so changing your defaults
@@ -58,7 +58,7 @@ A self-hosted photography portfolio and client-delivery platform. It combines a 
   and cancelled jobs are left out by default, and re-importing skips jobs that are already there. A
   row's fee becomes a draft invoice, or an imported record if it's paid or has an invoice number.
 - **Analytics** (`/admin/analytics`): earnings, money awaiting payment, booked work, average job and
-  time to get paid, income by month (paid → invoiced → drafts → tentative), top clients, AU vs Guild,
+  time to get paid, income by month (paid → invoiced → drafts → tentative), top clients, who you billed (by saved address),
   and weekly gallery views and downloads. Filter by this or last academic year, the last 12 months, the calendar year, all time, or
   any custom dates.
 
@@ -137,9 +137,8 @@ With Coolify, give the `gallery` service a domain with port 3000, e.g. `https://
 
 ## Migrating from the previous gallery
 
-`scripts/import-legacy.sh` copies everything from the previous version of this app
-([henrybeedham/client-gallery](https://github.com/henrybeedham/client-gallery)) when both run in Docker
-on the same machine:
+Only relevant if you ran the earlier version of this app (the `client-gallery` container).
+`scripts/import-legacy.sh` copies everything from it when both run in Docker on the same machine:
 
 ```sh
 scripts/import-legacy.sh --dry-run   # preview the plan; nothing is changed

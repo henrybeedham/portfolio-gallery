@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Imports albums, photos, tags, settings, the hero image and analytics from the previous
- * version of the gallery (github.com/henrybeedham/client-gallery) into this one.
+ * version of the gallery (the `client-gallery` container) into this one.
  *
  * Run it with `scripts/import-legacy.sh`, which starts this script inside a one-off container
  * built from the new gallery image, with the old container's data mounted READ-ONLY and the

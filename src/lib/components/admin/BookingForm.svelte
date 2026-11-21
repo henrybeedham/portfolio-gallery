@@ -205,7 +205,7 @@
 				class="input"
 				name="location"
 				bind:value={location}
-				placeholder="Exeter Castle"
+				placeholder="Town Hall"
 			/>
 		</div>
 	</section>

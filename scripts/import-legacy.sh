@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Imports everything from the previous gallery (github.com/henrybeedham/client-gallery) into
+# Imports everything from the previous version of this app (the `client-gallery` container) into
 # this one, when both run in Docker on the same machine.
 #
 #   scripts/import-legacy.sh                 # interactive

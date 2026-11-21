@@ -88,10 +88,6 @@ const MIGRATIONS: Migration[] = [
 		created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 	);
 
-	INSERT INTO billing_addresses (label, organisation, address, position) VALUES
-		('Guild', 'University of Exeter Students’ Guild', 'Devonshire House\nStocker Road\nExeter\nEX4 4PZ', 1),
-		('AU', 'University of Exeter Athletic Union', 'Sports Park\nStocker Road\nExeter\nEX4 4QN', 2);
-
 	CREATE TABLE bookings (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		title TEXT NOT NULL,
