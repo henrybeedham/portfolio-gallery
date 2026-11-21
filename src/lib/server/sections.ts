@@ -6,8 +6,8 @@
 import { all, get, placeholders, run, transaction } from './db.js';
 import type { AdminSection, Section } from '#lib/types.js';
 
-export const SECTION_TITLE_MAX = 80;
-export const SECTION_DESCRIPTION_MAX = 500;
+const SECTION_TITLE_MAX = 80;
+const SECTION_DESCRIPTION_MAX = 500;
 
 interface SectionRow {
 	id: number;

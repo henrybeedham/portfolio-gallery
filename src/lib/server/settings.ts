@@ -1,7 +1,7 @@
 import { get, run } from './db.js';
 import type { PublicSettings, SiteSettings } from '#lib/types.js';
 
-export const defaultSettings: SiteSettings = {
+const defaultSettings: SiteSettings = {
 	siteTitle: 'Photography',
 	copyright: '© {year} {title}. All rights reserved.',
 	heroTitle: 'Light, stillness\nand the moments\nin between',

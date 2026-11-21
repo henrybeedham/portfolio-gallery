@@ -8,7 +8,7 @@ import { all, get, run } from './db.js';
 
 export type TokenScope = 'full' | 'widget';
 
-export interface ApiToken {
+interface ApiToken {
 	id: number;
 	name: string;
 	createdAt: string;

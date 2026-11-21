@@ -54,9 +54,6 @@ A self-hosted photography portfolio and client-delivery platform. It combines a 
   numbers) became invoices marked “Imported”, which keep the earlier numbers and have no PDF.
 - **Invoice styles** use the same themes as the site but are chosen separately: a default under
   **Invoices → Settings**, and per invoice.
-- **Import from a spreadsheet**: paste rows copied from Google Sheets (with the header row). Delivered
-  and cancelled jobs are left out by default, and re-importing skips jobs that are already there. A
-  row's fee becomes a draft invoice, or an imported record if it's paid or has an invoice number.
 - **Analytics** (`/admin/analytics`): earnings, money awaiting payment, booked work, average job and
   time to get paid, income by month (paid → invoiced → drafts → tentative), top clients, who you billed (by saved address),
   and weekly gallery views and downloads. Filter by this or last academic year, the last 12 months, the calendar year, all time, or
@@ -135,26 +132,10 @@ Caddy needs nothing extra: `photos.example.com { reverse_proxy gallery:3000 }`.
 
 With Coolify, give the `gallery` service a domain with port 3000, e.g. `https://photos.example.com:3000`. Its proxy needs no other changes: uploads are sent in small pieces, so they stay within Traefik's 60-second request limit.
 
-## Migrating from the previous gallery
+## Links from the previous gallery
 
-Only relevant if you ran the earlier version of this app (the `client-gallery` container).
-`scripts/import-legacy.sh` copies everything from it when both run in Docker on the same machine:
-
-```sh
-scripts/import-legacy.sh --dry-run   # preview the plan; nothing is changed
-scripts/import-legacy.sh             # import (asks a few questions first)
-```
-
-It imports albums (including passwords, expiry dates, colours, layout and visibility), original photos
-with their capture dates, tags, cover and background images, site settings, the hero image and the
-view/download counts. Old links (`/album/<slug>` and `/album/<slug>/photo/<id>`) redirect to the
-imported albums.
-
-The old gallery is never modified. The script runs a throwaway container from the new image with the
-old container's volumes mounted **read-only**, and it reads a snapshot copy of the old database.
-Running it again is safe: anything already imported is skipped, so you can rerun it to resume an
-interrupted import or to pick up photos added to the old gallery since. Start the new gallery at least
-once before importing so its database exists.
+Albums and photos imported from the previous version of this app keep working at their old links:
+`/album/<slug>` and `/album/<slug>/photo/<id>` redirect to the imported albums.
 
 ## Development
 

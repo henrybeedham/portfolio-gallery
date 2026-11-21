@@ -56,7 +56,7 @@ export async function detectVideo(
 	return { ...type, kind: 'video' };
 }
 
-export interface VideoInfo {
+interface VideoInfo {
 	width: number;
 	height: number;
 	duration: number | null;

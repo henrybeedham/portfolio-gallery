@@ -247,14 +247,6 @@ export function updateBooking(id: number, input: BookingInput) {
 	);
 }
 
-export function setBookingNotes(id: number, notes: string) {
-	run(
-		`UPDATE bookings SET notes = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?`,
-		notes,
-		id
-	);
-}
-
 export type BookingFlag = 'delivered';
 
 export function setBookingFlag(id: number, flag: BookingFlag, value: boolean) {

@@ -1,4 +1,4 @@
-export type ToastKind = 'success' | 'error' | 'info';
+type ToastKind = 'success' | 'error' | 'info';
 
 interface Toast {
 	id: number;
