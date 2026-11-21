@@ -9,7 +9,7 @@ import { paths } from './config.js';
 
 sharp.cache(false);
 
-export const SUPPORTED_TYPES: Record<string, string> = {
+const SUPPORTED_TYPES: Record<string, string> = {
 	'image/jpeg': 'jpg',
 	'image/png': 'png',
 	'image/webp': 'webp',
@@ -52,7 +52,7 @@ export async function detectType(file: string): Promise<{ mime: string; ext: str
 	}
 }
 
-export type Variant = 'thumb' | 'medium';
+type Variant = 'thumb' | 'medium';
 
 export function newKey() {
 	return crypto.randomBytes(12).toString('base64url');
@@ -142,7 +142,7 @@ export async function generateVariants(source: string | Buffer, key: string) {
 	});
 }
 
-export interface PhotoMetadata {
+interface PhotoMetadata {
 	takenAt: string | null;
 	/** Keywords from Lightroom and similar tools, which become album tags. */
 	keywords: string[];

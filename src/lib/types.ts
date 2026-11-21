@@ -140,7 +140,7 @@ export interface ViewQuery {
 	seed: number | null;
 }
 
-export interface PublicAlbum {
+interface PublicAlbum {
 	id: number;
 	slug: string;
 	title: string;
@@ -189,7 +189,6 @@ export interface AlbumFormInitial {
 
 /* ------------------------------------------------------------ jobs & invoices */
 
-/** “Mine” in the old spreadsheet: yes → confirmed, maybe → tentative, no → cancelled. */
 export type BookingStatus = 'confirmed' | 'tentative' | 'cancelled';
 export const BOOKING_STATUSES: BookingStatus[] = ['confirmed', 'tentative', 'cancelled'];
 

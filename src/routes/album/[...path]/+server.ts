@@ -3,7 +3,7 @@ import { get } from '#lib/server/db.js';
 import { slugify } from '#lib/utils.js';
 import type { RequestHandler } from './$types';
 
-/** Looks up an imported album/photo; the mapping table only exists after scripts/import-legacy.sh ran. */
+/** Looks up an imported album/photo; the mapping table only exists where the previous gallery was imported. */
 function lookup<T>(sql: string, param: string | number): T | undefined {
 	try {
 		return get<T>(sql, param);

@@ -368,7 +368,7 @@ export function replaceDatabase(swap: () => void) {
 	}
 }
 
-export type Param = SQLInputValue | boolean | undefined;
+type Param = SQLInputValue | boolean | undefined;
 
 function normalise(params: Param[]): SQLInputValue[] {
 	return params.map((value) => {

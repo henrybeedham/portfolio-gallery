@@ -7,7 +7,6 @@
 	import CalendarPlus from '@lucide/svelte/icons/calendar-plus';
 	import Pencil from '@lucide/svelte/icons/pencil';
 	import FilePlus from '@lucide/svelte/icons/file-plus';
-	import ClipboardPaste from '@lucide/svelte/icons/clipboard-paste';
 	import Briefcase from '@lucide/svelte/icons/briefcase';
 	import Images from '@lucide/svelte/icons/images';
 	import FlagCheck from '#lib/components/admin/FlagCheck.svelte';
@@ -136,7 +135,6 @@
 	</div>
 	<div class="ui-actions">
 		<a class="btn btn-quiet" href="/admin/jobs/calendar"><CalendarPlus size={14} /> Calendar</a>
-		<a class="btn btn-quiet" href="/admin/jobs/import"><ClipboardPaste size={14} /> Import</a>
 		<a class="btn btn-solid" href="/admin/jobs/new"><Plus size={14} /> New Job</a>
 	</div>
 </header>
@@ -326,9 +324,8 @@
 		<div class="ui-empty">
 			<Briefcase size={28} strokeWidth={1} />
 			<h3>No jobs yet</h3>
-			<p>Add your first job, or bring in the ones from your spreadsheet.</p>
+			<p>Add your first job to start tracking your work.</p>
 			<div class="ui-inline">
-				<a class="btn btn-quiet" href="/admin/jobs/import"><ClipboardPaste size={14} /> Import</a>
 				<a class="btn btn-solid" href="/admin/jobs/new"><Plus size={14} /> New Job</a>
 			</div>
 		</div>

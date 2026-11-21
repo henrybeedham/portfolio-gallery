@@ -25,7 +25,6 @@
 		['New Album', '/admin/albums/new'],
 		['Jobs', '/admin/jobs'],
 		['New Job', '/admin/jobs/new'],
-		['Import Jobs', '/admin/jobs/import'],
 		['Calendar Feed', '/admin/jobs/calendar'],
 		['Invoices', '/admin/invoices'],
 		['New Invoice', '/admin/invoices/new'],
