@@ -297,8 +297,10 @@
 						role="radio"
 						aria-checked={family === size.id}
 						class:active={family === size.id}
-						onclick={() => (family = size.id)}>{size.label}</button
+						onclick={() => (family = size.id)}
 					>
+						{size.label}
+					</button>
 				{/each}
 			</div>
 			<div class="segmented" role="radiogroup" aria-label="Colours">
@@ -307,8 +309,10 @@
 						role="radio"
 						aria-checked={theme === choice.id}
 						class:active={theme === choice.id}
-						onclick={() => (theme = choice.id)}>{choice.label}</button
+						onclick={() => (theme = choice.id)}
 					>
+						{choice.label}
+					</button>
 				{/each}
 			</div>
 			{#if theme === 'auto'}

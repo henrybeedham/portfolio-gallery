@@ -193,9 +193,9 @@
 					{#if settings.contactPhone}
 						<li>
 							<Phone size={15} strokeWidth={1.5} />
-							<a href="tel:{settings.contactPhone.replace(/[^\d+]/g, '')}"
-								>{settings.contactPhone}</a
-							>
+							<a href="tel:{settings.contactPhone.replace(/[^\d+]/g, '')}">
+								{settings.contactPhone}
+							</a>
 						</li>
 					{/if}
 				</ul>

@@ -152,12 +152,14 @@
 								class:muted={column.muted}
 								x={cx(i)}
 								y={height - M.bottom + 18}
-								text-anchor="middle">{column.short}</text
+								text-anchor="middle"
 							>
+								{column.short}
+							</text>
 							{#if column.sub}
-								<text class="x sub" x={cx(i)} y={height - M.bottom + 34} text-anchor="middle"
-									>{column.sub}</text
-								>
+								<text class="x sub" x={cx(i)} y={height - M.bottom + 34} text-anchor="middle">
+									{column.sub}
+								</text>
 							{/if}
 						{/if}
 						<rect
@@ -219,11 +221,12 @@
 				<tbody>
 					{#each columns as column, i (column.key)}
 						<tr>
-							<th scope="row"
-								>{column.long}{#if column.note}<span class="ui-sub">{column.note}</span>{/if}</th
-							>
-							{#each series as s (s.key)}<td class="ui-num">{format(column.values[s.key] ?? 0)}</td
-								>{/each}
+							<th scope="row">
+								{column.long}{#if column.note}<span class="ui-sub">{column.note}</span>{/if}
+							</th>
+							{#each series as s (s.key)}<td class="ui-num">
+									{format(column.values[s.key] ?? 0)}
+								</td>{/each}
 							<td class="ui-num">{format(totals[i])}</td>
 						</tr>
 					{/each}

@@ -17,8 +17,9 @@
 		<h1>New album</h1>
 		<p class="muted">
 			Set up the album, then upload photos on the next screen.
-			{#if data.job}It will be linked to <a href="/admin/jobs/{data.job.id}">{data.job.title}</a
-				>.{/if}
+			{#if data.job}It will be linked to <a href="/admin/jobs/{data.job.id}">
+					{data.job.title}
+				</a>.{/if}
 		</p>
 	</header>
 

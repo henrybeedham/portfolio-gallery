@@ -88,8 +88,10 @@
 			class="ui-chip"
 			class:active={info.range.period === 'custom' || customOpen}
 			aria-expanded={customOpen}
-			onclick={() => (customOpen = !customOpen)}>Custom</button
+			onclick={() => (customOpen = !customOpen)}
 		>
+			Custom
+		</button>
 	</nav>
 
 	{#if customOpen}
@@ -219,12 +221,12 @@
 			</div>
 			<div class="totals">
 				<span><strong>{info.gallery.totals.views.toLocaleString('en-GB')}</strong> views</span>
-				<span
-					><strong>{info.gallery.totals.photos.toLocaleString('en-GB')}</strong> photos downloaded</span
-				>
-				<span
-					><strong>{info.gallery.totals.albums.toLocaleString('en-GB')}</strong> full albums</span
-				>
+				<span>
+					<strong>{info.gallery.totals.photos.toLocaleString('en-GB')}</strong> photos downloaded
+				</span>
+				<span>
+					<strong>{info.gallery.totals.albums.toLocaleString('en-GB')}</strong> full albums
+				</span>
 			</div>
 		</div>
 		<div class="ui-panel-body">

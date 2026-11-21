@@ -95,16 +95,16 @@
 							y1={y(tick)}
 							y2={y(tick)}
 						/>
-						<text class="tick" x={M.left - 10} y={y(tick)} dy="0.32em" text-anchor="end"
-							>{format(tick)}</text
-						>
+						<text class="tick" x={M.left - 10} y={y(tick)} dy="0.32em" text-anchor="end">
+							{format(tick)}
+						</text>
 					{/each}
-					<text class="x" x={x(0)} y={height - 8} text-anchor="start"
-						>{points[0].label.replace('w/c ', '')}</text
-					>
-					<text class="x" x={x(last)} y={height - 8} text-anchor="end"
-						>{points[last].label.replace('w/c ', '')}</text
-					>
+					<text class="x" x={x(0)} y={height - 8} text-anchor="start">
+						{points[0].label.replace('w/c ', '')}
+					</text>
+					<text class="x" x={x(last)} y={height - 8} text-anchor="end">
+						{points[last].label.replace('w/c ', '')}
+					</text>
 
 					<path class="area" d={area} fill={color} />
 					<path class="line" d={line} stroke={color} />
@@ -114,9 +114,9 @@
 						<circle class="dot" cx={x(active)} cy={y(points[active].value)} r="4" fill={color} />
 					{:else}
 						<circle class="dot" cx={x(last)} cy={y(points[last].value)} r="4" fill={color} />
-						<text class="end" x={x(last) + 9} y={y(points[last].value)} dy="0.32em"
-							>{format(points[last].value)}</text
-						>
+						<text class="end" x={x(last) + 9} y={y(points[last].value)} dy="0.32em">
+							{format(points[last].value)}
+						</text>
 					{/if}
 				</svg>
 
@@ -155,9 +155,9 @@
 					<tbody>
 						{#each points as point (point.key)}
 							<tr>
-								<th scope="row"
-									>{point.label}{#if point.note}<span class="ui-sub">{point.note}</span>{/if}</th
-								>
+								<th scope="row">
+									{point.label}{#if point.note}<span class="ui-sub">{point.note}</span>{/if}
+								</th>
 								<td class="ui-num">{format(point.value)}</td>
 							</tr>
 						{/each}

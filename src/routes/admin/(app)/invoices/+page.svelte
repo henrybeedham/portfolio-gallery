@@ -98,9 +98,9 @@
 		<h1>Invoices</h1>
 	</div>
 	<div class="ui-actions">
-		<a class="btn btn-quiet" href="/admin/invoices/tax-year"
-			><FileSpreadsheet size={14} /> Tax Year</a
-		>
+		<a class="btn btn-quiet" href="/admin/invoices/tax-year">
+			<FileSpreadsheet size={14} /> Tax Year
+		</a>
 		<a class="btn btn-quiet" href="/admin/invoices/settings"><Settings size={14} /> Settings</a>
 		<a class="btn btn-solid" href="/admin/invoices/new"><Plus size={14} /> New Invoice</a>
 	</div>
@@ -171,9 +171,9 @@
 					{#each shown as invoice (invoice.id)}
 						<tr>
 							<td>
-								<a class="ui-title num" href="/admin/invoices/{invoice.id}"
-									>{invoiceLabel(invoice.number)}</a
-								>
+								<a class="ui-title num" href="/admin/invoices/{invoice.id}">
+									{invoiceLabel(invoice.number)}
+								</a>
 								{#if invoice.imported}<span class="ui-sub">Imported</span>{/if}
 							</td>
 							<td>
@@ -261,9 +261,9 @@
 	{#if elsewhere > 0}
 		<p class="ui-elsewhere">
 			{plural(elsewhere, 'more match', 'more matches')} in other filters.
-			<a href={chipHref('/admin/invoices', null, query)} data-sveltekit-noscroll
-				>Search all invoices</a
-			>
+			<a href={chipHref('/admin/invoices', null, query)} data-sveltekit-noscroll>
+				Search all invoices
+			</a>
 		</p>
 	{/if}
 </section>
