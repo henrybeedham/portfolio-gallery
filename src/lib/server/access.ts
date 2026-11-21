@@ -2,7 +2,7 @@ import type { Cookies } from '@sveltejs/kit';
 import { albumIsExpired, type Album } from './albums.js';
 import { isAlbumUnlocked } from './auth.js';
 
-export type AccessStatus = 'ok' | 'not_found' | 'locked' | 'expired';
+type AccessStatus = 'ok' | 'not_found' | 'locked' | 'expired';
 
 /**
  * Decides what a visitor may see of an album.

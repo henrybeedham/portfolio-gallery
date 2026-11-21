@@ -16,14 +16,14 @@ import {
 	type VapidKeys
 } from './web-push.js';
 
-export interface PushDevice {
+interface PushDevice {
 	id: number;
 	name: string;
 	endpoint: string;
 	createdAt: string;
 }
 
-export interface PushMessage {
+interface PushMessage {
 	title: string;
 	body?: string;
 	/** Opened when the notification is tapped. */

@@ -4,7 +4,7 @@
  */
 import type { InvoiceSettings } from '#lib/types.js';
 
-export const defaultInvoiceSettings: InvoiceSettings = {
+const defaultInvoiceSettings: InvoiceSettings = {
 	sender: { name: '', address: '', phone: '', email: '' },
 	paymentDetails: '',
 	notes: 'Thanks very much :)',

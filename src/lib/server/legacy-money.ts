@@ -1,8 +1,7 @@
 /**
  * Jobs used to hold money themselves: hours × rate, a “paid” tick and the numbers of invoices sent
  * before this system. Money now lives on invoices only, so this turns those fields into invoices.
- * The migration that removed the fields uses it once, and the spreadsheet import uses it for the
- * same columns in a pasted sheet.
+ * Only the migration that removed the fields uses it.
  */
 import crypto from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
@@ -13,7 +12,7 @@ import type { BookingStatus, InvoiceSettings } from '#lib/types.js';
 import { invoiceDueDate, todayIso } from '#lib/utils.js';
 
 /** Cleans up a list of invoice numbers: “1, 2 3” → “1, 2, 3”. */
-export function cleanInvoiceNumbers(value: string) {
+function cleanInvoiceNumbers(value: string) {
 	return value
 		.split(/[,;\s]+/)
 		.map((part) => part.trim())
@@ -21,7 +20,7 @@ export function cleanInvoiceNumbers(value: string) {
 		.join(', ');
 }
 
-export interface LegacyMoney {
+interface LegacyMoney {
 	bookingId: number;
 	title: string;
 	client: string;
@@ -37,7 +36,7 @@ export interface LegacyMoney {
 	legacyInvoices: string;
 }
 
-export interface LegacyContext {
+interface LegacyContext {
 	settings: InvoiceSettings;
 	today: string;
 	/** An unused invoice number, for drafts. */
@@ -51,7 +50,7 @@ export interface LegacyContext {
  * - A fee that was never invoiced: a draft, so it still counts as booked (or tentative).
  * - A cancelled job's fee, or earlier numbers on a job that already has invoices: a line in its notes.
  */
-export function convertLegacyMoney(
+function convertLegacyMoney(
 	job: LegacyMoney,
 	ctx: LegacyContext
 ): { invoice: InvoiceInput } | { note: string } | null {
@@ -110,7 +109,7 @@ export function convertLegacyMoney(
 }
 
 /** Appends a line to a job's notes, after a blank line. */
-export function appendNote(notes: string, line: string) {
+function appendNote(notes: string, line: string) {
 	return notes.trim() ? `${notes.trim()}\n\n${line}` : line;
 }
 

@@ -7,7 +7,7 @@ import { slugify } from '#lib/utils.js';
 
 const MIN_PASSWORD_LENGTH = 6;
 
-export interface AlbumFormValues {
+interface AlbumFormValues {
 	title: string;
 	slug: string;
 	description: string;
@@ -25,7 +25,7 @@ export interface AlbumFormValues {
 	sectionsCollapsed: boolean;
 }
 
-export type AlbumFormResult =
+type AlbumFormResult =
 	| { ok: true; input: AlbumInput }
 	| { ok: false; error: string; field?: string; values: AlbumFormValues };
 

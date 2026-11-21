@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import { Readable } from 'node:stream';
 
-export interface ByteRange {
+interface ByteRange {
 	start: number;
 	end: number;
 }

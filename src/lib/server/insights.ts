@@ -18,7 +18,7 @@ export interface Range {
 }
 
 /** The pipeline money moves through, in order. Drafts are booked, or tentative for a tentative job. */
-export const STAGES = ['paid', 'invoiced', 'booked', 'tentative'] as const;
+const STAGES = ['paid', 'invoiced', 'booked', 'tentative'] as const;
 export type Stage = (typeof STAGES)[number];
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];

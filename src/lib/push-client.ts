@@ -3,7 +3,7 @@ import { dev } from '$app/env';
 
 export type PushSupport = 'supported' | 'needs-install' | 'unsupported';
 
-export function isIos() {
+function isIos() {
 	return (
 		/iPhone|iPad|iPod/.test(navigator.userAgent) ||
 		// iPadOS reports itself as a Mac.
@@ -11,7 +11,7 @@ export function isIos() {
 	);
 }
 
-export function isStandalone() {
+function isStandalone() {
 	return (
 		matchMedia('(display-mode: standalone)').matches ||
 		(navigator as Navigator & { standalone?: boolean }).standalone === true

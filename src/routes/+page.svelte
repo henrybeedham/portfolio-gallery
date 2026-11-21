@@ -12,7 +12,7 @@
 	import AlbumCard from '#lib/components/AlbumCard.svelte';
 	import Img from '#lib/components/Img.svelte';
 	import Lightbox from '#lib/components/Lightbox.svelte';
-	import { mediaUrl, paragraphs, plural, viewQuery } from '#lib/utils.js';
+	import { mediaUrl, paragraphs, viewQuery } from '#lib/utils.js';
 	import type { PhotoItem } from '#lib/types.js';
 	import type { PageProps } from './$types';
 
