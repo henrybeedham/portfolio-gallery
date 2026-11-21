@@ -66,20 +66,72 @@ can upload your own under **Settings → Appearance** (they're saved in `data/th
 for the format. Any album can use a different theme from the rest of the site (album → **Details →
 Appearance**); its album page, photo pages and password screen are shown in that theme.
 
-## Quick start (Docker)
+## Deployment
 
-```sh
-cp .env.example .env      # set ADMIN_PASSWORD (and optionally SESSION_SECRET / ORIGIN)
-docker compose up -d --build
+The app is one container that keeps everything (the SQLite database, your photos and videos) on a persistent disk mounted at `/data`. Anywhere that can run a Docker image with a persistent volume can host it. A ready-built image for amd64 and arm64 (including a Raspberry Pi or an Apple Silicon Mac) is published with every change:
+
+```
+ghcr.io/henrybeedham/portfolio-gallery:latest
 ```
 
-The compose file doesn't publish a port: a reverse proxy on the same Docker network (Coolify's, for example) routes to the app on port 3000. To open it directly, add `ports: ['3000:3000']` to the `gallery` service, then open <http://localhost:3000> and sign in at `/admin/login`.
+| Option                                | Good for                                   | Cost                                 |
+| ------------------------------------- | ------------------------------------------ | ------------------------------------ |
+| [Railway](#railway-one-click)         | Trying it out, or hosting without a server | Usage-based, plus storage for photos |
+| [Docker on your own machine](#docker) | A home server, NAS or a quick local look   | Free                                 |
+| [Docker Compose](#docker-compose)     | A VPS or home server you'll keep running   | Your server                          |
+| [Coolify](#coolify)                   | A server already managed by Coolify        | Your server                          |
+| [Vercel, Netlify, …](#why-not-vercel) | Not supported                              | —                                    |
+
+### Railway (one click)
+
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/TEMPLATE_CODE)
+
+The button creates the app from the published image with a volume at `/data`, a random admin password and a `*.up.railway.app` address with HTTPS.
+
+1. Click the button, sign in to Railway and choose **Deploy**.
+2. When it's running, open the service's **Variables** tab and copy `ADMIN_PASSWORD`.
+3. Open the address under **Settings → Networking** and sign in at `/admin/login` as `admin`.
+
+Photos take space: grow the volume under the service's **Volume** settings as your library grows (the size you can choose depends on your Railway plan). To use your own domain, add it under **Settings → Networking**; nothing else needs changing. Updates are a redeploy, which pulls the latest image; the database is backed up automatically before it changes.
+
+### Docker
+
+To try it on your own computer or server with one command:
+
+```sh
+docker run -d --name gallery --restart unless-stopped \
+  -p 3000:3000 -v gallery-data:/data \
+  -e ADMIN_PASSWORD='choose-a-long-password' \
+  ghcr.io/henrybeedham/portfolio-gallery:latest
+```
+
+Then open <http://localhost:3000> and sign in at `/admin/login` as `admin`. Everything is kept in the `gallery-data` volume. To update, `docker pull` the image, then remove and recreate the container with the same command. For a site on the internet, put it behind a reverse proxy that handles HTTPS (see [Reverse proxy](#reverse-proxy)).
+
+### Docker Compose
+
+```sh
+git clone https://github.com/henrybeedham/portfolio-gallery.git && cd portfolio-gallery
+cp .env.example .env      # set ADMIN_PASSWORD (and optionally SESSION_SECRET / ORIGIN)
+docker compose up -d
+```
+
+This pulls the published image and keeps its data in `./data`. Update with `docker compose pull && docker compose up -d`, or build from your checkout with `docker compose up -d --build`.
+
+The compose file doesn't publish a port: a reverse proxy on the same Docker network routes to the app on port 3000. To open it directly, add `ports: ['3000:3000']` to the `gallery` service, then open <http://localhost:3000>.
 
 If `ADMIN_PASSWORD` isn't set, a password is generated on first start and saved to `data/.admin-password` (it isn't printed to the logs). Placeholder passwords such as `change-me` are refused at startup.
 
+### Coolify
+
+Create a resource from this repository using the **Docker Compose** build pack, then give the `gallery` service a domain with port 3000, e.g. `https://photos.example.com:3000`, and set `ADMIN_PASSWORD` in its environment variables. Coolify's proxy needs no other changes: uploads are sent in small pieces, so they stay within Traefik's 60-second request limit.
+
+### Why not Vercel?
+
+Vercel, Netlify, Cloudflare Pages and similar hosts run apps as short-lived functions with no disk that survives between requests. This app needs a long-running server: the SQLite database and every original photo live on disk, thumbnails and video previews are made in the background with `sharp` and ffmpeg, and full-album ZIPs stream for as long as a download takes. So there's no Vercel button. For the same reason, Heroku, Google Cloud Run and DigitalOcean App Platform won't work without a persistent volume. Railway, Fly.io, Render (with a disk) or any VPS will.
+
 ### Data
 
-Everything lives in the `./data` volume:
+Everything lives in the `/data` volume (`./data` with the compose file):
 
 | Path                                 | Contents                                                   |
 | ------------------------------------ | ---------------------------------------------------------- |
@@ -130,7 +182,7 @@ proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
 
 Caddy needs nothing extra: `photos.example.com { reverse_proxy gallery:3000 }`.
 
-With Coolify, give the `gallery` service a domain with port 3000, e.g. `https://photos.example.com:3000`. Its proxy needs no other changes: uploads are sent in small pieces, so they stay within Traefik's 60-second request limit.
+With Coolify, see [Coolify](#coolify) above.
 
 ## Links from the previous gallery
 

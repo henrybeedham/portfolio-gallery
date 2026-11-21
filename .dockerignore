@@ -9,3 +9,4 @@ import
 !.env.example
 .DS_Store
 .vscode
+.github

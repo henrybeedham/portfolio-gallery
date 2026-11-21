@@ -1,7 +1,9 @@
 services:
   gallery:
+    # The published image is pulled by default. To build from this checkout instead, run
+    # `docker compose up -d --build`.
+    image: ghcr.io/henrybeedham/portfolio-gallery:latest
     build: .
-    image: client-gallery:latest
     # Not "client-gallery": that name is used by the previous version of the app.
     container_name: gallery
     restart: unless-stopped
