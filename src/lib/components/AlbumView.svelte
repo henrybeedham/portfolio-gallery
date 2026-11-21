@@ -295,9 +295,9 @@
 
 <header class="topbar">
 	<div class="container inner">
-		<a class="link" href="/"
-			><ArrowLeft size={14} /> <span class="home-label">{settings.siteTitle}</span></a
-		>
+		<a class="link" href="/">
+			<ArrowLeft size={14} /> <span class="home-label">{settings.siteTitle}</span>
+		</a>
 		<span class="top-title">{album.title}</span>
 		<span class="top-count eyebrow">{plural(data.albumCount, 'photo')}</span>
 	</div>
@@ -514,9 +514,9 @@
 	{#if hasMore}
 		{#if loadError}
 			<p class="error-text">{loadError}</p>
-			<button class="btn" onclick={() => loadMore(loadLimit)} disabled={loadingMore}
-				>Try again</button
-			>
+			<button class="btn" onclick={() => loadMore(loadLimit)} disabled={loadingMore}>
+				Try again
+			</button>
 		{:else}
 			<p class="subtle loading" aria-live="polite">
 				<span class="spinner"></span> Loading more photos…
@@ -530,7 +530,7 @@
 	{/if}
 {/snippet}
 
-<SiteFooter copyright={settings.copyright} isAdmin={data.isAdmin} />
+<SiteFooter copyright={settings.copyright} title={settings.siteTitle} isAdmin={data.isAdmin} />
 
 {#if selecting}
 	<div class="selection-bar" transition:fly={{ y: 80, duration: 300 }}>
@@ -542,9 +542,9 @@
 				<button class="link" onclick={selectAll} disabled={selectingAll}>
 					{selectingAll ? 'Selecting…' : 'Select all'}
 				</button>
-				<button class="link" onclick={() => selected.clear()} disabled={!selected.size}
-					>Clear</button
-				>
+				<button class="link" onclick={() => selected.clear()} disabled={!selected.size}>
+					Clear
+				</button>
 				<button
 					class="btn btn-sm btn-accent"
 					onclick={downloadSelected}

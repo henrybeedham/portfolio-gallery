@@ -193,9 +193,9 @@
 					{#if settings.contactPhone}
 						<li>
 							<Phone size={15} strokeWidth={1.5} />
-							<a href="tel:{settings.contactPhone.replace(/[^\d+]/g, '')}"
-								>{settings.contactPhone}</a
-							>
+							<a href="tel:{settings.contactPhone.replace(/[^\d+]/g, '')}">
+								{settings.contactPhone}
+							</a>
 						</li>
 					{/if}
 				</ul>
@@ -204,7 +204,7 @@
 	</section>
 </main>
 
-<SiteFooter copyright={settings.copyright} isAdmin={data.isAdmin} />
+<SiteFooter copyright={settings.copyright} title={settings.siteTitle} isAdmin={data.isAdmin} />
 
 {#if lightboxIndex >= 0}
 	<Lightbox

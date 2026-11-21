@@ -1,14 +1,70 @@
 /**
- * The site's icons (browser tab, Home Screen, notifications), drawn in a theme's colours so they
- * follow the site theme, or an album's own theme on its pages. PNGs are rendered from the same SVG
- * with sharp and kept in memory; the theme version in the URL (`iconUrl` in themes.ts) changes when colours do.
+ * The site's icons (browser tab, Home Screen, notifications): the site title's initials in
+ * Playfair Display, drawn in a theme's colours so they follow the site theme, or an album's own
+ * theme on its pages. PNGs are rendered from the same SVG with sharp and kept in memory; the
+ * version in the URL (`iconUrl` in themes.ts) changes when the colours or the initials do.
  */
+import fs from 'node:fs';
+import { createRequire } from 'node:module';
+import * as fontkit from 'fontkit';
 import sharp from 'sharp';
+import { getSettings } from './settings.js';
 import { themeVersion, type Theme } from './themes.js';
+import { siteInitials } from '#lib/utils.js';
 
-/** The monogram, drawn on a 64-unit square. */
-const MONOGRAM =
-	'M25.01 42.97V42.35Q26.05 42.29 26.57 42.1Q27.1 41.91 27.28 41.36Q27.46 40.8 27.46 39.68V24.32Q27.46 23.17 27.28 22.63Q27.1 22.09 26.57 21.88Q26.04 21.68 25.01 21.65V21.03Q25.78 21.06 26.94 21.09Q28.11 21.12 29.26 21.12Q30.54 21.12 31.66 21.09Q32.78 21.06 33.47 21.03V21.65Q32.44 21.68 31.91 21.88Q31.38 22.09 31.2 22.63Q31.02 23.17 31.02 24.32V39.68Q31.02 40.8 31.21 41.36Q31.39 41.91 31.92 42.1Q32.44 42.29 33.47 42.35V42.97Q32.78 42.91 31.66 42.89Q30.54 42.88 29.26 42.88Q28.11 42.88 26.94 42.89Q25.78 42.91 25.01 42.97ZM12 42.97V42.35Q13.03 42.29 13.56 42.1Q14.09 41.91 14.27 41.36Q14.45 40.8 14.45 39.68V24.32Q14.45 23.17 14.27 22.63Q14.09 22.09 13.56 21.88Q13.03 21.68 12 21.65V21.03Q12.7 21.06 13.84 21.09Q14.97 21.12 16.28 21.12Q17.43 21.12 18.57 21.09Q19.71 21.06 20.46 21.03V21.65Q19.43 21.68 18.9 21.88Q18.37 22.09 18.19 22.63Q18.01 23.17 18.01 24.32V39.68Q18.01 40.8 18.19 41.36Q18.37 41.91 18.9 42.1Q19.43 42.29 20.46 42.35V42.97Q19.71 42.91 18.57 42.89Q17.43 42.88 16.28 42.88Q14.97 42.88 13.84 42.89Q12.7 42.91 12 42.97ZM16.62 32.25V31.63H28.86V32.25ZM34.65 21.03Q35.35 21.06 36.49 21.09Q37.62 21.12 38.74 21.12Q40.21 21.12 41.56 21.09Q42.91 21.06 43.48 21.06Q46.93 21.06 48.66 22.43Q50.39 23.79 50.39 25.93Q50.39 27.01 49.87 28.07Q49.36 29.14 48.21 30Q47.07 30.85 45.19 31.34V31.4Q47.79 31.68 49.27 32.53Q50.76 33.38 51.38 34.53Q52 35.69 52 36.96Q52 38.79 51.07 40.13Q50.14 41.47 48.39 42.22Q46.63 42.97 44.19 42.97Q43.5 42.97 42.12 42.92Q40.74 42.88 38.8 42.88Q37.62 42.88 36.49 42.89Q35.35 42.91 34.65 42.97V42.35Q35.68 42.29 36.21 42.1Q36.74 41.91 36.92 41.36Q37.1 40.8 37.1 39.68V24.32Q37.1 23.17 36.92 22.63Q36.73 22.09 36.21 21.88Q35.68 21.68 34.65 21.65ZM42.83 21.65Q41.48 21.65 41.07 22.18Q40.66 22.7 40.66 24.32V39.68Q40.66 40.77 40.84 41.33Q41.02 41.88 41.5 42.07Q41.99 42.26 42.92 42.26Q45.7 42.26 46.96 40.85Q48.22 39.44 48.22 36.83Q48.22 34.45 46.97 33.15Q45.71 31.85 42.83 31.85H39.82Q39.82 31.85 39.82 31.58Q39.82 31.32 39.82 31.32H42.49Q44.19 31.32 45.12 30.62Q46.04 29.92 46.39 28.76Q46.73 27.6 46.73 26.27Q46.73 23.98 45.83 22.81Q44.92 21.65 42.83 21.65Z';
+const require = createRequire(import.meta.url);
+
+/** The same static file the invoices use (fontkit, like PDFKit, can't read WOFF2). */
+const FONT_FILE = '@fontsource/playfair-display/files/playfair-display-latin-400-normal.woff';
+
+let font: fontkit.Font | undefined;
+
+/** Capital letters stand this tall on the 64-unit square, and the monogram at most this wide. */
+const CAP_HEIGHT = 21.94;
+const MAX_WIDTH = 40;
+/** Space added between letters, in font units (a thousandth of the type size): set a little tight. */
+const TRACKING = -30;
+
+const monograms = new Map<string, string>();
+
+/** The initials as one SVG path on the 64-unit square, centred on their capital height. */
+function monogramPath(initials: string): string {
+	let d = monograms.get(initials);
+	if (d === undefined) {
+		font ??= fontkit.create(fs.readFileSync(require.resolve(FONT_FILE)));
+		const run = font.layout(initials);
+		const width = run.bbox.maxX - run.bbox.minX + TRACKING * (run.glyphs.length - 1);
+		const scale = Math.min(CAP_HEIGHT / font.capHeight, width > 0 ? MAX_WIDTH / width : Infinity);
+		const left = 32 - (width * scale) / 2 - run.bbox.minX * scale;
+		const baseline = 32 + (font.capHeight * scale) / 2;
+		let x = 0;
+		d = run.glyphs
+			.map((glyph, i) => {
+				const position = run.positions[i];
+				const path = glyph.path
+					.transform(
+						scale,
+						0,
+						0,
+						-scale,
+						left + (x + position.xOffset) * scale,
+						baseline - position.yOffset * scale
+					)
+					.toSVG();
+				x += position.xAdvance + TRACKING;
+				return path;
+			})
+			.join('')
+			.replace(/-?\d+\.\d+/g, (n) => String(Math.round(Number(n) * 100) / 100));
+		monograms.set(initials, d);
+	}
+	return d;
+}
+
+/** The initials the icons show now. */
+export function iconInitials() {
+	return siteInitials(getSettings().siteTitle);
+}
 
 /**
  * The favicon has rounded corners of its own. The PNGs fill the square, because iOS and Android
@@ -27,7 +83,7 @@ export function iconSvg(theme: Theme, rounded: boolean): string {
 		`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">` +
 		`<rect width="64" height="64" rx="${rounded ? 12 : 0}" fill="${bg}"/>` +
 		`<rect x="${inset}" y="${inset}" width="${64 - inset * 2}" height="${64 - inset * 2}" rx="${rounded ? 9 : 8}" fill="none" ${frame} stroke-width="1"/>` +
-		`<path fill="${text}" d="${MONOGRAM}"/>` +
+		`<path fill="${text}" d="${monogramPath(iconInitials())}"/>` +
 		`</svg>`
 	);
 }
@@ -35,7 +91,7 @@ export function iconSvg(theme: Theme, rounded: boolean): string {
 const pngs = new Map<string, Promise<Buffer>>();
 
 export function iconPng(theme: Theme, size: number): Promise<Buffer> {
-	const key = `${theme.id}:${themeVersion()}:${size}`;
+	const key = `${theme.id}:${themeVersion()}:${iconInitials()}:${size}`;
 	let png = pngs.get(key);
 	if (!png) {
 		// Old versions of a theme are never asked for again once pages reload, so start afresh.

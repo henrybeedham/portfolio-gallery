@@ -330,7 +330,7 @@ export function clashCandidates(): ClashJob[] {
 
 /**
  * Clients you've billed before, with the address used most recently, so typing a client's name
- * can fill in AU or Guild automatically.
+ * can fill in their saved address automatically.
  */
 export function clientSuggestions(): { client: string; billingAddressId: number | null }[] {
 	const rows = all<{ client: string; billing_address_id: number | null; at: string }>(

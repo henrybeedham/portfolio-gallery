@@ -559,15 +559,15 @@
 					aria-label="Select {photo.name}"
 				>
 					<img src={mediaUrl(photo, 'thumb')} alt="" loading="lazy" decoding="async" />
-					<span class="check"
-						>{#if isSelected}<Check size={13} strokeWidth={2.5} />{/if}</span
-					>
+					<span class="check">
+						{#if isSelected}<Check size={13} strokeWidth={2.5} />{/if}
+					</span>
 					<span class="flags">
 						{#if photo.id === coverPhotoId}<span class="flag"><Star size={10} /> Cover</span>{/if}
 						{#if photo.id === backgroundPhotoId}<span class="flag">Background</span>{/if}
-						{#if photo.kind === 'video'}<span class="flag"
-								>Video {formatDuration(photo.duration)}</span
-							>{/if}
+						{#if photo.kind === 'video'}<span class="flag">
+								Video {formatDuration(photo.duration)}
+							</span>{/if}
 					</span>
 				</button>
 				<div class="hover-actions">
@@ -610,8 +610,10 @@
 					<span class="name" title={photo.name}>{photo.name}</span>
 					<span class="details">
 						{formatBytes(photo.size)}
-						<span class="downloads" title="Downloads"><Download size={11} /> {photo.downloads}</span
-						>
+						<span class="downloads" title="Downloads">
+							<Download size={11} />
+							{photo.downloads}
+						</span>
 					</span>
 					{#if sections.length && show === 'all'}
 						<span class="tile-section" class:none={!photo.section}>

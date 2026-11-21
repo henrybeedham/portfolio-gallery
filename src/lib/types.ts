@@ -203,7 +203,7 @@ export type InvoiceState = 'draft' | 'paid' | 'unpaid' | 'overdue';
 
 export interface BillingAddress {
 	id: number;
-	/** Short name shown in pickers, e.g. “AU”. */
+	/** Short name shown in pickers, e.g. “Acme”. */
 	label: string;
 	organisation: string;
 	/** The lines under the organisation, one per line. */

@@ -89,9 +89,9 @@
 		<div class="row">
 			{#if running}<span class="spinner"></span>{/if}
 			<strong>{job.label}</strong>
-			<span class="subtle"
-				>{job.done} / {job.total}{job.failed ? ` · ${job.failed} failed` : ''}</span
-			>
+			<span class="subtle">
+				{job.done} / {job.total}{job.failed ? ` · ${job.failed} failed` : ''}
+			</span>
 			<span class="pct">{running ? `${percent}%` : 'Done'}</span>
 		</div>
 		<div class="bar"><span style:width="{running ? percent : 100}%"></span></div>
@@ -147,15 +147,15 @@
 				<p class="scan">
 					{#if scan.files}
 						<strong>{scan.files}</strong> image{scan.files === 1 ? '' : 's'} ready to import
-						{#if scan.sample.length}<span class="subtle"
-								>— {scan.sample.join(', ')}{scan.files > scan.sample.length ? ', …' : ''}</span
-							>{/if}
+						{#if scan.sample.length}<span class="subtle">
+								— {scan.sample.join(', ')}{scan.files > scan.sample.length ? ', …' : ''}
+							</span>{/if}
 					{:else}
 						<span class="subtle">No images found in this folder.</span>
 					{/if}
-					<button class="link" onclick={rescan} disabled={scanning}
-						>{scanning ? 'Scanning…' : 'Rescan'}</button
-					>
+					<button class="link" onclick={rescan} disabled={scanning}>
+						{scanning ? 'Scanning…' : 'Rescan'}
+					</button>
 				</p>
 			{/if}
 		</div>

@@ -39,8 +39,8 @@ A self-hosted photography portfolio and client-delivery platform. It combines a 
   on the job to record it.
 - **Calendar** (`/admin/jobs/calendar`): a private link that puts your jobs in Apple Calendar and
   keeps them up to date.
-- **Saved addresses**: type a client's name and pick AU, Guild or any other saved address (or
-  type one in for one-off clients). Clients you've billed before pick their address automatically.
+- **Saved addresses**: type a client's name and pick one of the addresses you've saved under
+  **Invoices → Settings** (or type one in for one-off clients). Clients you've billed before pick their address automatically.
 - **Invoices** (`/admin/invoices`): PDF invoices with a live preview, a unique random 8-digit number,
   line items, a due date (by default the shoot date, or your payment terms), and a paid stamp once
   paid. Your details, bank details and notes are copied onto each invoice, so changing your defaults
@@ -55,7 +55,7 @@ A self-hosted photography portfolio and client-delivery platform. It combines a 
 - **Invoice styles** use the same themes as the site but are chosen separately: a default under
   **Invoices → Settings**, and per invoice.
 - **Analytics** (`/admin/analytics`): earnings, money awaiting payment, booked work, average job and
-  time to get paid, income by month (paid → invoiced → drafts → tentative), top clients, AU vs Guild,
+  time to get paid, income by month (paid → invoiced → drafts → tentative), top clients, who you billed (by saved address),
   and weekly gallery views and downloads. Filter by this or last academic year, the last 12 months, the calendar year, all time, or
   any custom dates.
 

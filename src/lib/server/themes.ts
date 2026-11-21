@@ -13,6 +13,7 @@ import path from 'node:path';
 import { dataDir } from './config.js';
 import { getSettings } from './settings.js';
 import type { PageTheme, ThemeSummary } from '#lib/types.js';
+import { siteInitials } from '#lib/utils.js';
 
 interface ThemeFile {
 	name?: unknown;
@@ -58,7 +59,8 @@ function colorMap(value: unknown, source: string, problems?: string[]): Record<s
 	if (!value || typeof value !== 'object' || Array.isArray(value)) return out;
 	for (const [key, raw] of Object.entries(value as Record<string, unknown>)) {
 		const color = typeof raw === 'string' ? raw.trim() : '';
-		if (!KEY.test(key) || !VALUE.test(color) || color.includes('/*')) {
+		// url() would let a theme make visitors' browsers fetch from another site.
+		if (!KEY.test(key) || !VALUE.test(color) || color.includes('/*') || /url\s*\(/i.test(color)) {
 			if (problems) problems.push(`${source}: “${key}” was skipped (not a valid colour).`);
 			else console.warn(`[gallery] Theme ${source}: ignoring colour "${key}"`);
 			continue;
@@ -230,9 +232,14 @@ export function hasTheme(id: string): boolean {
 export const ICON_FILES = ['favicon.svg', '180.png', '192.png', '512.png'] as const;
 export type IconFile = (typeof ICON_FILES)[number];
 
-/** The URL of a theme's icon, versioned so browsers fetch it again when the theme changes. */
+/** Changes whenever the icons would look different: new colours, or new initials in the site title. */
+export function iconVersion(): string {
+	return `${themeVersion()}-${siteInitials(getSettings().siteTitle)}`;
+}
+
+/** The URL of a theme's icon, versioned so browsers fetch it again when it changes. */
 export function iconUrl(id: string | null | undefined, file: IconFile): string {
-	return `/site/icon/${getTheme(id).id}/${file}?v=${themeVersion()}`;
+	return `/site/icon/${getTheme(id).id}/${file}?v=${iconVersion()}`;
 }
 
 /** What a page needs to show a theme: the `data-theme` id, the browser UI colour and the CSS version. */

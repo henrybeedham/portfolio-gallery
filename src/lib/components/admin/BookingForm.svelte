@@ -179,8 +179,10 @@
 								{i ? (i === overlapping.length - 1 ? ' and ' : ', ') : ''}<a
 									href="/admin/jobs/{clash.job.id}"
 									target="_blank"
-									rel="noopener">{clash.job.title}</a
-								>{when.time ? ` (${when.time})` : ''}{/each}.
+									rel="noopener"
+								>
+									{clash.job.title}
+								</a>{when.time ? ` (${when.time})` : ''}{/each}.
 						</span>
 					</p>
 				{/if}
@@ -189,9 +191,9 @@
 						Also on this day:
 						{#each sameDay as clash, i (clash.job.id)}
 							{@const when = formatJobDate(clash.job.startsAt, clash.job.endsAt)}
-							{i ? ', ' : ''}<a href="/admin/jobs/{clash.job.id}" target="_blank" rel="noopener"
-								>{clash.job.title}</a
-							>{when.time ? ` at ${when.time}` : ''}{clash.job.status === 'tentative'
+							{i ? ', ' : ''}<a href="/admin/jobs/{clash.job.id}" target="_blank" rel="noopener">
+								{clash.job.title}
+							</a>{when.time ? ` at ${when.time}` : ''}{clash.job.status === 'tentative'
 								? ' (tentative)'
 								: ''}{/each}.
 					</p>
@@ -205,7 +207,7 @@
 				class="input"
 				name="location"
 				bind:value={location}
-				placeholder="Exeter Castle"
+				placeholder="Town Hall"
 			/>
 		</div>
 	</section>

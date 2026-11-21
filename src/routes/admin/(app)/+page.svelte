@@ -169,9 +169,9 @@
 								{#each data.attention.overdue.slice(0, LIMIT) as invoice (invoice.id)}
 									<li>
 										<a class="item" href="/admin/invoices/{invoice.id}">
-											<span class="item-title"
-												>{invoice.billToName || invoice.jobs[0]?.title || 'No client'}</span
-											>
+											<span class="item-title">
+												{invoice.billToName || invoice.jobs[0]?.title || 'No client'}
+											</span>
 											<span class="ui-sub">
 												{invoiceLabel(invoice.number)} · due {formatShortDay(invoice.dueDate)}
 											</span>

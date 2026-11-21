@@ -74,8 +74,9 @@
 		</p>
 	</div>
 	<div class="ui-inline">
-		<a class="btn btn-solid" href={subscribeUrl}><CalendarPlus size={14} /> Add to Apple Calendar</a
-		>
+		<a class="btn btn-solid" href={subscribeUrl}>
+			<CalendarPlus size={14} /> Add to Apple Calendar
+		</a>
 		<button class="btn btn-quiet" onclick={copy}><Copy size={14} /> Copy Link</button>
 	</div>
 	<p class="hint">

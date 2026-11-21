@@ -114,9 +114,9 @@
 {#snippet stat(name: string, value: string, size = 20, note = '', tone = 'text')}
 	<div class="w-stat">
 		{@render label(name)}
-		<span class="w-serif" style="font-size: calc({size} * var(--u)); color: var(--w-{tone})"
-			>{value}</span
-		>
+		<span class="w-serif" style="font-size: calc({size} * var(--u)); color: var(--w-{tone})">
+			{value}
+		</span>
 		{#if note}<span class="w-note">{note}</span>{/if}
 	</div>
 {/snippet}
@@ -125,9 +125,9 @@
 	{@const detail = [j.time || j.when, j.location || j.client].filter(Boolean).join(' · ')}
 	<div class="w-job">
 		<div class="w-date">
-			<span class="w-serif" style:color={j.daysUntil === 0 ? 'var(--w-highlight)' : undefined}
-				>{j.date}</span
-			>
+			<span class="w-serif" style:color={j.daysUntil === 0 ? 'var(--w-highlight)' : undefined}>
+				{j.date}
+			</span>
 			<span class="w-weekday">{j.weekday}</span>
 		</div>
 		<div class="w-job-info">
@@ -344,9 +344,9 @@
 			{/if}
 		{:else if family === 'small'}
 			{@render label('To do', t.count ? 'highlight' : 'muted')}
-			<span class="w-serif" style="font-size: calc({t.count ? 30 : 16} * var(--u))"
-				>{t.count || 'All caught up'}</span
-			>
+			<span class="w-serif" style="font-size: calc({t.count ? 30 : 16} * var(--u))">
+				{t.count || 'All caught up'}
+			</span>
 			<div class="w-fill"></div>
 			{#each t.tasks.slice(0, 2) as task (task.url)}
 				<span class="w-strong">{task.label}</span>

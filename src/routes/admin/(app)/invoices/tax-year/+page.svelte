@@ -64,8 +64,10 @@
 					class:active={data.basis === basis.id}
 					href={query(data.year, basis.id)}
 					data-sveltekit-noscroll
-					data-sveltekit-replacestate>{basis.label}</a
+					data-sveltekit-replacestate
 				>
+					{basis.label}
+				</a>
 			{/each}
 		</nav>
 		<select
@@ -100,9 +102,9 @@
 					{#each data.invoices as invoice (invoice.id)}
 						<tr>
 							<td>
-								<a class="ui-title" href="/admin/invoices/{invoice.id}"
-									>{invoiceLabel(invoice.number)}</a
-								>
+								<a class="ui-title" href="/admin/invoices/{invoice.id}">
+									{invoiceLabel(invoice.number)}
+								</a>
 								{#if invoice.jobs}<span class="ui-sub">{invoice.jobs}</span>{/if}
 							</td>
 							<td>{invoice.client || '—'}</td>

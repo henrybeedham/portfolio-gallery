@@ -157,12 +157,12 @@
 				<button class="btn btn-sm btn-solid" onclick={copyLink}><Copy size={13} /> Copy</button>
 			</div>
 			<div class="share-links">
-				<a class="link" href="/{album.slug}" target="_blank" rel="noopener"
-					><ExternalLink size={13} /> Open in new tab</a
-				>
-				<a class="link" href="/{album.slug}?preview=1" target="_blank" rel="noopener"
-					><Eye size={13} /> Preview as visitors see it</a
-				>
+				<a class="link" href="/{album.slug}" target="_blank" rel="noopener">
+					<ExternalLink size={13} /> Open in new tab
+				</a>
+				<a class="link" href="/{album.slug}?preview=1" target="_blank" rel="noopener">
+					<Eye size={13} /> Preview as visitors see it
+				</a>
 			</div>
 			{#if !album.isPublic}
 				<p class="hint">
@@ -183,14 +183,14 @@
 					<strong>{album.views.toLocaleString()}</strong><span class="eyebrow">Page views</span>
 				</div>
 				<div>
-					<strong>{album.photoDownloads.toLocaleString()}</strong><span class="eyebrow"
-						>Photo downloads</span
-					>
+					<strong>{album.photoDownloads.toLocaleString()}</strong><span class="eyebrow">
+						Photo downloads
+					</span>
 				</div>
 				<div>
-					<strong>{album.albumDownloads.toLocaleString()}</strong><span class="eyebrow"
-						>Album downloads</span
-					>
+					<strong>{album.albumDownloads.toLocaleString()}</strong><span class="eyebrow">
+						Album downloads
+					</span>
 				</div>
 			</div>
 			<p class="hint">
@@ -209,9 +209,9 @@
 				<h3>Delete album</h3>
 				<p class="hint">Permanently removes the album, its photos and all original files.</p>
 			</div>
-			<button class="btn btn-sm btn-danger" onclick={deleteAlbum}
-				><Trash2 size={13} /> Delete album</button
-			>
+			<button class="btn btn-sm btn-danger" onclick={deleteAlbum}>
+				<Trash2 size={13} /> Delete album
+			</button>
 		</section>
 	</div>
 {/key}

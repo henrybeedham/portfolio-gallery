@@ -1,12 +1,16 @@
 <script lang="ts">
 	import { copyrightText } from '#lib/utils.js';
 
-	let { copyright, isAdmin = false }: { copyright: string; isAdmin?: boolean } = $props();
+	let {
+		copyright,
+		title,
+		isAdmin = false
+	}: { copyright: string; title: string; isAdmin?: boolean } = $props();
 </script>
 
 <footer class="footer">
 	<div class="container inner">
-		<p>{copyrightText(copyright)}</p>
+		<p>{copyrightText(copyright, title)}</p>
 		<a class="link" href={isAdmin ? '/admin' : '/admin/login'}>{isAdmin ? 'Dashboard' : 'Admin'}</a>
 	</div>
 </footer>

@@ -284,9 +284,9 @@
 	{#if elsewhere > 0}
 		<p class="ui-elsewhere">
 			{plural(elsewhere, 'more match', 'more matches')} in other filters.
-			<a href={chipHref('/admin/albums', null, query)} data-sveltekit-noscroll
-				>Search all galleries</a
-			>
+			<a href={chipHref('/admin/albums', null, query)} data-sveltekit-noscroll>
+				Search all galleries
+			</a>
 		</p>
 	{/if}
 </section>
