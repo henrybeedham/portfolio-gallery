@@ -11,7 +11,13 @@ import { DatabaseSync } from 'node:sqlite';
 import { BACKUP_NAME, vacuumInto, type BackupReason } from './backup-files.js';
 import { resetInvoiceSettings } from './billing.js';
 import { paths } from './config.js';
-import { backupDatabase, getDb, replaceDatabase, SCHEMA_VERSION } from './db.js';
+import {
+	backupDatabase,
+	getDb,
+	OLDEST_SCHEMA_VERSION,
+	replaceDatabase,
+	SCHEMA_VERSION
+} from './db.js';
 import { resetSettings } from './settings.js';
 import { customThemesDir } from './themes.js';
 import { zipResponse, type ZipFile } from './zip.js';
@@ -75,6 +81,8 @@ function checkBackup(file: string): string | null {
 		if (quick_check !== 'ok' || !albums)
 			return 'That backup is damaged, or isn’t a gallery backup.';
 		if (user_version > SCHEMA_VERSION) return 'That backup was made by a newer version of the app.';
+		if (user_version < OLDEST_SCHEMA_VERSION)
+			return 'That backup is from a version of the app too old to restore.';
 		return null;
 	} catch {
 		return 'That backup couldn’t be read.';

@@ -160,10 +160,12 @@ Prettier-formatted, so `bun run lint` reports it; leave it alone unless asked.
   `get`, `all`, `transaction` (nested calls join the outer one) and `placeholders(n)`.
   Booleans are stored as 0/1, `undefined` becomes `NULL`, and columns are snake_case, mapped to
   camelCase types in each module.
-- **Migrations.** These are the `MIGRATIONS` array in `db.ts`, applied in order and tracked by
-  `PRAGMA user_version`, each in its own transaction. Add a new entry at the end; never edit or
-  reorder existing ones. An entry is SQL, or a function given the raw `DatabaseSync` for data
-  conversions (it can't use the `db.ts` helpers, which open the database themselves).
+- **Migrations.** A new database is created from `BASELINE` in `db.ts` (schema version 18, which
+  the first 18 migrations were folded into). Changes since then are the `MIGRATIONS` array, applied
+  in order and tracked by `PRAGMA user_version`, each in its own transaction. Add a new entry at the
+  end; never edit or reorder existing ones, and don't edit `BASELINE` either. An entry is SQL, or a
+  function given the raw `DatabaseSync` for data conversions (it can't use the `db.ts` helpers,
+  which open the database themselves). A database or backup older than the baseline is refused.
 - **Backups** (`backups.ts`, `backup-files.ts`). `db.ts` saves a `VACUUM INTO` copy to `backups/`
   before migrating, and whenever the app version (`$app/env`) differs from the `'app-version'`
   settings row, i.e. after every deploy. Ten automatic backups are kept; ones made by hand stay until
@@ -244,8 +246,8 @@ background maintenance tasks (`jobs.ts`, `/admin/api/jobs`). The page route is s
   - A **draft** (`draft = 1`) hasn't been sent. It holds the expected fee, counts as booked (or
     tentative, for a tentative job) in analytics, can't be marked paid, and isn't outstanding.
     Issuing it (`issueInvoice`) dates it today and recomputes the due date with `invoiceDueDate`.
-  - An **imported** record (`imported = 1`) was converted from the money jobs used to hold
-    (`legacy-money.ts`). It has no PDF, its number may be empty or list several earlier numbers, and
+  - An **imported** record (`imported = 1`) was converted from the money jobs used to hold, by a
+    migration since folded into the baseline. It has no PDF, its number may be empty or list several earlier numbers, and
     it's left out of “time to get paid”. “Invoiced Elsewhere” on a job (`recordExternalInvoice`)
     creates one by hand, replacing a draft if the job has one.
 - **Invoices are snapshots.**

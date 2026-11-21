@@ -2,14 +2,18 @@ import { DatabaseSync, type StatementSync, type SQLInputValue } from 'node:sqlit
 import { version } from '$app/env';
 import { writeBackup, type BackupReason } from './backup-files.js';
 import { ensureDirs, paths } from './config.js';
-import { fillEndTimesFromInvoices } from './end-times.js';
-import { moveJobMoneyToInvoices } from './legacy-money.js';
 
 /** SQL, or a function for migrations that convert data. Each runs inside its own transaction. */
 type Migration = string | ((db: DatabaseSync) => void);
 
-const MIGRATIONS: Migration[] = [
-	`
+/**
+ * The schema after the first 18 migrations, which have been folded into it. A new database starts
+ * here. One older than this must first be opened by a build from before the fold (commit ff17783),
+ * which brings it up to version 18.
+ */
+const BASELINE_VERSION = 18;
+
+const BASELINE = `
 	CREATE TABLE settings (
 		key TEXT PRIMARY KEY,
 		value TEXT NOT NULL
@@ -27,7 +31,6 @@ const MIGRATIONS: Migration[] = [
 		is_featured INTEGER NOT NULL DEFAULT 0,
 		password_hash TEXT,
 		expires_at TEXT,
-		accent_color TEXT NOT NULL DEFAULT '#2a2723',
 		layout TEXT NOT NULL DEFAULT 'grid',
 		sort_order TEXT NOT NULL DEFAULT 'oldest',
 		cover_photo_id INTEGER,
@@ -36,9 +39,26 @@ const MIGRATIONS: Migration[] = [
 		photo_downloads INTEGER NOT NULL DEFAULT 0,
 		album_downloads INTEGER NOT NULL DEFAULT 0,
 		created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-		updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+		updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+		-- NULL follows the site's theme.
+		theme TEXT,
+		-- Whether the album page opens with its sections collapsed to a few small previews.
+		sections_collapsed INTEGER NOT NULL DEFAULT 0
 	);
 
+	-- Named, ordered parts of an album (e.g. “Day 1 — Film”). A photo is in at most one; deleting a
+	-- section leaves its photos in the album without one (sections.ts).
+	CREATE TABLE sections (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		album_id INTEGER NOT NULL REFERENCES albums(id) ON DELETE CASCADE,
+		title TEXT NOT NULL,
+		description TEXT NOT NULL DEFAULT '',
+		position INTEGER NOT NULL DEFAULT 0,
+		created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+	);
+	CREATE INDEX sections_album ON sections(album_id, position);
+
+	-- Photos and videos (kind), with a video's poster frame as its thumbnail.
 	CREATE TABLE photos (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		album_id INTEGER NOT NULL REFERENCES albums(id) ON DELETE CASCADE,
@@ -50,17 +70,19 @@ const MIGRATIONS: Migration[] = [
 		width INTEGER NOT NULL DEFAULT 0,
 		height INTEGER NOT NULL DEFAULT 0,
 		taken_at TEXT,
-		camera TEXT,
-		lens TEXT,
-		focal_length REAL,
-		aperture REAL,
-		exposure_time REAL,
-		iso INTEGER,
 		downloads INTEGER NOT NULL DEFAULT 0,
 		version INTEGER NOT NULL DEFAULT 1,
-		created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+		created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+		kind TEXT NOT NULL DEFAULT 'photo',
+		duration REAL,
+		-- Whether a video has a smaller copy for playing in the browser: NULL not yet decided, 0 plays
+		-- the original, 1 has one (video-preview.ts).
+		preview INTEGER,
+		section_id INTEGER REFERENCES sections(id) ON DELETE SET NULL
 	);
-	CREATE INDEX photos_album ON photos(album_id);
+	-- Album pages and covers read photos in capture order, which this index returns already sorted.
+	CREATE INDEX photos_album_chrono ON photos(album_id, COALESCE(taken_at, created_at));
+	CREATE INDEX photos_section ON photos(section_id);
 
 	CREATE TABLE tags (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -75,10 +97,18 @@ const MIGRATIONS: Migration[] = [
 		PRIMARY KEY (photo_id, tag_id)
 	);
 	CREATE INDEX photo_tags_tag ON photo_tags(tag_id);
-	`,
-	// Photography jobs ("bookings" in code; "jobs" is already used for background maintenance tasks),
-	// invoices and the saved addresses invoices are billed to.
-	`
+
+	-- Per-day gallery activity for the analytics charts (albums only keep running totals).
+	CREATE TABLE album_daily_stats (
+		album_id INTEGER NOT NULL REFERENCES albums(id) ON DELETE CASCADE,
+		day TEXT NOT NULL,
+		views INTEGER NOT NULL DEFAULT 0,
+		photo_downloads INTEGER NOT NULL DEFAULT 0,
+		album_downloads INTEGER NOT NULL DEFAULT 0,
+		PRIMARY KEY (album_id, day)
+	);
+	CREATE INDEX album_daily_stats_day ON album_daily_stats(day);
+
 	CREATE TABLE billing_addresses (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		label TEXT NOT NULL,
@@ -88,6 +118,8 @@ const MIGRATIONS: Migration[] = [
 		created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 	);
 
+	-- Photography jobs ("bookings" in code; "jobs" is already used for background maintenance tasks).
+	-- They hold no money: that comes from their invoices. "shot" is no longer used.
 	CREATE TABLE bookings (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		title TEXT NOT NULL,
@@ -95,16 +127,14 @@ const MIGRATIONS: Migration[] = [
 		billing_address_id INTEGER REFERENCES billing_addresses(id) ON DELETE SET NULL,
 		location TEXT NOT NULL DEFAULT '',
 		starts_at TEXT,
-		hours REAL NOT NULL DEFAULT 0,
-		rate INTEGER NOT NULL DEFAULT 0,
 		status TEXT NOT NULL DEFAULT 'confirmed',
 		shot INTEGER NOT NULL DEFAULT 0,
 		delivered INTEGER NOT NULL DEFAULT 0,
-		paid INTEGER NOT NULL DEFAULT 0,
-		legacy_invoices TEXT NOT NULL DEFAULT '',
 		notes TEXT NOT NULL DEFAULT '',
 		created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-		updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+		updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+		-- A naive local YYYY-MM-DDTHH:mm, the day after the start for overnight jobs.
+		ends_at TEXT
 	);
 	CREATE INDEX bookings_starts ON bookings(starts_at);
 
@@ -116,52 +146,6 @@ const MIGRATIONS: Migration[] = [
 	CREATE INDEX booking_albums_album ON booking_albums(album_id);
 
 	CREATE TABLE invoices (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		number TEXT NOT NULL UNIQUE,
-		booking_id INTEGER REFERENCES bookings(id) ON DELETE SET NULL,
-		billing_address_id INTEGER REFERENCES billing_addresses(id) ON DELETE SET NULL,
-		issue_date TEXT NOT NULL,
-		due_date TEXT,
-		bill_to_name TEXT NOT NULL DEFAULT '',
-		bill_to_address TEXT NOT NULL DEFAULT '',
-		sender TEXT NOT NULL DEFAULT '{}',
-		payment_details TEXT NOT NULL DEFAULT '',
-		notes TEXT NOT NULL DEFAULT '',
-		items TEXT NOT NULL DEFAULT '[]',
-		total INTEGER NOT NULL DEFAULT 0,
-		style TEXT NOT NULL DEFAULT 'light',
-		paid_at TEXT,
-		created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-		updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
-	);
-	CREATE INDEX invoices_booking ON invoices(booking_id);
-	`,
-	// Per-day gallery activity for the analytics charts (the albums table only keeps running totals).
-	`
-	CREATE TABLE album_daily_stats (
-		album_id INTEGER NOT NULL REFERENCES albums(id) ON DELETE CASCADE,
-		day TEXT NOT NULL,
-		views INTEGER NOT NULL DEFAULT 0,
-		photo_downloads INTEGER NOT NULL DEFAULT 0,
-		album_downloads INTEGER NOT NULL DEFAULT 0,
-		PRIMARY KEY (album_id, day)
-	);
-	CREATE INDEX album_daily_stats_day ON album_daily_stats(day);
-	`,
-	// Albums can use their own theme (NULL follows the site's), replacing the per-album accent colour.
-	`
-	ALTER TABLE albums ADD COLUMN theme TEXT;
-	ALTER TABLE albums DROP COLUMN accent_color;
-	`,
-	// Money lives on invoices only. Jobs lose hours, rate, paid and earlier invoice numbers, which
-	// become imported records or drafts; invoices gain draft and imported flags.
-	moveJobMoneyToInvoices,
-	// Jobs can have an end time: a naive local YYYY-MM-DDTHH:mm, the day after for overnight jobs.
-	`ALTER TABLE bookings ADD COLUMN ends_at TEXT;`,
-	// An invoice can cover several jobs and a job can have several invoices, so the link moves from
-	// invoices.booking_id to a table of its own. SQLite can't drop a foreign key column in place.
-	`
-	CREATE TABLE invoices_new (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		number TEXT NOT NULL DEFAULT '',
 		billing_address_id INTEGER REFERENCES billing_addresses(id) ON DELETE SET NULL,
@@ -181,91 +165,30 @@ const MIGRATIONS: Migration[] = [
 		created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
 		updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 	);
-	INSERT INTO invoices_new (id, number, billing_address_id, issue_date, due_date, bill_to_name,
-		bill_to_address, sender, payment_details, notes, items, total, style, paid_at, draft, imported,
-		created_at, updated_at)
-	SELECT id, number, billing_address_id, issue_date, due_date, bill_to_name, bill_to_address, sender,
-		payment_details, notes, items, total, style, paid_at, draft, imported, created_at, updated_at
-	FROM invoices;
+	-- Imported records may share or lack a number, so only real invoices must be unique.
+	CREATE UNIQUE INDEX invoices_number ON invoices(number) WHERE imported = 0;
+
+	-- An invoice can cover several jobs and a job can have several invoices.
 	CREATE TABLE invoice_bookings (
-		invoice_id INTEGER NOT NULL REFERENCES invoices_new(id) ON DELETE CASCADE,
+		invoice_id INTEGER NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
 		booking_id INTEGER NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
 		PRIMARY KEY (invoice_id, booking_id)
 	);
-	INSERT INTO invoice_bookings (invoice_id, booking_id)
-	SELECT id, booking_id FROM invoices WHERE booking_id IS NOT NULL;
-	DROP TABLE invoices;
-	ALTER TABLE invoices_new RENAME TO invoices;
-	CREATE UNIQUE INDEX invoices_number ON invoices(number) WHERE imported = 0;
 	CREATE INDEX invoice_bookings_booking ON invoice_bookings(booking_id);
-	`,
-	// Album pages and covers read photos in capture order, which this index returns already sorted.
-	// It also serves every lookup by album, so it replaces the plain index.
-	`
-	CREATE INDEX photos_album_chrono ON photos(album_id, COALESCE(taken_at, created_at));
-	DROP INDEX photos_album;
-	`,
-	// Camera settings are no longer shown anywhere. The capture date stays.
-	`
-	ALTER TABLE photos DROP COLUMN camera;
-	ALTER TABLE photos DROP COLUMN lens;
-	ALTER TABLE photos DROP COLUMN focal_length;
-	ALTER TABLE photos DROP COLUMN aperture;
-	ALTER TABLE photos DROP COLUMN exposure_time;
-	ALTER TABLE photos DROP COLUMN iso;
-	`,
-	// Jobs from before end times existed get one worked out from their invoices' hours.
-	fillEndTimesFromInvoices,
-	// Videos sit alongside photos, with their poster frame as the thumbnail.
-	`
-	ALTER TABLE photos ADD COLUMN kind TEXT NOT NULL DEFAULT 'photo';
-	ALTER TABLE photos ADD COLUMN duration REAL;
-	`,
-	// Jobs with a visible gallery that has photos in it count as delivered (see delivery.ts).
-	`
-	UPDATE bookings SET delivered = 1
-	WHERE delivered = 0 AND status != 'cancelled' AND id IN (
-		SELECT ba.booking_id FROM booking_albums ba JOIN albums a ON a.id = ba.album_id
-		WHERE a.is_public = 1 AND EXISTS (SELECT 1 FROM photos p WHERE p.album_id = a.id)
-	);
-	`,
-	// Tokens that let apps such as the Lightroom plugin use the API. Only a hash is kept.
-	`
+
+	-- Tokens that let apps use the API. Only a hash is kept. scope is 'full' (Lightroom: anything the
+	-- admin can) or 'widget' (only read the summary that Home Screen widgets show, /api/widget).
 	CREATE TABLE api_tokens (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		name TEXT NOT NULL,
 		token_hash TEXT NOT NULL UNIQUE,
 		created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-		last_used_at TEXT
+		last_used_at TEXT,
+		scope TEXT NOT NULL DEFAULT 'full'
 	);
-	`,
-	// Whether a video has a smaller copy for playing in the browser: NULL not yet decided, 0 plays
-	// the original, 1 has one (video-preview.ts).
-	`
-	ALTER TABLE photos ADD COLUMN preview INTEGER;
-	`,
-	// Named, ordered parts of an album (e.g. “Day 1 — Film”). A photo is in at most one; deleting a
-	// section leaves its photos in the album without one (sections.ts).
-	`
-	CREATE TABLE sections (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		album_id INTEGER NOT NULL REFERENCES albums(id) ON DELETE CASCADE,
-		title TEXT NOT NULL,
-		description TEXT NOT NULL DEFAULT '',
-		position INTEGER NOT NULL DEFAULT 0,
-		created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
-	);
-	CREATE INDEX sections_album ON sections(album_id, position);
-	ALTER TABLE photos ADD COLUMN section_id INTEGER REFERENCES sections(id) ON DELETE SET NULL;
-	CREATE INDEX photos_section ON photos(section_id);
-	`,
-	// Whether the album page opens with its sections collapsed to a few small previews.
-	`
-	ALTER TABLE albums ADD COLUMN sections_collapsed INTEGER NOT NULL DEFAULT 0;
-	`,
-	// Browsers (usually the admin's phone, installed to the home screen) that get push
-	// notifications. The endpoint is the push service's URL for that browser (push.ts).
-	`
+
+	-- Browsers (usually the admin's phone, installed to the home screen) that get push
+	-- notifications. The endpoint is the push service's URL for that browser (push.ts).
 	CREATE TABLE push_subscriptions (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		endpoint TEXT NOT NULL UNIQUE,
@@ -275,31 +198,51 @@ const MIGRATIONS: Migration[] = [
 		subject TEXT NOT NULL,
 		created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 	);
-	`,
-	// What an API token may do: 'full' (Lightroom: anything the admin can) or 'widget' (only read
-	// the summary that Home Screen widgets show, /api/widget).
-	`
-	ALTER TABLE api_tokens ADD COLUMN scope TEXT NOT NULL DEFAULT 'full';
-	`
-];
+`;
+
+/** Changes since the baseline, in order: entry i takes the schema to BASELINE_VERSION + i + 1. */
+const MIGRATIONS: Migration[] = [];
+
+/** The schema version this build of the app expects. */
+export const SCHEMA_VERSION = BASELINE_VERSION + MIGRATIONS.length;
+
+/** The oldest schema this build can bring up to date (a database, or a backup to restore). */
+export const OLDEST_SCHEMA_VERSION = BASELINE_VERSION;
 
 let db: DatabaseSync | undefined;
 const statements = new Map<string, StatementSync>();
 
+/** Runs one step in its own transaction, recording the schema version it reaches. */
+function step(instance: DatabaseSync, to: number, apply: () => void) {
+	instance.exec('BEGIN');
+	try {
+		apply();
+		instance.exec(`PRAGMA user_version = ${to}`);
+		instance.exec('COMMIT');
+	} catch (error) {
+		instance.exec('ROLLBACK');
+		throw error;
+	}
+}
+
 function migrate(instance: DatabaseSync) {
 	const row = instance.prepare('PRAGMA user_version').get() as { user_version: number };
-	for (let version = row.user_version; version < MIGRATIONS.length; version++) {
-		instance.exec('BEGIN');
-		try {
-			const migration = MIGRATIONS[version];
+	let current = row.user_version;
+	if (current > 0 && current < BASELINE_VERSION) {
+		throw new Error(
+			`[gallery] The database is at schema version ${current}, older than this version of the app can update. Run a build from commit ff17783 once to bring it up to version ${BASELINE_VERSION}, then this one.`
+		);
+	}
+	if (current === 0) {
+		step(instance, BASELINE_VERSION, () => instance.exec(BASELINE));
+		current = BASELINE_VERSION;
+	}
+	for (let version = current; version < SCHEMA_VERSION; version++) {
+		const migration = MIGRATIONS[version - BASELINE_VERSION];
+		step(instance, version + 1, () => {
 			if (typeof migration === 'string') instance.exec(migration);
 			else migration(instance);
-			instance.exec(`PRAGMA user_version = ${version + 1}`);
-			instance.exec('COMMIT');
-		} catch (error) {
-			instance.exec('ROLLBACK');
-			throw error;
-		}
+		});
 	}
 }
 
@@ -323,7 +266,7 @@ function open(backupFirst: boolean): DatabaseSync {
 		const stored = instance
 			.prepare(`SELECT value FROM settings WHERE key = 'app-version'`)
 			.get() as { value: string } | undefined;
-		if (schema < MIGRATIONS.length || stored?.value !== version) writeBackup(instance, 'update');
+		if (schema < SCHEMA_VERSION || stored?.value !== version) writeBackup(instance, 'update');
 	}
 	migrate(instance);
 	instance
@@ -340,9 +283,6 @@ export function getDb(): DatabaseSync {
 	if (!db) db = open(true);
 	return db;
 }
-
-/** The schema version this build of the app expects. */
-export const SCHEMA_VERSION = MIGRATIONS.length;
 
 /** Saves a copy of the database as it is now. */
 export function backupDatabase(reason: BackupReason) {
