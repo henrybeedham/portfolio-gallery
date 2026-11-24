@@ -46,6 +46,8 @@
 	});
 
 	const ogImage = $derived(`${data.origin}${mediaUrl(photo, 'medium')}`);
+	// The medium variant fits inside 2048 × 2048.
+	const ogScale = $derived(photo.w && photo.h ? Math.min(1, 2048 / Math.max(photo.w, photo.h)) : 0);
 	const ogTitle = $derived(`${photo.name} — ${album.title}`);
 </script>
 
@@ -57,12 +59,9 @@
 	<meta property="og:description" content="A photo from {album.title} by {settings.siteTitle}." />
 	<meta property="og:url" content="{data.origin}/{album.slug}/photo/{photo.id}" />
 	<meta property="og:image" content={ogImage} />
-	{#if photo.w && photo.h}
-		<meta property="og:image:width" content={String(Math.min(2048, photo.w))} />
-		<meta
-			property="og:image:height"
-			content={String(Math.round((Math.min(2048, photo.w) * photo.h) / photo.w))}
-		/>
+	{#if ogScale}
+		<meta property="og:image:width" content={String(Math.round(photo.w * ogScale))} />
+		<meta property="og:image:height" content={String(Math.round(photo.h * ogScale))} />
 	{/if}
 	<meta name="twitter:card" content="summary_large_image" />
 	<meta name="twitter:title" content={ogTitle} />

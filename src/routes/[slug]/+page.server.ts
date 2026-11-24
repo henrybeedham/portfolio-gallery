@@ -2,6 +2,7 @@ import { error, fail, redirect } from '@sveltejs/kit';
 import {
 	albumIsExpired,
 	albumPhotoCount,
+	effectiveCoverId,
 	getAlbumById,
 	getAlbumBySlug,
 	type Album
@@ -57,6 +58,13 @@ function viewSections(
 	});
 }
 
+/** The cover for link previews; the media route serves it even while the album is locked. */
+function shareImage(albumId: number) {
+	const id = effectiveCoverId(albumId);
+	const photo = id ? getPhoto(id) : undefined;
+	return photo ? { key: photo.key, v: photo.version, w: photo.width, h: photo.height } : null;
+}
+
 function contact() {
 	const settings = getSettings();
 	return { email: settings.contactEmail, phone: settings.contactPhone };
@@ -76,7 +84,9 @@ export const load: PageServerLoad = (event) => {
 		theme: albumPageTheme(locals, album),
 		album: publicAlbum(album),
 		preview,
-		expired: albumIsExpired(album)
+		expired: albumIsExpired(album),
+		origin: url.origin,
+		shareImage: access === 'expired' ? null : shareImage(album.id)
 	};
 
 	if (access === 'expired') {

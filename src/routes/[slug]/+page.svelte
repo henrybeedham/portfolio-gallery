@@ -10,12 +10,28 @@
 
 	const settings = $derived(data.settings);
 	const album = $derived(data.album);
+	const shareImage = $derived(data.shareImage);
+	// The medium variant fits inside 2048 × 2048.
+	const shareScale = $derived(
+		shareImage?.w && shareImage.h ? Math.min(1, 2048 / Math.max(shareImage.w, shareImage.h)) : 0
+	);
 </script>
 
 <svelte:head>
 	<title>{album.title} — {settings.siteTitle}</title>
 	<meta property="og:title" content={album.title} />
 	<meta property="og:site_name" content={settings.siteTitle} />
+	<meta property="og:type" content="website" />
+	<meta property="og:url" content="{data.origin}/{album.slug}" />
+	{#if shareImage}
+		<meta property="og:image" content="{data.origin}{mediaUrl(shareImage, 'medium')}" />
+		{#if shareScale}
+			<meta property="og:image:width" content={String(Math.round(shareImage.w * shareScale))} />
+			<meta property="og:image:height" content={String(Math.round(shareImage.h * shareScale))} />
+		{/if}
+		<meta name="twitter:card" content="summary_large_image" />
+		<meta name="twitter:image" content="{data.origin}{mediaUrl(shareImage, 'medium')}" />
+	{/if}
 	{#if album.hasPassword || !album.isPublic}
 		<meta name="robots" content="noindex" />
 	{/if}
