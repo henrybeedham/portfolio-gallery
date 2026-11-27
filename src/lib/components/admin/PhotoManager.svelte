@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { SvelteSet } from 'svelte/reactivity';
+	import { MediaQuery, SvelteSet } from 'svelte/reactivity';
+	import { fade, slide } from 'svelte/transition';
 	import { invalidate } from '$app/navigation';
 	import Check from '@lucide/svelte/icons/check';
 	import Star from '@lucide/svelte/icons/star';
@@ -9,7 +10,10 @@
 	import X from '@lucide/svelte/icons/x';
 	import Plus from '@lucide/svelte/icons/plus';
 	import Tag from '@lucide/svelte/icons/tag';
-	import Images from '@lucide/svelte/icons/images';
+	import Upload from '@lucide/svelte/icons/upload';
+	import Grid2x2 from '@lucide/svelte/icons/grid-2x2';
+	import Grid3x3 from '@lucide/svelte/icons/grid-3x3';
+	import ChevronDown from '@lucide/svelte/icons/chevron-down';
 	import Layers from '@lucide/svelte/icons/layers';
 	import ArrowUp from '@lucide/svelte/icons/arrow-up';
 	import ArrowDown from '@lucide/svelte/icons/arrow-down';
@@ -17,7 +21,7 @@
 	import Uploader from './Uploader.svelte';
 	import { api, feedback } from './feedback.svelte.js';
 	import { sortAdminPhotos } from '#lib/sort.js';
-	import { formatBytes, formatDuration, mediaUrl } from '#lib/utils.js';
+	import { formatBytes, formatDuration, mediaUrl, plural } from '#lib/utils.js';
 	import type { AdminPhoto, AdminSection, AdminSort, Tag as TagType } from '#lib/types.js';
 
 	interface Props {
@@ -37,6 +41,34 @@
 		const known = new Set(photos.map((p) => p.id));
 		return [...photos, ...uploaded.filter((p) => !known.has(p.id))];
 	});
+
+	let uploader = $state<Uploader>();
+
+	/** Files dragged over any part of the manager; counted so child elements don't flicker it. */
+	let dragDepth = $state(0);
+	const hasFiles = (event: DragEvent) => !!event.dataTransfer?.types.includes('Files');
+
+	/** Tags and sections sit in a side column on wide screens, and fold away above the grid otherwise. */
+	const wide = new MediaQuery('min-width: 1200px', true);
+
+	type TileSize = 'small' | 'large';
+	const SIZE_KEY = 'admin:photo-size';
+	let size = $state<TileSize>('small');
+	$effect(() => {
+		try {
+			if (localStorage.getItem(SIZE_KEY) === 'large') size = 'large';
+		} catch {
+			// storage unavailable
+		}
+	});
+	function setSize(next: TileSize) {
+		size = next;
+		try {
+			localStorage.setItem(SIZE_KEY, next);
+		} catch {
+			// storage unavailable
+		}
+	}
 
 	let sort = $state<AdminSort>('oldest');
 	let seed = $state(1);
@@ -299,33 +331,8 @@
 	}
 </script>
 
-<section class="block">
-	{#if sections.length}
-		<label class="upload-target">
-			<span class="label">Upload into</span>
-			<select class="select compact" bind:value={uploadSection}>
-				<option value="">No section</option>
-				{#each sections as section (section.id)}
-					<option value={section.id}>{section.title}</option>
-				{/each}
-			</select>
-		</label>
-	{/if}
-	<Uploader
-		{albumId}
-		sectionId={uploadSection === '' ? null : uploadSection}
-		onuploaded={(photo) => (uploaded = [...uploaded, photo])}
-		ondone={async ({ ok, failed }) => {
-			await refresh();
-			if (ok) feedback.toast(`Uploaded ${ok} photo${ok === 1 ? '' : 's'}`);
-			if (failed) feedback.toast(`${failed} upload${failed === 1 ? '' : 's'} failed`, 'error');
-		}}
-	/>
-</section>
-
-<section class="block tags-block">
-	<div class="tags-head">
-		<h3><Tag size={15} strokeWidth={1.5} /> Tags</h3>
+{#snippet tagsBody()}
+	<div class="organise-head">
 		<form class="new-tag" onsubmit={createTag}>
 			<input
 				class="input"
@@ -357,11 +364,10 @@
 			photos, then apply it.
 		</p>
 	{/if}
-</section>
+{/snippet}
 
-<section class="block tags-block">
-	<div class="tags-head">
-		<h3><Layers size={15} strokeWidth={1.5} /> Sections</h3>
+{#snippet sectionsBody()}
+	<div class="organise-head">
 		<form class="new-tag" onsubmit={createSection}>
 			<input
 				class="input"
@@ -466,244 +472,343 @@
 			its own heading and can download it on its own. Create one, select photos, then move them in.
 		</p>
 	{/if}
-</section>
+{/snippet}
 
-<div class="toolbar">
-	<div class="selection">
-		{#if selected.size}
-			<strong>{selected.size}</strong> selected
-			<button class="link" onclick={clearSelection}>Deselect</button>
-		{:else}
-			<span class="subtle">{shown.length} photo{shown.length === 1 ? '' : 's'}</span>
-		{/if}
-		<button class="link" onclick={selectAll} disabled={!shown.length}>Select all</button>
-	</div>
-
-	{#if selected.size}
-		<div class="bulk">
-			{#if sections.length}
-				<select class="select compact" bind:value={moveChoice} aria-label="Section to move to">
-					<option value="">Move to section…</option>
-					{#each sections as section (section.id)}
-						<option value={section.id}>{section.title}</option>
-					{/each}
-					<option value="none">No section</option>
-				</select>
-				<button
-					class="btn btn-sm btn-quiet"
-					disabled={moveChoice === '' || busy}
-					onclick={moveSelected}
-				>
-					Move
-				</button>
-			{/if}
-			{#if tags.length}
-				<select class="select compact" bind:value={tagChoice} aria-label="Tag to apply">
-					<option value="">Choose tag…</option>
-					{#each tags as tag (tag.id)}<option value={tag.id}>{tag.name}</option>{/each}
-				</select>
-				<button
-					class="btn btn-sm btn-quiet"
-					disabled={!tagChoice || busy}
-					onclick={() => applyTag(true)}
-				>
-					Apply
-				</button>
-				<button
-					class="btn btn-sm btn-quiet"
-					disabled={!tagChoice || busy}
-					onclick={() => applyTag(false)}
-				>
-					Remove
-				</button>
-			{/if}
-			<button class="btn btn-sm btn-danger" onclick={deleteSelected} disabled={busy}>
-				<Trash2 size={13} /> Delete
-			</button>
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<div
+	class="manager"
+	ondragenter={(event) => {
+		if (!hasFiles(event)) return;
+		event.preventDefault();
+		dragDepth++;
+	}}
+	ondragover={(event) => {
+		if (hasFiles(event)) event.preventDefault();
+	}}
+	ondragleave={(event) => {
+		if (hasFiles(event)) dragDepth = Math.max(0, dragDepth - 1);
+	}}
+	ondrop={(event) => {
+		if (!hasFiles(event)) return;
+		event.preventDefault();
+		dragDepth = 0;
+		uploader?.start([...(event.dataTransfer?.files ?? [])]);
+	}}
+>
+	{#if dragDepth > 0}
+		<div class="drop-overlay" aria-hidden="true" transition:fade={{ duration: 200 }}>
+			<div>
+				<Upload size={26} strokeWidth={1.25} />
+				<p>Drop to Upload</p>
+				<span class="subtle">
+					{uploadSection === ''
+						? sections.length
+							? 'Into no section'
+							: 'Into this album'
+						: `Into “${sectionNames.get(uploadSection)}”`}
+				</span>
+			</div>
 		</div>
 	{/if}
 
-	{#if sections.length}
-		<label class="sort">
-			<span class="label">Show</span>
-			<select
-				class="select compact"
-				bind:value={show}
-				onchange={() => {
-					anchor = null;
-					visible = PAGE;
-				}}
-			>
-				<option value="all">All sections</option>
-				{#each sections as section (section.id)}
-					<option value={section.id}>{section.title}</option>
-				{/each}
-				<option value="none">No section</option>
-			</select>
-		</label>
-	{/if}
+	<div class="toolbar">
+		<div class="upload-group">
+			<button class="btn btn-sm btn-solid" onclick={() => uploader?.browse()}>
+				<Upload size={13} /> Upload
+			</button>
+			{#if sections.length}
+				<select
+					class="select compact"
+					bind:value={uploadSection}
+					aria-label="Section new uploads go into"
+					title="Section new uploads go into"
+				>
+					<option value="">Into no section</option>
+					{#each sections as section (section.id)}
+						<option value={section.id}>Into {section.title}</option>
+					{/each}
+				</select>
+			{/if}
+		</div>
 
-	<label class="sort">
-		<span class="label">Sort</span>
-		<select
-			class="select compact"
-			bind:value={sort}
-			onchange={() => {
-				if (sort === 'random') seed = Math.floor(Math.random() * 1e9);
-				anchor = null;
-			}}
-		>
-			<option value="oldest">Oldest</option>
-			<option value="newest">Newest</option>
-			<option value="downloads">Most downloaded</option>
-			<option value="random">Random</option>
-			<option value="name">Filename A–Z</option>
-		</select>
-	</label>
+		<div class="selection">
+			{#if selected.size}
+				<strong>{selected.size}</strong> selected
+				<button class="link" onclick={clearSelection}>Deselect</button>
+			{:else}
+				<span class="subtle">{shown.length} photo{shown.length === 1 ? '' : 's'}</span>
+			{/if}
+			<button class="link" onclick={selectAll} disabled={!shown.length}>Select All</button>
+		</div>
+
+		<div class="filters">
+			{#if sections.length}
+				<label class="sort">
+					<span class="label">Show</span>
+					<select
+						class="select compact"
+						bind:value={show}
+						onchange={() => {
+							anchor = null;
+							visible = PAGE;
+						}}
+					>
+						<option value="all">All sections</option>
+						{#each sections as section (section.id)}
+							<option value={section.id}>{section.title}</option>
+						{/each}
+						<option value="none">No section</option>
+					</select>
+				</label>
+			{/if}
+
+			<label class="sort">
+				<span class="label">Sort</span>
+				<select
+					class="select compact"
+					bind:value={sort}
+					onchange={() => {
+						if (sort === 'random') seed = Math.floor(Math.random() * 1e9);
+						anchor = null;
+					}}
+				>
+					<option value="oldest">Oldest</option>
+					<option value="newest">Newest</option>
+					<option value="downloads">Most downloaded</option>
+					<option value="random">Random</option>
+					<option value="name">Filename A–Z</option>
+				</select>
+			</label>
+			<div class="size" role="group" aria-label="Thumbnail size">
+				<button
+					class:active={size === 'small'}
+					aria-pressed={size === 'small'}
+					aria-label="Small thumbnails"
+					title="Small thumbnails"
+					onclick={() => setSize('small')}
+				>
+					<Grid3x3 size={15} strokeWidth={1.5} />
+				</button>
+				<button
+					class:active={size === 'large'}
+					aria-pressed={size === 'large'}
+					aria-label="Large thumbnails"
+					title="Large thumbnails"
+					onclick={() => setSize('large')}
+				>
+					<Grid2x2 size={15} strokeWidth={1.5} />
+				</button>
+			</div>
+		</div>
+
+		{#if selected.size}
+			<div class="bulk" transition:slide={{ duration: 250 }}>
+				{#if sections.length}
+					<select class="select compact" bind:value={moveChoice} aria-label="Section to move to">
+						<option value="">Move to section…</option>
+						{#each sections as section (section.id)}
+							<option value={section.id}>{section.title}</option>
+						{/each}
+						<option value="none">No section</option>
+					</select>
+					<button
+						class="btn btn-sm btn-quiet"
+						disabled={moveChoice === '' || busy}
+						onclick={moveSelected}
+					>
+						Move
+					</button>
+				{/if}
+				{#if tags.length}
+					<select class="select compact" bind:value={tagChoice} aria-label="Tag to apply">
+						<option value="">Choose tag…</option>
+						{#each tags as tag (tag.id)}<option value={tag.id}>{tag.name}</option>{/each}
+					</select>
+					<button
+						class="btn btn-sm btn-quiet"
+						disabled={!tagChoice || busy}
+						onclick={() => applyTag(true)}
+					>
+						Apply
+					</button>
+					<button
+						class="btn btn-sm btn-quiet"
+						disabled={!tagChoice || busy}
+						onclick={() => applyTag(false)}
+					>
+						Remove
+					</button>
+				{/if}
+				<button class="btn btn-sm btn-danger" onclick={deleteSelected} disabled={busy}>
+					<Trash2 size={13} /> Delete
+				</button>
+			</div>
+		{/if}
+	</div>
+
+	<Uploader
+		bind:this={uploader}
+		{albumId}
+		dropzone={!all.length}
+		sectionId={uploadSection === '' ? null : uploadSection}
+		onuploaded={(photo) => (uploaded = [...uploaded, photo])}
+		ondone={async ({ ok, failed, skipped }) => {
+			await refresh();
+			if (ok) feedback.toast(`Uploaded ${plural(ok, 'file')}`);
+			if (failed) feedback.toast(`${plural(failed, 'upload')} failed`, 'error');
+			if (skipped && ok + failed)
+				feedback.toast(`Skipped ${plural(skipped, 'file')} that aren’t photos or videos`);
+		}}
+	/>
+
+	<div class="layout" class:wide={wide.current}>
+		<div class="main">
+			{#if !wide.current}
+				<div class="organise">
+					<details>
+						<summary>
+							<Tag size={14} strokeWidth={1.5} /> Tags
+							<span class="count">{tags.length}</span>
+							<ChevronDown class="chevron" size={14} strokeWidth={1.5} />
+						</summary>
+						<div class="organise-body">{@render tagsBody()}</div>
+					</details>
+					<details>
+						<summary>
+							<Layers size={14} strokeWidth={1.5} /> Sections
+							<span class="count">{sections.length}</span>
+							<ChevronDown class="chevron" size={14} strokeWidth={1.5} />
+						</summary>
+						<div class="organise-body">{@render sectionsBody()}</div>
+					</details>
+				</div>
+			{/if}
+
+			{#if sorted.length}
+				<ul class="grid" class:large={size === 'large'}>
+					{#each sorted.slice(0, visible) as photo, index (photo.id)}
+						{@const isSelected = selected.has(photo.id)}
+						<li class="tile" class:selected={isSelected}>
+							<button
+								class="pick"
+								onclick={(event) => onpick(photo, index, event)}
+								aria-pressed={isSelected}
+								aria-label="Select {photo.name}"
+							>
+								<img src={mediaUrl(photo, 'thumb')} alt="" loading="lazy" decoding="async" />
+								<span class="check">
+									{#if isSelected}<Check size={13} strokeWidth={2.5} />{/if}
+								</span>
+								<span class="flags">
+									{#if photo.id === coverPhotoId}<span class="flag">
+											<Star size={10} /> Cover
+										</span>{/if}
+									{#if photo.id === backgroundPhotoId}<span class="flag">Background</span>{/if}
+									{#if photo.kind === 'video'}<span class="flag">
+											Video {formatDuration(photo.duration)}
+										</span>{/if}
+								</span>
+							</button>
+							<div class="hover-actions">
+								<button
+									title="Set as cover"
+									aria-label="Set {photo.name} as cover"
+									onclick={() =>
+										action('Cover', { action: 'set-cover', photoId: photo.id }, 'Cover updated')}
+									disabled={busy || photo.id === coverPhotoId}
+								>
+									<Star size={14} strokeWidth={1.5} />
+								</button>
+								<button
+									title={photo.id === backgroundPhotoId ? 'Clear background' : 'Set as background'}
+									aria-label="Set {photo.name} as background"
+									onclick={() =>
+										action(
+											'Background',
+											{
+												action: 'set-background',
+												photoId: photo.id === backgroundPhotoId ? null : photo.id
+											},
+											photo.id === backgroundPhotoId ? 'Background cleared' : 'Background updated'
+										)}
+									disabled={busy}
+								>
+									<ImageIcon size={14} strokeWidth={1.5} />
+								</button>
+								<button
+									class="danger"
+									title="Delete photo"
+									aria-label="Delete {photo.name}"
+									onclick={() => deleteOne(photo)}
+									disabled={busy}
+								>
+									<Trash2 size={14} strokeWidth={1.5} />
+								</button>
+							</div>
+							<div class="meta">
+								<span class="name" title={photo.name}>{photo.name}</span>
+								<span class="details">
+									{formatBytes(photo.size)}
+									<span class="downloads" title="Downloads">
+										<Download size={11} />
+										{photo.downloads}
+									</span>
+								</span>
+								{#if sections.length && show === 'all'}
+									<span class="tile-section" class:none={!photo.section}>
+										{photo.section ? (sectionNames.get(photo.section) ?? '') : 'No section'}
+									</span>
+								{/if}
+								{#if photo.tags.length}
+									<span class="tile-tags">
+										{#each photo.tags as tagId (tagId)}
+											{#if tagNames.get(tagId)}<span>{tagNames.get(tagId)}</span>{/if}
+										{/each}
+									</span>
+								{/if}
+							</div>
+						</li>
+					{/each}
+				</ul>
+				{#if sorted.length > visible}
+					<div class="more" bind:this={sentinel}>
+						<button class="btn btn-sm" onclick={() => (visible += PAGE)}>
+							Show more ({sorted.length - visible} remaining)
+						</button>
+					</div>
+				{/if}
+			{:else if all.length}
+				<div class="empty">
+					<Layers size={26} strokeWidth={1} />
+					<p>
+						{show === 'none'
+							? 'Every photo is in a section.'
+							: 'No photos in this section yet. Select some under All sections and move them in.'}
+					</p>
+					<button class="btn btn-sm" onclick={() => (show = 'all')}>Show All Sections</button>
+				</div>
+			{/if}
+		</div>
+
+		{#if wide.current}
+			<aside class="aside">
+				<section class="aside-card">
+					<h3><Tag size={14} strokeWidth={1.5} /> Tags</h3>
+					{@render tagsBody()}
+				</section>
+				<section class="aside-card">
+					<h3><Layers size={14} strokeWidth={1.5} /> Sections</h3>
+					{@render sectionsBody()}
+				</section>
+				<p class="subtle small">Click a photo to select it. Shift-click to select a range.</p>
+			</aside>
+		{/if}
+	</div>
 </div>
 
-{#if sorted.length}
-	<p class="hint tip">Click to select · Shift-click to select a range</p>
-	<ul class="grid">
-		{#each sorted.slice(0, visible) as photo, index (photo.id)}
-			{@const isSelected = selected.has(photo.id)}
-			<li class="tile" class:selected={isSelected}>
-				<button
-					class="pick"
-					onclick={(event) => onpick(photo, index, event)}
-					aria-pressed={isSelected}
-					aria-label="Select {photo.name}"
-				>
-					<img src={mediaUrl(photo, 'thumb')} alt="" loading="lazy" decoding="async" />
-					<span class="check">
-						{#if isSelected}<Check size={13} strokeWidth={2.5} />{/if}
-					</span>
-					<span class="flags">
-						{#if photo.id === coverPhotoId}<span class="flag"><Star size={10} /> Cover</span>{/if}
-						{#if photo.id === backgroundPhotoId}<span class="flag">Background</span>{/if}
-						{#if photo.kind === 'video'}<span class="flag">
-								Video {formatDuration(photo.duration)}
-							</span>{/if}
-					</span>
-				</button>
-				<div class="hover-actions">
-					<button
-						title="Set as cover"
-						aria-label="Set {photo.name} as cover"
-						onclick={() =>
-							action('Cover', { action: 'set-cover', photoId: photo.id }, 'Cover updated')}
-						disabled={busy || photo.id === coverPhotoId}
-					>
-						<Star size={14} strokeWidth={1.5} />
-					</button>
-					<button
-						title={photo.id === backgroundPhotoId ? 'Clear background' : 'Set as background'}
-						aria-label="Set {photo.name} as background"
-						onclick={() =>
-							action(
-								'Background',
-								{
-									action: 'set-background',
-									photoId: photo.id === backgroundPhotoId ? null : photo.id
-								},
-								photo.id === backgroundPhotoId ? 'Background cleared' : 'Background updated'
-							)}
-						disabled={busy}
-					>
-						<ImageIcon size={14} strokeWidth={1.5} />
-					</button>
-					<button
-						class="danger"
-						title="Delete photo"
-						aria-label="Delete {photo.name}"
-						onclick={() => deleteOne(photo)}
-						disabled={busy}
-					>
-						<Trash2 size={14} strokeWidth={1.5} />
-					</button>
-				</div>
-				<div class="meta">
-					<span class="name" title={photo.name}>{photo.name}</span>
-					<span class="details">
-						{formatBytes(photo.size)}
-						<span class="downloads" title="Downloads">
-							<Download size={11} />
-							{photo.downloads}
-						</span>
-					</span>
-					{#if sections.length && show === 'all'}
-						<span class="tile-section" class:none={!photo.section}>
-							{photo.section ? (sectionNames.get(photo.section) ?? '') : 'No section'}
-						</span>
-					{/if}
-					{#if photo.tags.length}
-						<span class="tile-tags">
-							{#each photo.tags as tagId (tagId)}
-								{#if tagNames.get(tagId)}<span>{tagNames.get(tagId)}</span>{/if}
-							{/each}
-						</span>
-					{/if}
-				</div>
-			</li>
-		{/each}
-	</ul>
-	{#if sorted.length > visible}
-		<div class="more" bind:this={sentinel}>
-			<button class="btn btn-sm" onclick={() => (visible += PAGE)}>
-				Show more ({sorted.length - visible} remaining)
-			</button>
-		</div>
-	{/if}
-{:else if all.length}
-	<div class="empty">
-		<Layers size={26} strokeWidth={1} />
-		<p>
-			{show === 'none'
-				? 'Every photo is in a section.'
-				: 'No photos in this section yet. Select some under All sections and move them in.'}
-		</p>
-		<button class="btn btn-sm" onclick={() => (show = 'all')}>Show All Sections</button>
-	</div>
-{:else}
-	<div class="empty">
-		<Images size={26} strokeWidth={1} />
-		<p>No photos yet. Upload some above, or import them from the server folder in Maintenance.</p>
-	</div>
-{/if}
-
 <style>
-	.block {
-		margin-bottom: 1.25rem;
-	}
-
 	.small {
 		font-size: 0.82rem;
-	}
-
-	.tags-block {
-		padding: 1.1rem 1.25rem;
-		border: 1px solid var(--border);
-		background: var(--bg-elevated);
-	}
-
-	.tags-head {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: center;
-		justify-content: space-between;
-		gap: 0.75rem 1rem;
-		margin-bottom: 0.85rem;
-	}
-
-	.tags-head h3 {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		font-family: var(--font-sans);
-		font-size: 0.72rem;
-		font-weight: 500;
-		letter-spacing: 0.16em;
-		text-transform: uppercase;
 	}
 
 	.new-tag {
@@ -712,10 +817,11 @@
 	}
 
 	.new-tag .input {
+		flex: 1;
+		min-width: 0;
 		min-height: 36px;
 		padding-block: 0.4rem;
 		font-size: 0.86rem;
-		width: 220px;
 	}
 
 	.tag-list {
@@ -749,13 +855,6 @@
 
 	.tag-list button:hover {
 		color: var(--danger);
-	}
-
-	.upload-target {
-		display: flex;
-		align-items: center;
-		gap: 0.6rem;
-		margin-bottom: 0.75rem;
 	}
 
 	.section-list {
@@ -850,6 +949,38 @@
 		font-style: italic;
 	}
 
+	.manager {
+		position: relative;
+	}
+
+	.drop-overlay {
+		position: absolute;
+		inset: 0;
+		z-index: 30;
+		display: grid;
+		place-items: start center;
+		padding-top: min(30vh, 14rem);
+		border: 1px dashed var(--text);
+		background: var(--overlay);
+		backdrop-filter: blur(4px);
+		-webkit-backdrop-filter: blur(4px);
+		pointer-events: none;
+	}
+
+	.drop-overlay div {
+		position: sticky;
+		top: 40vh;
+		display: grid;
+		justify-items: center;
+		gap: 0.4rem;
+		text-align: center;
+	}
+
+	.drop-overlay p {
+		font-family: var(--font-serif);
+		font-size: 1.6rem;
+	}
+
 	.toolbar {
 		position: sticky;
 		top: 0;
@@ -859,7 +990,10 @@
 		align-items: center;
 		gap: 0.75rem 1.25rem;
 		padding: 0.75rem 0;
-		background: var(--bg);
+		margin-bottom: 1.25rem;
+		background: var(--header-bg);
+		backdrop-filter: blur(14px);
+		-webkit-backdrop-filter: blur(14px);
 		border-bottom: 1px solid var(--border);
 		font-size: 0.86rem;
 	}
@@ -870,26 +1004,52 @@
 		}
 	}
 
+	/* On a phone the wrapped toolbar is too tall to keep on screen. */
+	@media (max-width: 719px) {
+		.toolbar {
+			position: static;
+		}
+	}
+
+	.upload-group {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
 	.selection {
 		display: flex;
 		align-items: center;
 		gap: 0.75rem;
+		font-variant-numeric: tabular-nums;
 	}
 
 	.selection .link {
 		font-size: 0.64rem;
 	}
 
+	.filters {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.5rem 1rem;
+		margin-left: auto;
+	}
+
 	.bulk {
+		flex-basis: 100%;
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
 		gap: 0.4rem;
+		padding-top: 0.75rem;
+		border-top: 1px solid var(--border);
 	}
 
 	.select.compact {
 		min-height: 36px;
 		width: auto;
+		max-width: 14rem;
 		padding-block: 0.3rem;
 		font-size: 0.84rem;
 	}
@@ -898,20 +1058,145 @@
 		display: flex;
 		align-items: center;
 		gap: 0.6rem;
-		margin-left: auto;
 	}
 
-	.tip {
-		margin: 0.85rem 0 0.75rem;
+	.size {
+		display: flex;
+		border: 1px solid var(--border-strong);
+	}
+
+	.size button {
+		display: grid;
+		place-items: center;
+		width: 34px;
+		height: 34px;
+		border: 0;
+		background: none;
+		color: var(--text-subtle);
+		cursor: pointer;
+		transition:
+			color 0.2s var(--ease),
+			background-color 0.2s var(--ease);
+	}
+
+	.size button + button {
+		border-left: 1px solid var(--border-strong);
+	}
+
+	.size button:hover {
+		color: var(--text);
+	}
+
+	.size button.active {
+		background: var(--surface);
+		color: var(--text);
+	}
+
+	.layout.wide {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) 300px;
+		gap: 2rem;
+		align-items: start;
+	}
+
+	.aside {
+		position: sticky;
+		top: 5.5rem;
+		display: grid;
+		gap: 1rem;
+		max-height: calc(100svh - 7rem);
+		overflow-y: auto;
+		scrollbar-width: thin;
+	}
+
+	.aside-card {
+		padding: 1rem 1.1rem;
+		border: 1px solid var(--border);
+		background: var(--bg-elevated);
+	}
+
+	.aside-card h3,
+	.organise summary {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		font-family: var(--font-sans);
+		font-size: 0.72rem;
+		font-weight: 500;
+		letter-spacing: 0.16em;
+		text-transform: uppercase;
+	}
+
+	.aside-card h3 {
+		margin-bottom: 0.85rem;
+	}
+
+	.organise {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+		gap: 0.75rem;
+		align-items: start;
+		margin-bottom: 1.25rem;
+	}
+
+	.organise details {
+		border: 1px solid var(--border);
+		background: var(--bg-elevated);
+	}
+
+	.organise summary {
+		padding: 0.85rem 1rem;
+		cursor: pointer;
+		list-style: none;
+	}
+
+	.organise summary::-webkit-details-marker {
+		display: none;
+	}
+
+	.organise summary :global(.chevron) {
+		margin-left: auto;
+		transition: transform 0.3s var(--ease);
+	}
+
+	.organise details[open] summary :global(.chevron) {
+		transform: rotate(180deg);
+	}
+
+	.organise .count {
+		padding: 0.05rem 0.4rem;
+		background: var(--surface);
+		font-size: 0.66rem;
+		letter-spacing: 0;
+	}
+
+	.organise-body {
+		padding: 0 1rem 1rem;
+	}
+
+	.organise-head {
+		margin-bottom: 0.85rem;
 	}
 
 	.grid {
 		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+		grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
 		gap: 0.85rem;
 		list-style: none;
 		margin: 0;
 		padding: 0;
+	}
+
+	.grid.large {
+		grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+		gap: 1.25rem;
+	}
+
+	@media (max-width: 560px) {
+		.grid {
+			grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+			gap: 0.6rem;
+		}
 	}
 
 	.tile {

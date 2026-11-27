@@ -1,7 +1,7 @@
 import fsp from 'node:fs/promises';
 import path from 'node:path';
 import { error } from '@sveltejs/kit';
-import { setAlbumImage } from '#lib/server/albums.js';
+import { setAlbumImage, setAlbumPublic } from '#lib/server/albums.js';
 import { clearAnalytics } from '#lib/server/analytics.js';
 import { importDir } from '#lib/server/config.js';
 import { requireAdmin, requireAlbum } from '#lib/server/guard.js';
@@ -130,6 +130,11 @@ export const POST: RequestHandler = async ({ request, params, locals }) => {
 			const sectionId = body.sectionId === null ? null : Number(body.sectionId);
 			const moved = assignSection(album.id, sectionId, ids(body.ids));
 			return Response.json({ moved });
+		}
+
+		case 'set-public': {
+			setAlbumPublic(album.id, body.isPublic === true);
+			return Response.json({ ok: true });
 		}
 
 		case 'clear-analytics': {

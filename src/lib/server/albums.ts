@@ -193,6 +193,18 @@ export function updateAlbum(id: number, input: AlbumInput) {
 	});
 }
 
+/** Makes an album public or private on its own, as from the album page's status notes. */
+export function setAlbumPublic(id: number, isPublic: boolean) {
+	transaction(() => {
+		run(
+			`UPDATE albums SET is_public = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?`,
+			isPublic,
+			id
+		);
+		deliverJobsForAlbum(id);
+	});
+}
+
 /** Changes just the title, as when a collection is renamed in Lightroom. The address stays. */
 export function renameAlbum(id: number, title: string) {
 	run(

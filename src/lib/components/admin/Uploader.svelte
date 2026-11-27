@@ -7,10 +7,12 @@
 		/** The section new uploads go into, if any. */
 		sectionId?: number | null;
 		onuploaded: (photo: AdminPhoto) => void;
-		ondone: (summary: { ok: number; failed: number }) => void;
+		ondone: (summary: { ok: number; failed: number; skipped: number }) => void;
+		/** Show the large drop area while idle (an empty album). Otherwise only progress shows. */
+		dropzone?: boolean;
 	}
 
-	let { albumId, sectionId = null, onuploaded, ondone }: Props = $props();
+	let { albumId, sectionId = null, onuploaded, ondone, dropzone = false }: Props = $props();
 
 	const ACCEPT = [
 		'image/jpeg',
@@ -125,7 +127,12 @@
 		}
 	}
 
-	async function start(files: File[]) {
+	/** Opens the file picker. */
+	export function browse() {
+		input?.click();
+	}
+
+	export async function start(files: File[]) {
 		if (running) return;
 		const accepted = files.filter((f) => ACCEPT.includes(f.type) || ACCEPT_EXT.test(f.name));
 		skipped = files.length - accepted.length;
@@ -163,7 +170,7 @@
 		await Promise.all(Array.from({ length: Math.min(CONCURRENCY, accepted.length) }, worker));
 
 		running = false;
-		ondone({ ok: completed - failed, failed });
+		ondone({ ok: completed - failed, failed, skipped });
 	}
 
 	function ondrop(event: DragEvent) {
@@ -173,59 +180,50 @@
 	}
 </script>
 
-<div
-	class="dropzone"
-	class:dragging
-	class:running
-	role="region"
-	aria-label="Upload photos and videos"
-	ondragover={(event) => {
-		event.preventDefault();
-		dragging = true;
-	}}
-	ondragleave={() => (dragging = false)}
-	{ondrop}
->
-	{#if running}
-		<div class="progress-info" aria-live="polite">
-			<div class="row">
-				<span class="spinner"></span>
-				<span>Uploading {Math.min(completed + 1, total)} of {total}</span>
-				<strong>{percent}%</strong>
-			</div>
-			<div class="bar"><span style:width="{percent}%"></span></div>
-			<p class="subtle">
-				{completed - failed} uploaded{failed ? ` · ${failed} failed` : ''} — keep this page open until
-				finished.
-			</p>
+{#if running}
+	<div class="progress" aria-live="polite">
+		<div class="row">
+			<span class="spinner"></span>
+			<span>Uploading {Math.min(completed + 1, total)} of {total}</span>
+			<span class="subtle">
+				{completed - failed} done{failed ? ` · ${failed} failed` : ''} · keep this page open
+			</span>
+			<strong>{percent}%</strong>
 		</div>
-	{:else}
+		<div class="bar"><span style:width="{percent}%"></span></div>
+	</div>
+{:else if dropzone}
+	<div
+		class="dropzone"
+		class:dragging
+		role="region"
+		aria-label="Upload photos and videos"
+		ondragover={(event) => {
+			event.preventDefault();
+			dragging = true;
+		}}
+		ondragleave={() => (dragging = false)}
+		{ondrop}
+	>
 		<Upload size={22} strokeWidth={1.25} />
 		<p>
 			<strong>Drop photos or videos here</strong> or
-			<button type="button" class="browse" onclick={() => input?.click()}>browse files</button>
+			<button type="button" class="browse" onclick={browse}>browse files</button>
 		</p>
 		<p class="subtle">JPEG, PNG, WebP, GIF, MP4, MOV or WebM · multiple files supported</p>
-		{#if total && !running}
-			<p class="summary" aria-live="polite">
-				Last upload: {completed - failed} succeeded{failed ? `, ${failed} failed` : ''}{skipped
-					? `, ${skipped} skipped`
-					: ''}.
-			</p>
-		{/if}
-	{/if}
-	<input
-		bind:this={input}
-		type="file"
-		accept={ACCEPT.join(',')}
-		multiple
-		hidden
-		onchange={(event) => {
-			start([...(event.currentTarget.files ?? [])]);
-			event.currentTarget.value = '';
-		}}
-	/>
-</div>
+	</div>
+{/if}
+<input
+	bind:this={input}
+	type="file"
+	accept={ACCEPT.join(',')}
+	multiple
+	hidden
+	onchange={(event) => {
+		start([...(event.currentTarget.files ?? [])]);
+		event.currentTarget.value = '';
+	}}
+/>
 
 {#if errors.length}
 	<details class="errors">
@@ -237,11 +235,16 @@
 {/if}
 
 <style>
+	.dropzone,
+	.progress {
+		margin-bottom: 1.25rem;
+	}
+
 	.dropzone {
 		display: grid;
 		justify-items: center;
 		gap: 0.5rem;
-		padding: 2rem 1.5rem;
+		padding: 3.5rem 1.5rem;
 		border: 1px dashed var(--border-strong);
 		background: var(--bg-elevated);
 		text-align: center;
@@ -253,10 +256,6 @@
 	.dropzone.dragging {
 		border-color: var(--text);
 		background: var(--surface);
-	}
-
-	.dropzone.running {
-		border-style: solid;
 	}
 
 	.browse {
@@ -272,23 +271,20 @@
 		font-size: 0.8rem;
 	}
 
-	.summary {
-		margin-top: 0.4rem;
-		font-size: 0.82rem;
-		color: var(--text-muted);
-	}
-
-	.progress-info {
-		width: min(100%, 520px);
+	.progress {
 		display: grid;
-		gap: 0.75rem;
+		gap: 0.65rem;
+		padding: 0.9rem 1.1rem;
+		border: 1px solid var(--border);
+		background: var(--bg-elevated);
 	}
 
 	.row {
 		display: flex;
+		flex-wrap: wrap;
 		align-items: center;
-		gap: 0.75rem;
-		font-size: 0.9rem;
+		gap: 0.35rem 0.75rem;
+		font-size: 0.88rem;
 	}
 
 	.row strong {
@@ -310,7 +306,7 @@
 	}
 
 	.errors {
-		margin-top: 0.75rem;
+		margin-bottom: 1.25rem;
 		padding: 0.75rem 1rem;
 		border: 1px solid var(--danger);
 		background: var(--danger-soft);

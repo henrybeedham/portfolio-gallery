@@ -1,8 +1,8 @@
-import { placeholders, run, transaction } from './db.js';
+import { all, placeholders, run, transaction } from './db.js';
 import type { Album } from './albums.js';
 import { notify, notifyPhotoDownload } from './discord.js';
 import type { PhotoRow } from './photos.js';
-import { todayIso } from '#lib/utils.js';
+import { addDays, todayIso } from '#lib/utils.js';
 
 type DailyColumn = 'views' | 'photo_downloads' | 'album_downloads';
 
@@ -110,4 +110,35 @@ export function clearAnalytics(albumId: number) {
 		run('UPDATE photos SET downloads = 0 WHERE album_id = ?', albumId);
 		run('DELETE FROM album_daily_stats WHERE album_id = ?', albumId);
 	});
+}
+
+export interface AlbumDay {
+	day: string;
+	views: number;
+	downloads: number;
+}
+
+/**
+ * One album's views and downloads (photos and whole-album ZIPs together) for each of the last
+ * `days` days, or since it was created if that's sooner. Days without activity are zeros.
+ */
+export function albumDailyActivity(album: Pick<Album, 'id' | 'createdAt'>, days = 90): AlbumDay[] {
+	const today = todayIso();
+	const created = album.createdAt.slice(0, 10);
+	const earliest = addDays(today, -(days - 1));
+	const from = created > earliest ? created : earliest;
+	const rows = all<{ day: string; views: number; downloads: number }>(
+		`SELECT day, views, photo_downloads + album_downloads AS downloads
+		 FROM album_daily_stats WHERE album_id = ? AND day BETWEEN ? AND ?`,
+		album.id,
+		from,
+		today
+	);
+	const byDay = new Map(rows.map((row) => [row.day, row]));
+	const out: AlbumDay[] = [];
+	for (let day = from; day <= today; day = addDays(day, 1)) {
+		const row = byDay.get(day);
+		out.push({ day, views: row?.views ?? 0, downloads: row?.downloads ?? 0 });
+	}
+	return out;
 }

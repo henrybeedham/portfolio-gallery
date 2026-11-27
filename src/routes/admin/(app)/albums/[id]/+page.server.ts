@@ -1,5 +1,11 @@
 import { fail } from '@sveltejs/kit';
-import { albumIsExpired, albumPhotoStats, updateAlbum } from '#lib/server/albums.js';
+import {
+	albumIsExpired,
+	albumPhotoStats,
+	effectiveCoverId,
+	updateAlbum
+} from '#lib/server/albums.js';
+import { albumDailyActivity } from '#lib/server/analytics.js';
 import { parseAlbumForm } from '#lib/server/album-form.js';
 import { requireAdmin, requireAlbum } from '#lib/server/guard.js';
 import { runningJob } from '#lib/server/jobs.js';
@@ -28,6 +34,11 @@ export const load: PageServerLoad = ({ params, locals, url, depends }) => {
 			hasPassword: !!album.passwordHash,
 			expired: albumIsExpired(album),
 			coverPhotoId: album.coverPhotoId,
+			/** The chosen cover, or the earliest photo standing in for one. */
+			effectiveCoverId: effectiveCoverId(album.id),
+			albumDate: album.albumDate,
+			expiresAt: album.expiresAt,
+			listed: album.showOnHome || album.showOnGalleries,
 			backgroundPhotoId: album.backgroundPhotoId,
 			views: album.views,
 			photoDownloads: album.photoDownloads,
@@ -57,6 +68,7 @@ export const load: PageServerLoad = ({ params, locals, url, depends }) => {
 		tags: albumTags(album.id),
 		sections: adminSections(album.id),
 		stats,
+		activity: albumDailyActivity(album),
 		job: runningJob(album.id),
 		bookings: bookingsForAlbum(album.id).map((booking) => ({
 			id: booking.id,
