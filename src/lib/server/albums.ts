@@ -1,5 +1,6 @@
 import { all, get, run, transaction } from './db.js';
 import { deliverJobsForAlbum } from './delivery.js';
+import { getSettings } from './settings.js';
 import type { AlbumCardData, ImageRef, Layout, SortOrder } from '#lib/types.js';
 import { isExpired } from '#lib/utils.js';
 
@@ -10,9 +11,8 @@ export interface Album {
 	description: string;
 	albumDate: string | null;
 	isPublic: boolean;
+	/** Listed on the homepage, which is also what lets search engines index it (`isIndexable`). */
 	showOnHome: boolean;
-	showOnGalleries: boolean;
-	isFeatured: boolean;
 	passwordHash: string | null;
 	expiresAt: string | null;
 	/** Theme id, or null to use the site's theme. */
@@ -38,8 +38,6 @@ interface AlbumRow {
 	album_date: string | null;
 	is_public: number;
 	show_on_home: number;
-	show_on_galleries: number;
-	is_featured: number;
 	password_hash: string | null;
 	expires_at: string | null;
 	theme: string | null;
@@ -64,8 +62,6 @@ function mapAlbum(row: AlbumRow): Album {
 		albumDate: row.album_date,
 		isPublic: !!row.is_public,
 		showOnHome: !!row.show_on_home,
-		showOnGalleries: !!row.show_on_galleries,
-		isFeatured: !!row.is_featured,
 		passwordHash: row.password_hash,
 		expiresAt: row.expires_at,
 		theme: row.theme,
@@ -95,7 +91,8 @@ const RESERVED_SLUGS = new Set([
 	'healthz',
 	'_app',
 	'favicon.svg',
-	'robots.txt'
+	'robots.txt',
+	'sitemap.xml'
 ]);
 
 export function validateSlug(slug: string, exceptId?: number): string | null {
@@ -130,8 +127,6 @@ export type AlbumInput = Pick<
 	| 'albumDate'
 	| 'isPublic'
 	| 'showOnHome'
-	| 'showOnGalleries'
-	| 'isFeatured'
 	| 'expiresAt'
 	| 'theme'
 	| 'layout'
@@ -141,19 +136,16 @@ export type AlbumInput = Pick<
 
 export function createAlbum(input: AlbumInput): number {
 	return transaction(() => {
-		if (input.isFeatured) run('UPDATE albums SET is_featured = 0');
 		const result = run(
-			`INSERT INTO albums (title, slug, description, album_date, is_public, show_on_home, show_on_galleries,
-				is_featured, password_hash, expires_at, theme, layout, sort_order, sections_collapsed)
-			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			`INSERT INTO albums (title, slug, description, album_date, is_public, show_on_home,
+				password_hash, expires_at, theme, layout, sort_order, sections_collapsed)
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 			input.title,
 			input.slug,
 			input.description,
 			input.albumDate,
 			input.isPublic,
 			input.showOnHome,
-			input.showOnGalleries,
-			input.isFeatured,
 			input.passwordHash,
 			input.expiresAt,
 			input.theme,
@@ -167,10 +159,9 @@ export function createAlbum(input: AlbumInput): number {
 
 export function updateAlbum(id: number, input: AlbumInput) {
 	transaction(() => {
-		if (input.isFeatured) run('UPDATE albums SET is_featured = 0 WHERE id != ?', id);
 		run(
 			`UPDATE albums SET title = ?, slug = ?, description = ?, album_date = ?, is_public = ?, show_on_home = ?,
-				show_on_galleries = ?, is_featured = ?, password_hash = ?, expires_at = ?, theme = ?, layout = ?,
+				password_hash = ?, expires_at = ?, theme = ?, layout = ?,
 				sort_order = ?, sections_collapsed = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
 			 WHERE id = ?`,
 			input.title,
@@ -179,8 +170,6 @@ export function updateAlbum(id: number, input: AlbumInput) {
 			input.albumDate,
 			input.isPublic,
 			input.showOnHome,
-			input.showOnGalleries,
-			input.isFeatured,
 			input.passwordHash,
 			input.expiresAt,
 			input.theme,
@@ -250,8 +239,6 @@ interface ListingRow {
 	expires_at: string | null;
 	is_public: number;
 	show_on_home: number;
-	show_on_galleries: number;
-	is_featured: number;
 	created_at: string;
 	views: number;
 	photo_downloads: number;
@@ -265,7 +252,7 @@ interface ListingRow {
 
 const LISTING_SQL = `
 	SELECT a.id, a.slug, a.title, a.album_date, a.password_hash, a.expires_at, a.is_public, a.show_on_home,
-		a.show_on_galleries, a.is_featured, a.created_at, a.views, a.photo_downloads, a.album_downloads,
+		a.created_at, a.views, a.photo_downloads, a.album_downloads,
 		(SELECT COUNT(*) FROM photos p WHERE p.album_id = a.id) AS count,
 		c.key AS cover_key, c.version AS cover_v, c.width AS cover_w, c.height AS cover_h
 	FROM albums a
@@ -296,13 +283,13 @@ function sortByDate(a: ListingRow, b: ListingRow) {
 	return db.localeCompare(da);
 }
 
-export function listPublicAlbums(where: 'home' | 'galleries'): AlbumCardData[] {
-	const column = where === 'home' ? 'show_on_home' : 'show_on_galleries';
-	const rows = all<ListingRow>(`${LISTING_SQL} WHERE a.is_public = 1 AND a.${column} = 1`);
+/** The albums listed on the homepage, newest first, leaving out the featured one shown above them. */
+export function listHomeAlbums(): AlbumCardData[] {
+	const featuredId = getSettings().featuredAlbumId;
+	const rows = all<ListingRow>(`${LISTING_SQL} WHERE a.is_public = 1 AND a.show_on_home = 1`);
 	return (
 		rows
-			.filter((row) => !isExpired(row.expires_at))
-			.filter((row) => (where === 'home' ? !row.is_featured : true))
+			.filter((row) => !isExpired(row.expires_at) && row.id !== featuredId)
 			.sort(sortByDate)
 			.map(toCard)
 			// Don't reveal how many photos a password-protected album holds.
@@ -310,17 +297,77 @@ export function listPublicAlbums(where: 'home' | 'galleries'): AlbumCardData[] {
 	);
 }
 
+/** The album chosen under Settings → Homepage, if it's public and hasn't expired. */
 export function getFeaturedAlbum(): Album | undefined {
-	const row = get<AlbumRow>('SELECT * FROM albums WHERE is_featured = 1 AND is_public = 1 LIMIT 1');
+	const id = getSettings().featuredAlbumId;
+	if (id === null) return undefined;
+	const row = get<AlbumRow>('SELECT * FROM albums WHERE id = ? AND is_public = 1', id);
 	if (!row || isExpired(row.expires_at)) return undefined;
 	return mapAlbum(row);
+}
+
+/**
+ * Whether search engines may index an album: only ones a visitor can reach from the homepage (listed
+ * there or featured), without a password, that haven't expired. Every other album, public or not,
+ * is only for people who have its link, so it's sent with `noindex`.
+ */
+export function isIndexable(
+	album: Pick<Album, 'id' | 'isPublic' | 'showOnHome' | 'passwordHash' | 'expiresAt'>
+) {
+	if (!album.isPublic || album.passwordHash || isExpired(album.expiresAt)) return false;
+	return album.showOnHome || getSettings().featuredAlbumId === album.id;
+}
+
+/** The albums search engines may index (`isIndexable`), for the sitemap. */
+export function listIndexableAlbums(): {
+	slug: string;
+	updatedAt: string;
+	coverKey: string | null;
+}[] {
+	const featuredId = getSettings().featuredAlbumId ?? -1;
+	const rows = all<{
+		slug: string;
+		updated_at: string;
+		expires_at: string | null;
+		cover_key: string | null;
+	}>(
+		`SELECT a.slug, a.updated_at, a.expires_at, c.key AS cover_key FROM albums a
+		 LEFT JOIN photos c ON c.id = ${EFFECTIVE_COVER}
+		 WHERE a.is_public = 1 AND a.password_hash IS NULL AND (a.show_on_home = 1 OR a.id = ?)
+		 ORDER BY a.updated_at DESC`,
+		featuredId
+	);
+	return rows
+		.filter((row) => !isExpired(row.expires_at))
+		.map((row) => ({ slug: row.slug, updatedAt: row.updated_at, coverKey: row.cover_key }));
+}
+
+/** Albums that can be featured on the homepage (public ones), for the settings picker. */
+export function listFeaturableAlbums(): {
+	id: number;
+	title: string;
+	expired: boolean;
+	locked: boolean;
+}[] {
+	return all<{
+		id: number;
+		title: string;
+		expires_at: string | null;
+		password_hash: string | null;
+	}>(
+		'SELECT id, title, expires_at, password_hash FROM albums WHERE is_public = 1 ORDER BY created_at DESC'
+	).map((row) => ({
+		id: row.id,
+		title: row.title,
+		expired: isExpired(row.expires_at),
+		locked: !!row.password_hash
+	}));
 }
 
 interface AdminAlbumRow extends AlbumCardData {
 	count: number;
 	isPublic: boolean;
 	showOnHome: boolean;
-	showOnGalleries: boolean;
 	isFeatured: boolean;
 	expired: boolean;
 	expiresAt: string | null;
@@ -331,14 +378,14 @@ interface AdminAlbumRow extends AlbumCardData {
 }
 
 export function listAdminAlbums(): AdminAlbumRow[] {
+	const featuredId = getSettings().featuredAlbumId;
 	const rows = all<ListingRow>(`${LISTING_SQL} ORDER BY a.created_at DESC`);
 	return rows.map((row) => ({
 		...toCard(row),
 		count: row.count,
 		isPublic: !!row.is_public,
 		showOnHome: !!row.show_on_home,
-		showOnGalleries: !!row.show_on_galleries,
-		isFeatured: !!row.is_featured,
+		isFeatured: row.id === featuredId,
 		expired: isExpired(row.expires_at),
 		expiresAt: row.expires_at,
 		createdAt: row.created_at,

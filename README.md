@@ -8,8 +8,9 @@ A self-hosted photography portfolio and client-delivery platform. It combines a 
 
 **Public site**
 
-- Editorial homepage with a hero image, a featured album (grid or masonry), “Explore More” album cards and an About section with contact details.
-- `/galleries`: a responsive masonry listing of every public album.
+- Editorial homepage with a hero image, a featured album (grid or masonry, chosen under **Settings → Homepage**), cards for every album shown on the homepage, and an About section with contact details and an optional enquiry form.
+- **Search engines** only see the albums on the homepage. Every other album, even a public one, is for people with the link: its pages and photos are marked `noindex`, and it's left out of `/sitemap.xml`.
+- Photo captions from Lightroom become their alt text, and a blurred placeholder shows while each thumbnail loads.
 - Album pages on custom slugs (`/your-album`) with Markdown descriptions, their own theme or the site’s, an optional blurred background, tag filters, sort order (oldest, newest or random), progressive “Load More” and an expiry countdown.
 - A lightbox with keyboard, swipe and click-outside controls. Every photo also has its own shareable link with Open Graph/Twitter metadata.
 - Videos (MP4, MOV and WebM) alongside photos, with a poster frame as the thumbnail, the length shown on the grid, and playback in the lightbox.
@@ -20,6 +21,8 @@ A self-hosted photography portfolio and client-delivery platform. It combines a 
 
 - **Dashboard**: what needs attention (overdue invoices, jobs to deliver or invoice), jobs in the next two weeks, money (outstanding, overdue, paid this month and this tax year) and gallery activity over the last week.
 - **Galleries** (`/admin/albums`): every album as a table or a grid of covers, with search and filters (public, private, password, expired).
+- **Enquiries** (`/admin/enquiries`): enquiries from the homepage form, with a notification for each, a count in the sidebar, and **Make Job** to turn one into a tentative job.
+- **Passkeys**: sign in with Face ID, Touch ID, Windows Hello or a password manager, set up under **Settings → Sign-in**. The password keeps working.
 - **Search**: ⌘K (Ctrl K) finds pages, galleries, jobs, invoices and clients from anywhere in the admin, and each list has its own search box.
 - **Lightroom Classic** (`/admin/lightroom`): a publish-service plugin, downloaded from this page with the site's address filled in. Each published collection is an album; republished edits replace photos in place. It signs in with an API token made on the same page.
 - **Widgets** (`/admin/widgets`): iPhone Home Screen and Lock Screen widgets for jobs, money, gallery activity and what needs doing, through the free Scriptable app, with live previews of each option and a read-only token.

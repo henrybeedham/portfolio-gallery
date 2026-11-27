@@ -1,12 +1,12 @@
 import { error, redirect } from '@sveltejs/kit';
-import { getAlbumBySlug } from '#lib/server/albums.js';
+import { getAlbumBySlug, isIndexable } from '#lib/server/albums.js';
 import { albumAccess } from '#lib/server/access.js';
 import { albumTags, getPhoto, orderedPhotoIds, photoItems } from '#lib/server/photos.js';
 import { albumPageTheme } from '#lib/server/themes.js';
 import { parseView } from '#lib/server/view.js';
 import type { PageServerLoad } from './$types';
 
-export const load: PageServerLoad = ({ params, url, cookies, locals }) => {
+export const load: PageServerLoad = ({ params, url, cookies, locals, setHeaders }) => {
 	const album = getAlbumBySlug(params.slug);
 	if (!album) error(404, 'Gallery not found');
 
@@ -16,6 +16,9 @@ export const load: PageServerLoad = ({ params, url, cookies, locals }) => {
 
 	const photo = getPhoto(Number(params.id));
 	if (!photo || photo.album_id !== album.id) error(404, 'Photo not found');
+
+	const indexable = isIndexable(album);
+	if (!indexable) setHeaders({ 'x-robots-tag': 'noindex' });
 
 	const view = parseView(url, album, albumTags(album.id));
 	let ids = orderedPhotoIds(album.id, view);
@@ -32,6 +35,7 @@ export const load: PageServerLoad = ({ params, url, cookies, locals }) => {
 
 	return {
 		theme: albumPageTheme(locals, album),
+		indexable,
 		album: {
 			id: album.id,
 			slug: album.slug,

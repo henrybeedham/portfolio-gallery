@@ -5,11 +5,12 @@ import {
 	effectiveCoverId,
 	getAlbumById,
 	getAlbumBySlug,
+	isIndexable,
 	type Album
 } from '#lib/server/albums.js';
 import { albumAccess } from '#lib/server/access.js';
 import { unlockAlbum, verifyPassword } from '#lib/server/auth.js';
-import { renderMarkdown } from '#lib/server/markdown.js';
+import { markdownSummary, renderMarkdown } from '#lib/server/markdown.js';
 import { albumTags, getPhoto, orderedPhotos, PAGE_SIZE, photoItems } from '#lib/server/photos.js';
 import { clientIp, rateLimit } from '#lib/server/ratelimit.js';
 import { albumSections } from '#lib/server/sections.js';
@@ -71,7 +72,7 @@ function contact() {
 }
 
 export const load: PageServerLoad = (event) => {
-	const { params, url, cookies, locals } = event;
+	const { params, url, cookies, locals, setHeaders } = event;
 	const album = getAlbumBySlug(params.slug);
 	if (!album) error(404, 'Gallery not found');
 
@@ -80,7 +81,13 @@ export const load: PageServerLoad = (event) => {
 
 	if (access === 'not_found') error(404, 'Gallery not found');
 
+	// Only albums reachable from the homepage are for search engines; the rest are link-only.
+	const indexable = isIndexable(album);
+	if (!indexable) setHeaders({ 'x-robots-tag': 'noindex' });
+
 	const base = {
+		indexable,
+		summary: access === 'ok' ? markdownSummary(album.description) : '',
 		theme: albumPageTheme(locals, album),
 		album: publicAlbum(album),
 		preview,

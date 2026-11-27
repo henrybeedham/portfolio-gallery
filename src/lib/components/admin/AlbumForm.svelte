@@ -45,8 +45,6 @@
 	let albumDate = $state(start.albumDate);
 	let isPublic = $state(start.isPublic);
 	let showOnHome = $state(start.showOnHome);
-	let showOnGalleries = $state(start.showOnGalleries);
-	let isFeatured = $state(start.isFeatured);
 	let passwordEnabled = $state(start.passwordEnabled);
 	let password = $state('');
 	let expiresLocal = $state('');
@@ -180,25 +178,9 @@
 			<Toggle
 				name="show_on_home"
 				label="Show on homepage"
-				description="List this album in the homepage “Explore More” section."
+				description="List this album on the homepage, where search engines can find it unless it has a password. Albums that aren’t listed are only for people with the link."
 				bind:checked={showOnHome}
 			/>
-			<input type="hidden" name="show_on_galleries_present" value="1" />
-			<Toggle
-				name="show_on_galleries"
-				label="Show on galleries page"
-				description="Include this album on the public /galleries listing."
-				bind:checked={showOnGalleries}
-			/>
-			{#if mode === 'edit'}
-				<input type="hidden" name="is_featured_present" value="1" />
-				<Toggle
-					name="is_featured"
-					label="Featured on homepage"
-					description="Show this album’s photos in the homepage feature. Only one album can be featured."
-					bind:checked={isFeatured}
-				/>
-			{/if}
 		</div>
 	</section>
 

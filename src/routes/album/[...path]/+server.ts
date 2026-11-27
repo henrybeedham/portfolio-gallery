@@ -19,7 +19,7 @@ function lookup<T>(sql: string, param: string | number): T | undefined {
 export const GET: RequestHandler = ({ params }) => {
 	// SvelteKit has already decoded the path.
 	const [oldSlug, kind, oldId] = params.path.split('/');
-	if (!oldSlug) redirect(301, '/galleries');
+	if (!oldSlug) redirect(301, '/#work');
 
 	if (kind === 'photo' && /^\d+$/.test(oldId ?? '')) {
 		const photo = lookup<{ id: number; slug: string }>(

@@ -30,8 +30,6 @@ export const load: PageServerLoad = ({ locals, url }) => {
 			albumDate: '',
 			isPublic: settings.defaultPublic,
 			showOnHome: settings.defaultShowOnHome,
-			showOnGalleries: settings.defaultShowOnGalleries,
-			isFeatured: false,
 			passwordEnabled: false,
 			expiresAt: '',
 			theme: hasTheme(settings.defaultAlbumTheme) ? settings.defaultAlbumTheme : '',

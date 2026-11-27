@@ -66,7 +66,15 @@
 	<meta name="twitter:card" content="summary_large_image" />
 	<meta name="twitter:title" content={ogTitle} />
 	<meta name="twitter:image" content={ogImage} />
-	{#if album.hasPassword || !album.isPublic}
+	{#if data.indexable}
+		<link rel="canonical" href="{data.origin}/{album.slug}/photo/{photo.id}" />
+		<meta
+			name="description"
+			content={photo.alt !== album.title && photo.alt
+				? photo.alt
+				: `A photo from ${album.title} by ${settings.siteTitle}.`}
+		/>
+	{:else}
 		<meta name="robots" content="noindex" />
 	{/if}
 </svelte:head>

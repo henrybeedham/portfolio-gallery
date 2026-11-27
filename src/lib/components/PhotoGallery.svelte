@@ -54,14 +54,15 @@
 		onclick={(event) => handleClick(event, photo, index)}
 		aria-label={selecting
 			? `${photo.name}${isSelected ? ' (selected)' : ''} — click to ${isSelected ? 'deselect' : 'select'}`
-			: `${photo.name}${photo.kind === 'video' ? ' (video)' : ''}`}
+			: `${photo.alt || photo.name}${photo.kind === 'video' ? ' (video)' : ''}`}
 		data-sveltekit-noscroll
 		data-sveltekit-preload-data="off"
 		style:aspect-ratio={layout === 'masonry' ? `${photo.w || 3} / ${photo.h || 2}` : undefined}
+		style:background-image={photo.placeholder ? `url(${photo.placeholder})` : undefined}
 	>
 		<Img
 			src={mediaUrl(photo, 'thumb')}
-			alt={photo.name}
+			alt={photo.alt}
 			width={photo.w || undefined}
 			height={photo.h || undefined}
 			eager={index < eagerCount}
@@ -118,6 +119,9 @@
 		display: block;
 		overflow: hidden;
 		background: var(--placeholder);
+		/* The blurred placeholder, if there is one, fills the tile until the thumbnail fades in. */
+		background-size: cover;
+		background-position: center;
 		cursor: zoom-in;
 		outline-offset: 2px;
 	}

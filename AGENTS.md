@@ -81,7 +81,10 @@ Prettier-formatted, so `bun run lint` reports it; leave it alone unless asked.
 
 **Public**
 
-- **Pages:** `/` (home), `/galleries`, and `/[slug]` (an album, with a password `unlock` action).
+- **Pages:** `/` (home, with the enquiry form's `enquire` action) and `/[slug]` (an album, with a
+  password `unlock` action). There is no galleries page any more: `/galleries` redirects to the
+  homepage, which lists every album with `show_on_home`, under the featured one
+  (`featuredAlbumId` in the site settings, chosen under Settings → Homepage, not on the album).
 - **Photo viewer:** `Lightbox.svelte` is the only one. The album and home pages open it with shallow
   routing (`PageState.lightbox`). Each photo also has its own URL at `/[slug]/photo/[id]`, for
   reloads and shared links, which renders the same viewer.
@@ -98,8 +101,14 @@ Prettier-formatted, so `bun run lint` reports it; leave it alone unless asked.
   takes a **widget** token: API tokens have a `scope`, `full` (Lightroom, `requireToken(event)`) or
   `widget` (read-only, `requireToken(event, 'widget')`). `WidgetPreview.svelte` mirrors the
   script's layouts for the admin page; change both together.
+- **Search engines.** Only albums reachable from the homepage are indexed: `isIndexable()` in
+  `albums.ts` (public, listed on the homepage or featured, no password, not expired). Every other
+  album is link-only, so its pages send `noindex` (meta tag and `X-Robots-Tag`) and so do its images
+  on the media route. `/sitemap.xml` lists only indexable albums, with their photos as image entries,
+  and `/robots.txt` (a route, not a static file) never names albums, so link-only addresses aren't
+  given away.
 - **Other:** `/site/themes.css`, `/site/calendar/[token].ics` (the jobs feed), `/album/[...path]`
-  (legacy redirects) and `/healthz`.
+  (legacy redirects), `/galleries` (a redirect), `/robots.txt`, `/sitemap.xml` and `/healthz`.
 - **Album slugs live at the root.** Any new top-level route must be added to `RESERVED_SLUGS` in
   `src/lib/server/albums.ts`.
 
@@ -136,6 +145,12 @@ Prettier-formatted, so `bun run lint` reports it; leave it alone unless asked.
 - **Admin login.** There is a single admin account, configured by environment variables. The session
   cookie is an HMAC-signed payload stamped with the current credentials, so changing the password
   signs every session out (`auth.ts`).
+- **Passkeys** (`passkeys.ts`, `passkey-client.ts`) sign in alongside the password, which stays as
+  the way back in. WebAuthn is done by hand with `node:crypto`: no attestation is asked for, so
+  the browser's `getPublicKey()` supplies the key and there's no CBOR. The challenge is a signed,
+  five-minute cookie that's used up when read. The relying party is the request's host name, so
+  passkeys only work at the address they were added on, over https (or localhost). They're added
+  under Settings → Sign-in; `/admin/login/passkey` is the unauthenticated sign-in endpoint.
 - **Album access** goes through `albumAccess()` in `access.ts`, which returns
   `ok | not_found | locked | expired`.
   - Anything that serves album content must use it.
@@ -185,6 +200,13 @@ Prettier-formatted, so `bun run lint` reports it; leave it alone unless asked.
     never sits in the page's memory. `serveFile` honours single byte ranges with If-Range, so
     downloads resume and videos seek. A continued range isn't counted as a new download
     (`isContinuation`).
+  - `caption` comes from the file's metadata (XMP `dc:description`, IPTC caption or EXIF
+    ImageDescription, which is Lightroom's Caption) on upload, replacement and “Re-extract
+    metadata”. `PhotoItem.alt` is the caption, or the album title when there's none; use it for
+    `alt`, never the file name.
+  - `placeholder` is a 16px WebP data URL made from the thumbnail in the background
+    (`placeholders.ts`). It's cleared whenever `version` changes and filled in again; photos without
+    one are queued at startup. Grid tiles show it as their background until the thumbnail loads.
   - Uploads arrive in 8 MB pieces (`Uploader.svelte` and the upload endpoint), each with an upload id
     and offset, so every request stays inside Traefik's 60-second limit and a dropped piece resumes.
 - **Sections** (`sections.ts`) split one album into named, ordered parts (`photos.section_id`, at
@@ -213,6 +235,14 @@ Prettier-formatted, so `bun run lint` reports it; leave it alone unless asked.
     import and “Re-extract metadata”. This only ever adds tags, so hand-applied ones survive.
 - **Maintenance tasks** (regenerating thumbnails, refreshing metadata, importing from a folder) run
   in memory through `jobs.ts`. The UI polls them at `/admin/api/jobs/[id]`.
+
+## Enquiries
+
+The homepage enquiry form (turned on with `enquiryForm` under Settings → Contact) saves to the
+`enquiries` table (`enquiries.ts`) and notifies like downloads (`notify()`). It has a hidden
+honeypot field (`website`) and per-visitor and site-wide rate limits. `/admin/enquiries` lists
+them, with the unread count in the sidebar (`depends('admin:enquiries')` in the `(app)` layout).
+“Make Job” creates a tentative job from one and links it (`enquiries.booking_id`).
 
 ## Naming trap: "jobs" vs "bookings"
 

@@ -201,7 +201,68 @@ const BASELINE = `
 `;
 
 /** Changes since the baseline, in order: entry i takes the schema to BASELINE_VERSION + i + 1. */
-const MIGRATIONS: Migration[] = [];
+const MIGRATIONS: Migration[] = [
+	// 19: the /galleries page is gone, so an album listed there now shows on the homepage, and the
+	// featured album moves from a per-album flag to the site settings (`featuredAlbumId`).
+	(db) => {
+		const featured = db
+			.prepare('SELECT id FROM albums WHERE is_featured = 1 ORDER BY updated_at DESC LIMIT 1')
+			.get() as { id: number } | undefined;
+		const row = db.prepare(`SELECT value FROM settings WHERE key = 'site'`).get() as
+			{ value: string } | undefined;
+		let site: Record<string, unknown> = {};
+		try {
+			site = row ? JSON.parse(row.value) : {};
+		} catch {
+			site = {};
+		}
+		site.featuredAlbumId = featured?.id ?? null;
+		if (site.defaultShowOnGalleries) site.defaultShowOnHome = true;
+		delete site.defaultShowOnGalleries;
+		db.prepare(
+			`INSERT INTO settings (key, value) VALUES ('site', ?)
+			 ON CONFLICT(key) DO UPDATE SET value = excluded.value`
+		).run(JSON.stringify(site));
+		db.exec(`
+			UPDATE albums SET show_on_home = 1 WHERE show_on_galleries = 1;
+			ALTER TABLE albums DROP COLUMN show_on_galleries;
+			ALTER TABLE albums DROP COLUMN is_featured;
+		`);
+	},
+	// 20: a photo's caption from its metadata (its alt text), and a tiny blurred copy shown while
+	// the thumbnail loads (placeholders.ts), filled in for existing photos in the background.
+	`ALTER TABLE photos ADD COLUMN caption TEXT;
+	 ALTER TABLE photos ADD COLUMN placeholder TEXT;`,
+	// 21: enquiries sent from the homepage form (enquiries.ts). One can become a tentative job.
+	`CREATE TABLE enquiries (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		name TEXT NOT NULL,
+		email TEXT NOT NULL,
+		phone TEXT NOT NULL DEFAULT '',
+		-- The date they asked about, YYYY-MM-DD, if any.
+		event_date TEXT,
+		location TEXT NOT NULL DEFAULT '',
+		message TEXT NOT NULL,
+		created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+		read_at TEXT,
+		archived INTEGER NOT NULL DEFAULT 0,
+		booking_id INTEGER REFERENCES bookings(id) ON DELETE SET NULL
+	);
+	CREATE INDEX enquiries_created ON enquiries(created_at);`,
+	// 22: passkeys for signing in to the admin area (passkeys.ts), alongside the password.
+	`CREATE TABLE passkeys (
+		-- The credential id, base64url.
+		id TEXT PRIMARY KEY,
+		-- The public key as DER SubjectPublicKeyInfo, and its COSE algorithm (-7 ES256, -257 RS256, -8 EdDSA).
+		public_key BLOB NOT NULL,
+		algorithm INTEGER NOT NULL,
+		sign_count INTEGER NOT NULL DEFAULT 0,
+		name TEXT NOT NULL,
+		transports TEXT NOT NULL DEFAULT '',
+		created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+		last_used_at TEXT
+	);`
+];
 
 /** The schema version this build of the app expects. */
 export const SCHEMA_VERSION = BASELINE_VERSION + MIGRATIONS.length;

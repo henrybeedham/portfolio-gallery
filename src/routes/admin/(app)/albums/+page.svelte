@@ -63,11 +63,9 @@
 	const elsewhere = $derived(query.trim() ? matching.length - shown.length : 0);
 
 	function placement(album: Album) {
-		return [
-			album.isFeatured && 'Featured',
-			album.showOnHome && 'Homepage',
-			album.showOnGalleries && 'Galleries'
-		].filter(Boolean) as string[];
+		return [album.isFeatured && 'Featured', album.showOnHome && 'Homepage'].filter(
+			Boolean
+		) as string[];
 	}
 
 	async function remove(album: Album) {

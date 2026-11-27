@@ -28,7 +28,7 @@ export function sign(value: string) {
 	return `${value}.${hmac(value)}`;
 }
 
-function unsign(signed: string | undefined): string | null {
+export function unsign(signed: string | undefined): string | null {
 	if (!signed) return null;
 	const index = signed.lastIndexOf('.');
 	if (index < 0) return null;

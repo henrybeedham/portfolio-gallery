@@ -37,12 +37,17 @@ export interface SiteSettings {
 	heroTitle: string;
 	heroDescription: string;
 	heroImage: string | null;
+	/** The album shown in full at the top of the homepage, or null for none. */
+	featuredAlbumId: number | null;
+	/** The introduction above the homepage's list of galleries. */
 	galleriesIntro: string;
 	aboutTitle: string;
 	aboutText: string;
 	contactEmail: string;
 	contactPhone: string;
 	showContactOnHome: boolean;
+	/** Shows the enquiry form in the homepage's About section. */
+	enquiryForm: boolean;
 	discordWebhook: string;
 	theme: Theme;
 	defaultDescription: string;
@@ -52,7 +57,6 @@ export interface SiteSettings {
 	defaultSort: SortOrder;
 	defaultPublic: boolean;
 	defaultShowOnHome: boolean;
-	defaultShowOnGalleries: boolean;
 }
 
 export type PublicSettings = Omit<SiteSettings, 'discordWebhook'>;
@@ -67,6 +71,10 @@ export interface ImageRef {
 export interface PhotoItem extends ImageRef {
 	id: number;
 	name: string;
+	/** The photo's caption, or the album's title when it has none. */
+	alt: string;
+	/** A tiny blurred copy as a data URL, shown while the thumbnail loads. */
+	placeholder?: string;
 	/** Set for videos, whose thumbnails come from a poster frame. */
 	kind?: 'video';
 	/** Seconds, for videos. */
@@ -176,8 +184,6 @@ export interface AlbumFormInitial {
 	albumDate: string;
 	isPublic: boolean;
 	showOnHome: boolean;
-	showOnGalleries: boolean;
-	isFeatured: boolean;
 	passwordEnabled: boolean;
 	expiresAt: string;
 	/** Theme id, or '' to follow the site's theme. */

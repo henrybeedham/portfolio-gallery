@@ -32,7 +32,13 @@
 		<meta name="twitter:card" content="summary_large_image" />
 		<meta name="twitter:image" content="{data.origin}{mediaUrl(shareImage, 'medium')}" />
 	{/if}
-	{#if album.hasPassword || !album.isPublic}
+	{#if data.indexable}
+		<link rel="canonical" href="{data.origin}/{album.slug}" />
+		{#if data.summary}
+			<meta name="description" content={data.summary} />
+			<meta property="og:description" content={data.summary} />
+		{/if}
+	{:else}
 		<meta name="robots" content="noindex" />
 	{/if}
 </svelte:head>

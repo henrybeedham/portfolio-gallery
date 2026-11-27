@@ -12,6 +12,7 @@ import {
 	removePhotoFiles
 } from './images.js';
 import { detectVideo, prepareVideo, probeVideo } from './video.js';
+import { queuePlaceholder } from './placeholders.js';
 import { queuePreview } from './video-preview.js';
 import { seededShuffle } from '#lib/sort.js';
 import type { AdminPhoto, PhotoItem, SortOrder, Tag } from '#lib/types.js';
@@ -33,6 +34,10 @@ export interface PhotoRow {
 	/** For videos: 1 when there's a smaller copy for the browser, 0 when the original plays. */
 	preview: number | null;
 	section_id: number | null;
+	/** From the photo's metadata, used as its alt text. */
+	caption: string | null;
+	/** A tiny blurred copy as a data URL (placeholders.ts), or null until it's made. */
+	placeholder: string | null;
 	downloads: number;
 	version: number;
 	created_at: string;
@@ -103,7 +108,7 @@ export async function detectMedia(file: string): Promise<MediaType | null> {
 	return image ? { ...image, kind: 'photo' } : detectVideo(file);
 }
 
-function toItem(row: PhotoRow): PhotoItem {
+function toItem(row: PhotoRow & { album_title?: string }): PhotoItem {
 	if (row.kind === 'video') {
 		const item: PhotoItem = { ...photoItem(row), kind: 'video', duration: row.duration };
 		if (row.preview === 1) item.preview = true;
@@ -112,15 +117,18 @@ function toItem(row: PhotoRow): PhotoItem {
 	return photoItem(row);
 }
 
-function photoItem(row: PhotoRow): PhotoItem {
+function photoItem(row: PhotoRow & { album_title?: string }): PhotoItem {
 	const item: PhotoItem = {
 		id: row.id,
 		key: row.key,
 		v: row.version,
 		w: row.width,
 		h: row.height,
-		name: row.original_name
+		name: row.original_name,
+		// The caption, or else the album's title: better for screen readers and search than a file name.
+		alt: row.caption || row.album_title || ''
 	};
+	if (row.placeholder) item.placeholder = row.placeholder;
 	if (row.section_id) item.section = row.section_id;
 	return item;
 }
@@ -128,14 +136,15 @@ function photoItem(row: PhotoRow): PhotoItem {
 /** Loads photos by id, preserving the order of `ids`. */
 export function photoItems(ids: number[]): PhotoItem[] {
 	if (!ids.length) return [];
-	const rows = all<PhotoRow>(
-		`SELECT * FROM photos WHERE id IN (${placeholders(ids.length)})`,
+	const rows = all<PhotoRow & { album_title: string }>(
+		`SELECT p.*, a.title AS album_title FROM photos p JOIN albums a ON a.id = p.album_id
+		 WHERE p.id IN (${placeholders(ids.length)})`,
 		...ids
 	);
 	const byId = new Map(rows.map((row) => [row.id, row]));
 	return ids
 		.map((id) => byId.get(id))
-		.filter((row): row is PhotoRow => !!row)
+		.filter((row) => !!row)
 		.map(toItem);
 }
 
@@ -187,11 +196,18 @@ async function photoDetails(file: string, key: string) {
 		generateVariants(file, key),
 		extractMetadata(file)
 	]);
-	return { width, height, takenAt: metadata.takenAt, keywords: metadata.keywords, duration: null };
+	return {
+		width,
+		height,
+		takenAt: metadata.takenAt,
+		caption: metadata.caption,
+		keywords: metadata.keywords,
+		duration: null
+	};
 }
 
 async function videoDetails(file: string, key: string) {
-	return { ...(await prepareVideo(file, key)), keywords: [] as string[] };
+	return { ...(await prepareVideo(file, key)), caption: null, keywords: [] as string[] };
 }
 
 /**
@@ -219,8 +235,8 @@ export async function addPhoto(
 		const photoId = transaction(() => {
 			const result = run(
 				`INSERT INTO photos (album_id, key, ext, original_name, mime, size, width, height, taken_at,
-					kind, duration, section_id)
-				 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+					kind, duration, section_id, caption)
+				 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 				albumId,
 				key,
 				type.ext,
@@ -232,7 +248,8 @@ export async function addPhoto(
 				details.takenAt,
 				type.kind,
 				details.duration,
-				options.sectionId ?? null
+				options.sectionId ?? null,
+				details.caption
 			);
 			tagWithKeywords(albumId, result.lastInsertRowid, details.keywords);
 			deliverJobsForAlbum(albumId);
@@ -240,6 +257,7 @@ export async function addPhoto(
 		});
 		const row = getPhoto(photoId)!;
 		if (row.kind === 'video') queuePreview(row.id);
+		queuePlaceholder(row.id);
 		return {
 			...toItem(row),
 			tags: all<{ tag_id: number }>('SELECT tag_id FROM photo_tags WHERE photo_id = ?', row.id).map(
@@ -278,8 +296,8 @@ export async function replacePhoto(
 		transaction(() => {
 			run(
 				`UPDATE photos SET key = ?, ext = ?, original_name = ?, mime = ?, size = ?, width = ?,
-					height = ?, taken_at = ?, kind = ?, duration = ?, preview = NULL,
-					version = version + 1
+					height = ?, taken_at = ?, kind = ?, duration = ?, caption = ?, preview = NULL,
+					placeholder = NULL, version = version + 1
 				 WHERE id = ?`,
 				key,
 				type.ext,
@@ -291,6 +309,7 @@ export async function replacePhoto(
 				details.takenAt,
 				type.kind,
 				details.duration,
+				details.caption,
 				row.id
 			);
 			tagWithKeywords(row.album_id, row.id, details.keywords);
@@ -301,6 +320,7 @@ export async function replacePhoto(
 	}
 	await removePhotoFiles(row.key, row.ext);
 	if (type.kind === 'video') queuePreview(row.id);
+	queuePlaceholder(row.id);
 	return getPhoto(row.id)!;
 }
 
@@ -333,11 +353,12 @@ export async function deleteAlbum(albumId: number) {
 
 export function bumpVersion(photoId: number, fields: { width: number; height: number }) {
 	run(
-		'UPDATE photos SET version = version + 1, width = ?, height = ? WHERE id = ?',
+		'UPDATE photos SET version = version + 1, width = ?, height = ?, placeholder = NULL WHERE id = ?',
 		fields.width,
 		fields.height,
 		photoId
 	);
+	queuePlaceholder(photoId);
 }
 
 /**
@@ -373,11 +394,12 @@ export async function refreshMetadata(row: PhotoRow) {
 	]);
 	transaction(() => {
 		run(
-			'UPDATE photos SET size = ?, width = ?, height = ?, taken_at = ? WHERE id = ?',
+			'UPDATE photos SET size = ?, width = ?, height = ?, taken_at = ?, caption = ? WHERE id = ?',
 			stat.size,
 			size.width,
 			size.height,
 			metadata.takenAt,
+			metadata.caption,
 			row.id
 		);
 		tagWithKeywords(row.album_id, row.id, metadata.keywords);

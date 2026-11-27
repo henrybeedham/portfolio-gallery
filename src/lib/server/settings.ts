@@ -8,6 +8,7 @@ const defaultSettings: SiteSettings = {
 	heroDescription:
 		'Documentary and portrait photography for people, places and the quiet stories worth keeping.',
 	heroImage: null,
+	featuredAlbumId: null,
 	galleriesIntro:
 		'A collection of recent commissions, personal projects and client stories, gathered in one place.',
 	aboutTitle: 'About',
@@ -16,6 +17,7 @@ const defaultSettings: SiteSettings = {
 	contactEmail: '',
 	contactPhone: '',
 	showContactOnHome: true,
+	enquiryForm: false,
 	discordWebhook: '',
 	theme: 'light',
 	defaultDescription: '',
@@ -23,8 +25,7 @@ const defaultSettings: SiteSettings = {
 	defaultLayout: 'grid',
 	defaultSort: 'oldest',
 	defaultPublic: true,
-	defaultShowOnHome: false,
-	defaultShowOnGalleries: false
+	defaultShowOnHome: false
 };
 
 let cache: SiteSettings | undefined;

@@ -1,11 +1,11 @@
 import fsp from 'node:fs/promises';
 import { error } from '@sveltejs/kit';
-import { effectiveCoverId, getAlbumById } from '#lib/server/albums.js';
+import { effectiveCoverId, getAlbumById, isIndexable, type Album } from '#lib/server/albums.js';
 import { albumAccess } from '#lib/server/access.js';
 import { recordPhotoDownload } from '#lib/server/analytics.js';
 import { isContinuation, serveFile } from '#lib/server/files.js';
 import { originalPath, previewPath, variantPath } from '#lib/server/images.js';
-import { getPhotoByKey, regenerateVariants } from '#lib/server/photos.js';
+import { getPhotoByKey, regenerateVariants, type PhotoRow } from '#lib/server/photos.js';
 import { queuePreview } from '#lib/server/video-preview.js';
 import { contentDisposition } from '#lib/server/zip.js';
 import type { RequestHandler } from './$types';
@@ -21,15 +21,25 @@ async function exists(file: string) {
 	}
 }
 
-export const GET: RequestHandler = async ({ params, request, url, cookies, locals }) => {
-	const variant = params.variant;
-	if (!VARIANTS.has(variant)) error(404, 'Not found');
-
-	const photo = getPhotoByKey(params.key);
+export const GET: RequestHandler = async (event) => {
+	if (!VARIANTS.has(event.params.variant)) error(404, 'Not found');
+	const photo = getPhotoByKey(event.params.key);
 	if (!photo) error(404, 'Not found');
 	const album = getAlbumById(photo.album_id);
 	if (!album) error(404, 'Not found');
 
+	const response = await serve(event, photo, album);
+	// Keeps photos from link-only albums out of image search, as their pages are.
+	if (!isIndexable(album)) response.headers.set('x-robots-tag', 'noindex');
+	return response;
+};
+
+async function serve(
+	{ params, request, url, cookies, locals }: Parameters<RequestHandler>[0],
+	photo: PhotoRow,
+	album: Album
+): Promise<Response> {
+	const variant = params.variant;
 	const access = albumAccess(album, { cookies, isAdmin: locals.isAdmin });
 	if (access !== 'ok') {
 		// Password-protected albums still show their cover on public listings.
@@ -89,4 +99,4 @@ export const GET: RequestHandler = async ({ params, request, url, cookies, local
 	}
 	if (!response) error(404, 'Not found');
 	return response;
-};
+}

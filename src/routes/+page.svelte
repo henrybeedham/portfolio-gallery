@@ -11,12 +11,13 @@
 	import PhotoGallery from '#lib/components/PhotoGallery.svelte';
 	import AlbumCard from '#lib/components/AlbumCard.svelte';
 	import Img from '#lib/components/Img.svelte';
+	import EnquiryForm from '#lib/components/EnquiryForm.svelte';
 	import Lightbox from '#lib/components/Lightbox.svelte';
 	import { mediaUrl, paragraphs, viewQuery } from '#lib/utils.js';
 	import type { PhotoItem } from '#lib/types.js';
 	import type { PageProps } from './$types';
 
-	let { data }: PageProps = $props();
+	let { data, form }: PageProps = $props();
 
 	const settings = $derived(data.settings);
 	const heroLines = $derived(settings.heroTitle.split('\n').filter((line) => line.trim()));
@@ -76,8 +77,12 @@
 	<meta name="description" content={settings.heroDescription} />
 	<meta property="og:title" content={settings.siteTitle} />
 	<meta property="og:description" content={settings.heroDescription} />
+	<meta property="og:type" content="website" />
+	<meta property="og:url" content="{page.url.origin}/" />
+	<link rel="canonical" href="{page.url.origin}/" />
 	{#if settings.heroImage}
-		<meta property="og:image" content="/site/hero/large?v={settings.heroImage}" />
+		<meta property="og:image" content="{page.url.origin}/site/hero/large?v={settings.heroImage}" />
+		<meta name="twitter:card" content="summary_large_image" />
 	{/if}
 </svelte:head>
 
@@ -110,7 +115,7 @@
 			<a
 				class="btn btn-solid fade-up"
 				style:animation-delay="0.6s"
-				href={featured ? '#work' : '/galleries'}
+				href={featured || data.albums.length ? '#work' : '#about'}
 			>
 				View Work <ArrowRight size={14} />
 			</a>
@@ -158,17 +163,19 @@
 
 	{#if data.albums.length}
 		<section class="explore container" id={featured ? undefined : 'work'}>
-			<div class="section-head simple">
-				<p class="eyebrow">Explore more</p>
-				<h2>Recent galleries</h2>
+			<div class="section-head" class:simple={!settings.galleriesIntro}>
+				<div>
+					<p class="eyebrow">{featured ? 'Explore more' : 'Portfolio'}</p>
+					<h2>Galleries</h2>
+				</div>
+				{#if settings.galleriesIntro}
+					<p class="lede">{settings.galleriesIntro}</p>
+				{/if}
 			</div>
 			<div class="cards">
-				{#each data.albums as album (album.id)}
-					<AlbumCard {album} />
+				{#each data.albums as album, i (album.id)}
+					<AlbumCard {album} eager={!featured && i < 3} />
 				{/each}
-			</div>
-			<div class="section-foot">
-				<a class="btn" href="/galleries">View All Galleries</a>
 			</div>
 		</section>
 	{/if}
@@ -199,6 +206,9 @@
 						</li>
 					{/if}
 				</ul>
+			{/if}
+			{#if settings.enquiryForm}
+				<EnquiryForm result={form?.enquiry} />
 			{/if}
 		</div>
 	</section>
@@ -373,6 +383,12 @@
 		letter-spacing: 0.18em;
 		text-transform: uppercase;
 		background: color-mix(in srgb, var(--bg) 35%, transparent);
+	}
+
+	.lede {
+		color: var(--text-muted);
+		max-width: 48ch;
+		line-height: 1.7;
 	}
 
 	.cards {

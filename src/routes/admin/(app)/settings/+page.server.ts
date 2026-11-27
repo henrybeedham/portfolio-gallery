@@ -8,9 +8,10 @@ import { sendDiscord } from '#lib/server/discord.js';
 import { requireAdmin } from '#lib/server/guard.js';
 import { detectType, removeHeroImage, saveHeroImage, tempFile } from '#lib/server/images.js';
 import { getSettings, updateSettings } from '#lib/server/settings.js';
+import { listPasskeys } from '#lib/server/passkeys.js';
 import { listPushDevices, vapidPublicKey } from '#lib/server/push.js';
 import { getInvoiceSettings } from '#lib/server/billing.js';
-import { albumThemeCounts } from '#lib/server/albums.js';
+import { albumThemeCounts, listFeaturableAlbums } from '#lib/server/albums.js';
 import { getTheme, hasTheme, themeSummaries } from '#lib/server/themes.js';
 import {
 	LAYOUTS,
@@ -43,6 +44,7 @@ function themesInUse(settings: SiteSettings) {
 export const load: PageServerLoad = ({ locals, depends }) => {
 	requireAdmin(locals);
 	depends('admin:push');
+	depends('admin:passkeys');
 	const current = getSettings();
 	return {
 		current: {
@@ -50,9 +52,11 @@ export const load: PageServerLoad = ({ locals, depends }) => {
 			theme: getTheme(current.theme).id,
 			defaultAlbumTheme: hasTheme(current.defaultAlbumTheme) ? current.defaultAlbumTheme : ''
 		},
+		featurable: listFeaturableAlbums(),
 		themes: themeSummaries(),
 		themesInUse: themesInUse(current),
-		push: { publicKey: vapidPublicKey(), devices: listPushDevices() }
+		push: { publicKey: vapidPublicKey(), devices: listPushDevices() },
+		passkeys: listPasskeys()
 	};
 };
 
@@ -92,18 +96,22 @@ export const actions: Actions = {
 		const layout = text(data, 'defaultLayout') as Layout;
 		const sort = text(data, 'defaultSort') as SortOrder;
 		const albumTheme = text(data, 'defaultAlbumTheme');
+		const featuredId = Number(text(data, 'featuredAlbumId')) || null;
+		const featurable = listFeaturableAlbums().some((album) => album.id === featuredId);
 
 		const patch: Partial<SiteSettings> = {
 			siteTitle: text(data, 'siteTitle', 120) || current.siteTitle,
 			copyright: text(data, 'copyright', 300),
 			heroTitle: text(data, 'heroTitle', 300),
 			heroDescription: text(data, 'heroDescription', 1000),
+			featuredAlbumId: featurable ? featuredId : null,
 			galleriesIntro: text(data, 'galleriesIntro', 1000),
 			aboutTitle: text(data, 'aboutTitle', 200),
 			aboutText: text(data, 'aboutText', 10000),
 			contactEmail: email,
 			contactPhone: text(data, 'contactPhone', 60),
 			showContactOnHome: data.get('showContactOnHome') === 'on',
+			enquiryForm: data.get('enquiryForm') === 'on',
 			discordWebhook: webhook,
 			theme: hasTheme(text(data, 'theme')) ? text(data, 'theme') : current.theme,
 			defaultDescription: text(data, 'defaultDescription', 20000),
@@ -111,8 +119,7 @@ export const actions: Actions = {
 			defaultLayout: LAYOUTS.includes(layout) ? layout : current.defaultLayout,
 			defaultSort: SORT_ORDERS.includes(sort) ? sort : current.defaultSort,
 			defaultPublic: data.get('defaultPublic') === 'on',
-			defaultShowOnHome: data.get('defaultShowOnHome') === 'on',
-			defaultShowOnGalleries: data.get('defaultShowOnGalleries') === 'on'
+			defaultShowOnHome: data.get('defaultShowOnHome') === 'on'
 		};
 
 		const hero = data.get('heroImage');

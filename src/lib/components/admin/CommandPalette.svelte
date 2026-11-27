@@ -26,6 +26,7 @@
 		['Jobs', '/admin/jobs'],
 		['New Job', '/admin/jobs/new'],
 		['Calendar Feed', '/admin/jobs/calendar'],
+		['Enquiries', '/admin/enquiries'],
 		['Invoices', '/admin/invoices'],
 		['New Invoice', '/admin/invoices/new'],
 		['Invoice Settings', '/admin/invoices/settings'],

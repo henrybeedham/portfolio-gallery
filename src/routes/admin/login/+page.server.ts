@@ -1,5 +1,6 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { checkAdminCredentials, createAdminSession } from '#lib/server/auth.js';
+import { hasPasskeys } from '#lib/server/passkeys.js';
 import { clientIp, rateLimit } from '#lib/server/ratelimit.js';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -8,8 +9,9 @@ function safeNext(value: string | null) {
 }
 
 export const load: PageServerLoad = ({ locals, url }) => {
-	if (locals.isAdmin) redirect(303, safeNext(url.searchParams.get('next')));
-	return {};
+	const next = safeNext(url.searchParams.get('next'));
+	if (locals.isAdmin) redirect(303, next);
+	return { passkeys: hasPasskeys(), next };
 };
 
 export const actions: Actions = {

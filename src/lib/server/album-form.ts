@@ -14,8 +14,6 @@ interface AlbumFormValues {
 	albumDate: string;
 	isPublic: boolean;
 	showOnHome: boolean;
-	showOnGalleries: boolean;
-	isFeatured: boolean;
 	passwordEnabled: boolean;
 	expiresAt: string;
 	/** Theme id, or '' to use the site's theme. */
@@ -38,7 +36,6 @@ function checkbox(data: FormData, name: string) {
 export function parseAlbumForm(data: FormData, existing?: Album): AlbumFormResult {
 	const settings = getSettings();
 	const str = (name: string) => String(data.get(name) ?? '').trim();
-	const has = (name: string) => data.has(name);
 
 	const title = str('title').slice(0, 200);
 	const slug = slugify(str('slug') || title);
@@ -63,13 +60,6 @@ export function parseAlbumForm(data: FormData, existing?: Album): AlbumFormResul
 		albumDate,
 		isPublic: checkbox(data, 'is_public'),
 		showOnHome: checkbox(data, 'show_on_home'),
-		// Unchecked checkboxes aren't submitted, so the marker fields tell "off" apart from "absent".
-		showOnGalleries: has('show_on_galleries_present')
-			? checkbox(data, 'show_on_galleries')
-			: (existing?.showOnGalleries ?? settings.defaultShowOnGalleries),
-		isFeatured: has('is_featured_present')
-			? checkbox(data, 'is_featured')
-			: (existing?.isFeatured ?? false),
 		passwordEnabled: checkbox(data, 'password_enabled'),
 		expiresAt,
 		theme: theme && hasTheme(theme) ? theme : '',
@@ -112,8 +102,6 @@ export function parseAlbumForm(data: FormData, existing?: Album): AlbumFormResul
 			albumDate: values.albumDate || null,
 			isPublic: values.isPublic,
 			showOnHome: values.showOnHome,
-			showOnGalleries: values.showOnGalleries,
-			isFeatured: values.isFeatured,
 			passwordHash,
 			expiresAt: values.expiresAt || null,
 			theme: values.theme || null,

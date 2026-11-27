@@ -17,7 +17,6 @@
 
 	const links = [
 		{ href: '/#work', label: 'Work' },
-		{ href: '/galleries', label: 'Galleries' },
 		{ href: '/#about', label: 'About' }
 	];
 </script>

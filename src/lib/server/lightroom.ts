@@ -98,8 +98,6 @@ export function createAlbumFor(input: {
 		albumDate: job?.startsAt?.slice(0, 10) ?? null,
 		isPublic: input.isPublic ?? settings.defaultPublic,
 		showOnHome: settings.defaultShowOnHome,
-		showOnGalleries: settings.defaultShowOnGalleries,
-		isFeatured: false,
 		passwordHash: null,
 		expiresAt: null,
 		theme: hasTheme(settings.defaultAlbumTheme) ? settings.defaultAlbumTheme : null,

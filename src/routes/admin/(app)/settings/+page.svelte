@@ -6,6 +6,7 @@
 	import ThemeManager from '#lib/components/admin/ThemeManager.svelte';
 	import Toggle from '#lib/components/admin/Toggle.svelte';
 	import PushSettings from '#lib/components/admin/PushSettings.svelte';
+	import PasskeySettings from '#lib/components/admin/PasskeySettings.svelte';
 	import { feedback } from '#lib/components/admin/feedback.svelte.js';
 	import type { Layout, SortOrder } from '#lib/types.js';
 	import type { PageProps } from './$types';
@@ -20,7 +21,8 @@
 	let showContactOnHome = $state(initial.showContactOnHome);
 	let defaultPublic = $state(initial.defaultPublic);
 	let defaultShowOnHome = $state(initial.defaultShowOnHome);
-	let defaultShowOnGalleries = $state(initial.defaultShowOnGalleries);
+	let enquiryForm = $state(initial.enquiryForm);
+	let featuredAlbumId = $state(String(initial.featuredAlbumId ?? ''));
 	let preview = $state<string | null>(null);
 	let fileInput = $state<HTMLInputElement>();
 	let saving = $state(false);
@@ -43,6 +45,7 @@
 		{ id: 'homepage', label: 'Homepage' },
 		{ id: 'contact', label: 'Contact' },
 		{ id: 'notifications', label: 'Notifications' },
+		{ id: 'sign-in', label: 'Sign-in' },
 		{ id: 'appearance', label: 'Appearance' },
 		{ id: 'defaults', label: 'Album defaults' }
 	];
@@ -165,10 +168,31 @@
 			>
 		</div>
 		<div class="field">
-			<label for="galleriesIntro">Galleries page introduction</label>
+			<label for="featuredAlbumId">Featured album</label>
+			<select
+				id="featuredAlbumId"
+				class="select"
+				name="featuredAlbumId"
+				bind:value={featuredAlbumId}
+			>
+				<option value="">None</option>
+				{#each data.featurable as album (album.id)}
+					<option value={String(album.id)}>
+						{album.title}{album.locked ? ' (password)' : ''}{album.expired ? ' (expired)' : ''}
+					</option>
+				{/each}
+			</select>
+			<p class="hint">
+				Its photos are shown in full beneath the hero, above the other homepage galleries. Only
+				public albums can be featured.
+			</p>
+		</div>
+		<div class="field">
+			<label for="galleriesIntro">Galleries introduction</label>
 			<textarea id="galleriesIntro" class="textarea short" name="galleriesIntro" rows="2"
 				>{data.current.galleriesIntro}</textarea
 			>
+			<p class="hint">Shown above the list of galleries on the homepage.</p>
 		</div>
 		<div class="field">
 			<label for="aboutTitle">About section title</label>
@@ -218,6 +242,12 @@
 			description="Displayed beneath the About section."
 			bind:checked={showContactOnHome}
 		/>
+		<Toggle
+			name="enquiryForm"
+			label="Show the enquiry form on the homepage"
+			description="Visitors can send you an enquiry from the About section. They arrive under Enquiries, and you’re notified the same way as for downloads."
+			bind:checked={enquiryForm}
+		/>
 		<div class="field">
 			<label for="discordWebhook">Discord webhook URL <span class="optional">optional</span></label>
 			<div class="inline">
@@ -246,6 +276,17 @@
 			</p>
 		</div>
 		<PushSettings publicKey={data.push.publicKey} devices={data.push.devices} />
+	</section>
+
+	<section class="card" id="sign-in">
+		<div class="card-head">
+			<h2>Sign-in</h2>
+			<p class="hint">
+				Sign in with a passkey (Face ID, Touch ID, Windows Hello or a password manager) instead of
+				typing the password. The password still works, so it’s there if you lose your devices.
+			</p>
+		</div>
+		<PasskeySettings passkeys={data.passkeys} />
 	</section>
 
 	<section class="card" id="appearance">
@@ -310,11 +351,6 @@
 				name="defaultShowOnHome"
 				label="Show on homepage by default"
 				bind:checked={defaultShowOnHome}
-			/>
-			<Toggle
-				name="defaultShowOnGalleries"
-				label="Show on galleries page by default"
-				bind:checked={defaultShowOnGalleries}
 			/>
 		</div>
 	</section>

@@ -38,7 +38,7 @@ export const load: PageServerLoad = ({ params, locals, url, depends }) => {
 			effectiveCoverId: effectiveCoverId(album.id),
 			albumDate: album.albumDate,
 			expiresAt: album.expiresAt,
-			listed: album.showOnHome || album.showOnGalleries,
+			listed: album.showOnHome || getSettings().featuredAlbumId === album.id,
 			backgroundPhotoId: album.backgroundPhotoId,
 			views: album.views,
 			photoDownloads: album.photoDownloads,
@@ -52,8 +52,6 @@ export const load: PageServerLoad = ({ params, locals, url, depends }) => {
 			albumDate: album.albumDate ?? '',
 			isPublic: album.isPublic,
 			showOnHome: album.showOnHome,
-			showOnGalleries: album.showOnGalleries,
-			isFeatured: album.isFeatured,
 			passwordEnabled: !!album.passwordHash,
 			expiresAt: album.expiresAt ?? '',
 			// A deleted theme shows as following the site, which is what the album falls back to.

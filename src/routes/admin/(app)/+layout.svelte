@@ -7,6 +7,7 @@
 	import Search from '@lucide/svelte/icons/search';
 	import Settings from '@lucide/svelte/icons/settings';
 	import Briefcase from '@lucide/svelte/icons/briefcase';
+	import Inbox from '@lucide/svelte/icons/inbox';
 	import Receipt from '@lucide/svelte/icons/receipt';
 	import ChartColumn from '@lucide/svelte/icons/chart-column';
 	import DatabaseBackup from '@lucide/svelte/icons/database-backup';
@@ -41,6 +42,7 @@
 		{ href: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
 		{ href: '/admin/albums', label: 'Galleries', icon: Images, exact: false },
 		{ href: '/admin/jobs', label: 'Jobs', icon: Briefcase, exact: false },
+		{ href: '/admin/enquiries', label: 'Enquiries', icon: Inbox, exact: false },
 		{ href: '/admin/invoices', label: 'Invoices', icon: Receipt, exact: false },
 		{ href: '/admin/analytics', label: 'Analytics', icon: ChartColumn, exact: false },
 		{ href: '/admin/lightroom', label: 'Lightroom', icon: Aperture, exact: false },
@@ -83,6 +85,11 @@
 			<a class="nav-link" class:active={active(link.href, link.exact)} href={link.href}>
 				<link.icon size={16} strokeWidth={1.5} />
 				{link.label}
+				{#if link.href === '/admin/enquiries' && data.unreadEnquiries}
+					<span class="nav-count" aria-label="{data.unreadEnquiries} new">
+						{data.unreadEnquiries}
+					</span>
+				{/if}
 			</a>
 		{/each}
 	</nav>
@@ -250,6 +257,16 @@
 	.nav-link:hover {
 		background: var(--surface);
 		color: var(--text);
+	}
+
+	.nav-count {
+		margin-left: auto;
+		min-width: 1.4rem;
+		padding: 0.05rem 0.4rem;
+		border: 1px solid var(--border-strong);
+		color: var(--highlight, var(--text));
+		font-size: 0.72rem;
+		text-align: center;
 	}
 
 	.nav-link.active {

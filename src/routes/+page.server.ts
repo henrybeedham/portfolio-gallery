@@ -1,8 +1,12 @@
-import { getFeaturedAlbum, listPublicAlbums, effectiveCoverId } from '#lib/server/albums.js';
+import { getFeaturedAlbum, listHomeAlbums, effectiveCoverId } from '#lib/server/albums.js';
 import { isAlbumUnlocked } from '#lib/server/auth.js';
 import { renderMarkdown } from '#lib/server/markdown.js';
+import { createEnquiry, parseEnquiry } from '#lib/server/enquiries.js';
 import { orderedPhotoIds, photoItems, randomSeed } from '#lib/server/photos.js';
-import type { PageServerLoad } from './$types';
+import { clientIp, rateLimit } from '#lib/server/ratelimit.js';
+import { getSettings } from '#lib/server/settings.js';
+import { fail } from '@sveltejs/kit';
+import type { Actions, PageServerLoad } from './$types';
 
 const FEATURED_LIMIT = 24;
 
@@ -36,6 +40,37 @@ export const load: PageServerLoad = ({ cookies, locals }) => {
 
 	return {
 		featured,
-		albums: listPublicAlbums('home')
+		albums: listHomeAlbums()
 	};
+};
+
+export const actions: Actions = {
+	enquire: async (event) => {
+		if (!getSettings().enquiryForm)
+			return fail(404, { enquiry: { error: 'Enquiries are closed.' } });
+		const data = await event.request.formData();
+		const values = Object.fromEntries(
+			['name', 'email', 'phone', 'eventDate', 'location', 'message'].map((name) => [
+				name,
+				String(data.get(name) ?? '')
+			])
+		);
+		// A field people can't see: only bots fill it in. They're told it worked, so they move on.
+		if (String(data.get('website') ?? '')) return { enquiry: { sent: true } };
+		// Per visitor, plus a ceiling for the whole site so a flood can't fill the inbox.
+		if (
+			!rateLimit(`enquiry:${clientIp(event)}`, 5, 60 * 60 * 1000) ||
+			!rateLimit('enquiry-all', 60, 24 * 60 * 60 * 1000)
+		) {
+			return fail(429, {
+				enquiry: { error: 'Too many enquiries have been sent. Please try again later.', values }
+			});
+		}
+		const parsed = parseEnquiry(data);
+		if (!parsed.ok) {
+			return fail(400, { enquiry: { error: parsed.error, field: parsed.field, values } });
+		}
+		createEnquiry(parsed.input, event.url.origin);
+		return { enquiry: { sent: true } };
+	}
 };

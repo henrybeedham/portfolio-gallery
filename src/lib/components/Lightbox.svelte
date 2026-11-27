@@ -155,7 +155,7 @@
 				{:else}
 					<img
 						src={mediaUrl(photo, 'medium')}
-						alt={photo.name}
+						alt={photo.alt}
 						width={photo.w || undefined}
 						height={photo.h || undefined}
 						in:fly={{ x: direction * 36, duration: 380, opacity: 0 }}

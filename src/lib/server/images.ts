@@ -144,6 +144,8 @@ export async function generateVariants(source: string | Buffer, key: string) {
 
 interface PhotoMetadata {
 	takenAt: string | null;
+	/** The caption (Lightroom's “Caption”), used as the photo's alt text. */
+	caption: string | null;
 	/** Keywords from Lightroom and similar tools, which become album tags. */
 	keywords: string[];
 }
@@ -188,6 +190,29 @@ function xmpKeywords(xmp: unknown): string[] {
 	return [...subject[1].matchAll(/<rdf:li(?:\s[^>]*)?>([^<]*)<\/rdf:li>/g)].map((match) =>
 		decodeXml(match[1])
 	);
+}
+
+/** The default-language `dc:description` in an XMP packet, which is where Lightroom puts captions. */
+function xmpCaption(xmp: unknown): string | null {
+	if (typeof xmp !== 'string') return null;
+	const description = /<dc:description(?:\s[^>]*)?>([\s\S]*?)<\/dc:description>/.exec(xmp);
+	if (!description) return null;
+	const items = [...description[1].matchAll(/<rdf:li(\s[^>]*)?>([^<]*)<\/rdf:li>/g)];
+	const item = items.find((match) => /x-default/.test(match[1] ?? '')) ?? items[0];
+	return item ? decodeXml(item[2]) : null;
+}
+
+/** The longest caption kept. */
+const MAX_CAPTION_LENGTH = 500;
+
+/** The first caption that has any text, tidied to one line. */
+function cleanCaption(...values: unknown[]): string | null {
+	for (const value of values) {
+		if (typeof value !== 'string') continue;
+		const text = value.replace(/[\0\s]+/g, ' ').trim();
+		if (text) return text.slice(0, MAX_CAPTION_LENGTH);
+	}
+	return null;
 }
 
 /**
@@ -259,12 +284,14 @@ export async function extractMetadata(source: string): Promise<PhotoMetadata> {
 	} catch {
 		exif = undefined;
 	}
-	if (!exif) return { takenAt: null, keywords: [] };
+	if (!exif) return { takenAt: null, caption: null, keywords: [] };
 	const xmp = xmpKeywords(exif.xmp);
+	const iptcCaption = iptcKeywords(exif.Caption)[0];
 
 	return {
 		takenAt:
 			exifDate(exif.DateTimeOriginal) ?? exifDate(exif.CreateDate) ?? exifDate(exif.ModifyDate),
+		caption: cleanCaption(xmpCaption(exif.xmp), iptcCaption, exif.ImageDescription),
 		keywords: cleanKeywords(xmp.length ? xmp : iptcKeywords(exif.Keywords))
 	};
 }
