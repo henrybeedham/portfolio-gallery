@@ -29,7 +29,8 @@ export function dashboard() {
 	const today = todayIso();
 	const bookings = listBookings();
 	const invoices = listInvoices();
-	const confirmedPast = bookings.filter((b) => b.status === 'confirmed' && !b.upcoming);
+	const confirmed = bookings.filter((b) => b.status === 'confirmed');
+	const confirmedPast = confirmed.filter((b) => !b.upcoming);
 
 	const sum = (list: typeof invoices) => list.reduce((total, invoice) => total + invoice.total, 0);
 	const unpaid = invoices.filter((i) => i.state === 'unpaid' || i.state === 'overdue');
@@ -61,7 +62,8 @@ export function dashboard() {
 		attention: {
 			overdue,
 			deliver: confirmedPast.filter((b) => !b.delivered),
-			invoice: confirmedPast.filter((b) => b.payment === 'not-invoiced' || b.payment === 'draft')
+			// Upcoming jobs too: invoices often go out before the shoot. Matches the jobs list's filter.
+			invoice: confirmed.filter((b) => b.payment === 'not-invoiced' || b.payment === 'draft')
 		},
 		comingUp,
 		aheadDays: AHEAD_DAYS,
