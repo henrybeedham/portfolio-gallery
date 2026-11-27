@@ -7,9 +7,11 @@
 		title: string;
 		/** `overlay` starts transparent over the hero and gains a background once scrolled. */
 		mode?: 'overlay' | 'sticky';
+		/** Signed in as the admin: adds a link to the dashboard. */
+		isAdmin?: boolean;
 	}
 
-	let { title, mode = 'sticky' }: Props = $props();
+	let { title, mode = 'sticky', isAdmin = false }: Props = $props();
 
 	let scrollY = $state(0);
 	let open = $state(false);
@@ -31,6 +33,9 @@
 				{#each links as link (link.href)}
 					<li><a href={link.href}>{link.label}</a></li>
 				{/each}
+				{#if isAdmin}
+					<li><a class="dashboard" href="/admin">Dashboard</a></li>
+				{/if}
 			</ul>
 			<button
 				class="toggle"
@@ -47,6 +52,9 @@
 			{#each links as link (link.href)}
 				<li><a href={link.href} onclick={() => (open = false)}>{link.label}</a></li>
 			{/each}
+			{#if isAdmin}
+				<li><a href="/admin">Dashboard</a></li>
+			{/if}
 		</ul>
 	{/if}
 </header>
@@ -99,6 +107,7 @@
 
 	.links {
 		display: flex;
+		align-items: center;
 		gap: clamp(1.25rem, 3vw, 2.75rem);
 		list-style: none;
 		margin: 0;
@@ -132,6 +141,20 @@
 	.links a:hover::after {
 		transform: scaleX(1);
 		transform-origin: left;
+	}
+
+	.links a.dashboard {
+		padding: 0.55rem 0.9rem;
+		border: 1px solid var(--border-strong);
+		transition: border-color 0.35s var(--ease);
+	}
+
+	.links a.dashboard::after {
+		display: none;
+	}
+
+	.links a.dashboard:hover {
+		border-color: var(--text);
 	}
 
 	.toggle {

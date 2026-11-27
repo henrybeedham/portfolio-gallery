@@ -86,7 +86,7 @@
 	{/if}
 </svelte:head>
 
-<SiteHeader title={settings.siteTitle} mode="overlay" />
+<SiteHeader title={settings.siteTitle} mode="overlay" isAdmin={data.isAdmin} />
 
 <main>
 	<section class="hero" class:has-image={!!settings.heroImage}>
