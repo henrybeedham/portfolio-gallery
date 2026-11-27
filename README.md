@@ -2,6 +2,8 @@
 
 # Client Gallery
 
+[https://henrybeedham.com](https://henrybeedham.com)
+
 A self-hosted photography portfolio and client-delivery platform. It combines a public portfolio with private, password-protected client galleries, full-resolution downloads and an admin dashboard. Built with SvelteKit and Svelte 5, and runs as a single Docker container with an SQLite database.
 
 ## Features
