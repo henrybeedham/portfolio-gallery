@@ -52,6 +52,22 @@
 	const PAGE = 120;
 	let visible = $state(PAGE);
 
+	// Infinite scroll, as on the public galleries: show the next batch when a sentinel below the
+	// grid nears the viewport. The observer is recreated after each batch (it reads `visible`), so
+	// a sentinel that's still in view triggers again. The button stays as a fallback.
+	let sentinel = $state<HTMLElement>();
+	$effect(() => {
+		if (!sentinel || visible >= sorted.length) return;
+		const observer = new IntersectionObserver(
+			(entries) => {
+				if (entries.some((entry) => entry.isIntersecting)) visible += PAGE;
+			},
+			{ rootMargin: '0px 0px 1200px 0px' }
+		);
+		observer.observe(sentinel);
+		return () => observer.disconnect();
+	});
+
 	const selected = new SvelteSet<number>();
 	let anchor = $state<number | null>(null);
 	let busy = $state(false);
@@ -632,7 +648,7 @@
 		{/each}
 	</ul>
 	{#if sorted.length > visible}
-		<div class="more">
+		<div class="more" bind:this={sentinel}>
 			<button class="btn btn-sm" onclick={() => (visible += PAGE)}>
 				Show more ({sorted.length - visible} remaining)
 			</button>
